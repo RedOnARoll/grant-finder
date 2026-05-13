@@ -1,4 +1,14 @@
-export type GrantCategory = "small_business" | "individual"
+export type GrantCategory =
+  | "small_business"
+  | "individual"
+  | "agricultural"
+  | "research"
+  | "education"
+  | "veterans"
+  | "arts"
+  | "housing"
+  | "energy"
+  | "health"
 
 export interface EligibilityCriteria {
   industries?: string[]
