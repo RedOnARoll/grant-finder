@@ -13,9 +13,12 @@ function GrantCard({ grant }: { grant: Grant }) {
   return (
     <div className="rounded-xl border border-zinc-200 p-6 hover:border-zinc-400 transition-colors">
       <div className="flex items-start justify-between gap-4 mb-3">
-        <h3 className="text-base font-semibold text-zinc-900 leading-snug">
+        <Link
+          href={`/grants/${grant.slug}`}
+          className="text-base font-semibold text-zinc-900 leading-snug hover:underline"
+        >
           {grant.name}
-        </h3>
+        </Link>
         <span className="shrink-0 text-sm font-semibold text-zinc-900 bg-zinc-100 px-2 py-0.5 rounded-full">
           {formatAmount(grant.max_amount)}
         </span>
@@ -38,14 +41,22 @@ function GrantCard({ grant }: { grant: Grant }) {
             </span>
           )}
         </div>
-        <a
-          href={grant.application_url}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="text-sm font-medium text-zinc-900 hover:underline"
-        >
-          Apply →
-        </a>
+        <div className="flex gap-3 items-center">
+          <Link
+            href={`/grants/${grant.slug}`}
+            className="text-sm font-medium text-zinc-700 hover:text-zinc-900 transition-colors"
+          >
+            View details
+          </Link>
+          <a
+            href={grant.application_url}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-sm font-medium text-zinc-900 hover:underline"
+          >
+            Apply →
+          </a>
+        </div>
       </div>
     </div>
   )
