@@ -1,11 +1,28 @@
 import Link from "next/link"
 import { getGrants } from "@/lib/supabase"
 
+const CATEGORY_META: Record<string, { label: string; icon: string; description: string }> = {
+  small_business: { label: "Small Business", icon: "🏢", description: "Grants for entrepreneurs, startups, and growing businesses." },
+  individual:     { label: "Individual",     icon: "👤", description: "Benefits and assistance programs for individuals and families." },
+  agricultural:   { label: "Agricultural",   icon: "🌾", description: "Funding for farmers, ranchers, and agricultural producers." },
+  research:       { label: "Research",       icon: "🔬", description: "Grants for scientific research and innovation projects." },
+  education:      { label: "Education",      icon: "🎓", description: "Scholarships and grants for students and educational programs." },
+  veterans:       { label: "Veterans",       icon: "🎖️", description: "Benefits and scholarships for veterans and military families." },
+  arts:           { label: "Arts",           icon: "🎨", description: "Grants supporting artists, performers, and cultural projects." },
+  housing:        { label: "Housing",        icon: "🏠", description: "Assistance programs for housing, homeownership, and shelter." },
+  energy:         { label: "Energy",         icon: "⚡", description: "Grants for clean energy, efficiency, and weatherization." },
+  health:         { label: "Health",         icon: "❤️", description: "Funding for healthcare programs, research, and services." },
+}
+
 export default async function HomePage() {
   const grants = await getGrants()
   const totalFunding = grants.reduce((sum, g) => sum + (g.max_amount ?? 0), 0)
-  const businessGrants = grants.filter((g) => g.category === "small_business").length
-  const individualGrants = grants.filter((g) => g.category === "individual").length
+
+  const countByCategory: Record<string, number> = {}
+  for (const g of grants) {
+    countByCategory[g.category] = (countByCategory[g.category] ?? 0) + 1
+  }
+  const categories = Object.keys(countByCategory)
 
   return (
     <div className="flex flex-col min-h-full">
@@ -68,7 +85,7 @@ export default async function HomePage() {
               <p className="text-sm text-zinc-500 mt-1">Total funding</p>
             </div>
             <div>
-              <p className="text-4xl font-bold text-zinc-900">2</p>
+              <p className="text-4xl font-bold text-zinc-900">{categories.length}</p>
               <p className="text-sm text-zinc-500 mt-1">Categories</p>
             </div>
           </div>
@@ -81,36 +98,25 @@ export default async function HomePage() {
               Browse by category
             </h2>
             <div className="grid grid-cols-2 gap-6">
-              <Link
-                href="/grants?category=small_business"
-                className="group rounded-xl border border-zinc-200 p-8 hover:border-zinc-400 transition-colors"
-              >
-                <div className="text-3xl mb-3">🏢</div>
-                <h3 className="text-lg font-semibold text-zinc-900 mb-2 group-hover:text-zinc-700">
-                  Small Business
-                </h3>
-                <p className="text-sm text-zinc-500 mb-4">
-                  Grants for entrepreneurs, startups, and growing businesses.
-                </p>
-                <p className="text-sm font-medium text-zinc-700">
-                  {businessGrants} grants →
-                </p>
-              </Link>
-              <Link
-                href="/grants?category=individual"
-                className="group rounded-xl border border-zinc-200 p-8 hover:border-zinc-400 transition-colors"
-              >
-                <div className="text-3xl mb-3">👤</div>
-                <h3 className="text-lg font-semibold text-zinc-900 mb-2 group-hover:text-zinc-700">
-                  Individual
-                </h3>
-                <p className="text-sm text-zinc-500 mb-4">
-                  Benefits and assistance programs for individuals and families.
-                </p>
-                <p className="text-sm font-medium text-zinc-700">
-                  {individualGrants} grants →
-                </p>
-              </Link>
+              {categories.map((cat) => {
+                const meta = CATEGORY_META[cat] ?? { label: cat.replace("_", " "), icon: "📋", description: "" }
+                return (
+                  <Link
+                    key={cat}
+                    href={`/grants?category=${cat}`}
+                    className="group rounded-xl border border-zinc-200 p-8 hover:border-zinc-400 transition-colors"
+                  >
+                    <div className="text-3xl mb-3">{meta.icon}</div>
+                    <h3 className="text-lg font-semibold text-zinc-900 mb-2 group-hover:text-zinc-700 capitalize">
+                      {meta.label}
+                    </h3>
+                    <p className="text-sm text-zinc-500 mb-4">{meta.description}</p>
+                    <p className="text-sm font-medium text-zinc-700">
+                      {countByCategory[cat]} grants →
+                    </p>
+                  </Link>
+                )
+              })}
             </div>
           </div>
         </section>

@@ -62,6 +62,19 @@ function GrantCard({ grant }: { grant: Grant }) {
   )
 }
 
+const CATEGORY_LABELS: Record<string, string> = {
+  small_business: "Small Business",
+  individual:     "Individual",
+  agricultural:   "Agricultural",
+  research:       "Research",
+  education:      "Education",
+  veterans:       "Veterans",
+  arts:           "Arts",
+  housing:        "Housing",
+  energy:         "Energy",
+  health:         "Health",
+}
+
 export default async function GrantsPage({
   searchParams,
 }: {
@@ -69,6 +82,7 @@ export default async function GrantsPage({
 }) {
   const { category, q } = await searchParams
   const allGrants = await getGrants()
+  const categories = [...new Set(allGrants.map((g) => g.category))]
 
   const grants = allGrants.filter((g) => {
     if (category && g.category !== category) return false
@@ -113,7 +127,7 @@ export default async function GrantsPage({
             placeholder="Search grants..."
             className="h-10 px-4 rounded-lg border border-zinc-300 text-sm text-zinc-900 placeholder:text-zinc-400 focus:outline-none focus:ring-2 focus:ring-zinc-900 min-w-[220px]"
           />
-          <div className="flex gap-2">
+          <div className="flex gap-2 flex-wrap">
             <Link
               href="/grants"
               className={`h-10 px-4 rounded-lg border text-sm font-medium transition-colors flex items-center ${
@@ -124,26 +138,19 @@ export default async function GrantsPage({
             >
               All
             </Link>
-            <Link
-              href="/grants?category=small_business"
-              className={`h-10 px-4 rounded-lg border text-sm font-medium transition-colors flex items-center ${
-                category === "small_business"
-                  ? "bg-zinc-900 text-white border-zinc-900"
-                  : "border-zinc-300 text-zinc-700 hover:border-zinc-500"
-              }`}
-            >
-              Small Business
-            </Link>
-            <Link
-              href="/grants?category=individual"
-              className={`h-10 px-4 rounded-lg border text-sm font-medium transition-colors flex items-center ${
-                category === "individual"
-                  ? "bg-zinc-900 text-white border-zinc-900"
-                  : "border-zinc-300 text-zinc-700 hover:border-zinc-500"
-              }`}
-            >
-              Individual
-            </Link>
+            {categories.map((cat) => (
+              <Link
+                key={cat}
+                href={`/grants?category=${cat}`}
+                className={`h-10 px-4 rounded-lg border text-sm font-medium transition-colors flex items-center ${
+                  category === cat
+                    ? "bg-zinc-900 text-white border-zinc-900"
+                    : "border-zinc-300 text-zinc-700 hover:border-zinc-500"
+                }`}
+              >
+                {CATEGORY_LABELS[cat] ?? cat.replace("_", " ")}
+              </Link>
+            ))}
           </div>
           <button
             type="submit"
