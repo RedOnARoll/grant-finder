@@ -1,6 +1,8 @@
 import Link from "next/link"
 import { getGrants } from "@/lib/supabase"
 
+export const dynamic = "force-dynamic"
+
 const CATEGORY_META: Record<string, { label: string; icon: string; description: string }> = {
   small_business: { label: "Small Business", icon: "🏢", description: "Grants for entrepreneurs, startups, and growing businesses." },
   individual:     { label: "Individual",     icon: "👤", description: "Benefits and assistance programs for individuals and families." },

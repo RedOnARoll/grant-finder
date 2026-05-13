@@ -2,6 +2,8 @@ import Link from "next/link"
 import { getGrants } from "@/lib/supabase"
 import type { Grant } from "@/lib/types"
 
+export const dynamic = "force-dynamic"
+
 function formatAmount(amount: number | null) {
   if (!amount) return "Varies"
   if (amount >= 1_000_000) return `$${(amount / 1_000_000).toFixed(1)}M`
