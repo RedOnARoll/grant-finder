@@ -84,7 +84,7 @@ export default async function GrantsPage({
 }) {
   const { category, q } = await searchParams
   const allGrants = await getGrants()
-  const categories = [...new Set(allGrants.map((g) => g.category))]
+  const categories = Object.keys(CATEGORY_LABELS)
 
   const grants = allGrants.filter((g) => {
     if (category && g.category !== category) return false

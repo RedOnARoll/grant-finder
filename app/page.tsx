@@ -24,7 +24,7 @@ export default async function HomePage() {
   for (const g of grants) {
     countByCategory[g.category] = (countByCategory[g.category] ?? 0) + 1
   }
-  const categories = Object.keys(countByCategory)
+  const categories = Object.keys(CATEGORY_META)
 
   return (
     <div className="flex flex-col min-h-full">
