@@ -13,14 +13,12 @@ function formatAmount(amount: number | null) {
 
 function GrantCard({ grant }: { grant: Grant }) {
   return (
-    <div className="rounded-xl border border-zinc-200 p-6 hover:border-zinc-400 transition-colors">
+    <div className="relative rounded-xl border border-zinc-200 p-6 hover:border-zinc-400 transition-colors">
+      <Link href={`/grants/${grant.slug}`} className="absolute inset-0 rounded-xl" aria-label={grant.name} />
       <div className="flex items-start justify-between gap-4 mb-3">
-        <Link
-          href={`/grants/${grant.slug}`}
-          className="text-base font-semibold text-zinc-900 leading-snug hover:underline"
-        >
+        <span className="text-base font-semibold text-zinc-900 leading-snug">
           {grant.name}
-        </Link>
+        </span>
         <span className="shrink-0 text-sm font-semibold text-zinc-900 bg-zinc-100 px-2 py-0.5 rounded-full">
           {formatAmount(grant.max_amount)}
         </span>
@@ -43,13 +41,7 @@ function GrantCard({ grant }: { grant: Grant }) {
             </span>
           )}
         </div>
-        <div className="flex gap-3 items-center">
-          <Link
-            href={`/grants/${grant.slug}`}
-            className="text-sm font-medium text-zinc-700 hover:text-zinc-900 transition-colors"
-          >
-            View details
-          </Link>
+        <div className="flex gap-3 items-center relative z-10">
           <a
             href={grant.application_url}
             target="_blank"
