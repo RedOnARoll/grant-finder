@@ -3,6 +3,8 @@ import { notFound } from "next/navigation"
 import { getGrants, getGrantBySlug } from "@/lib/supabase"
 import type { Grant, EligibilityCriteria } from "@/lib/types"
 import DocumentChecklist from "./DocumentChecklist"
+import StateApplyButton from "./StateApplyButton"
+import { STATE_APPLY_URLS } from "@/lib/state-programs"
 
 export const dynamic = "force-dynamic"
 export const dynamicParams = true
@@ -112,6 +114,7 @@ export default async function GrantDetailPage({
 
   const eligibility = eligibilityItems(grant.eligibility_criteria)
   const steps = applicationSteps(grant)
+  const stateUrls = STATE_APPLY_URLS[grant.slug] ?? null
 
   return (
     <div className="flex flex-col min-h-full">
@@ -186,14 +189,23 @@ export default async function GrantDetailPage({
             )}
           </div>
 
-          <a
-            href={grant.application_url}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-flex items-center justify-center h-12 px-8 rounded-full bg-zinc-900 text-white text-sm font-medium hover:bg-zinc-700 transition-colors"
-          >
-            Apply at {grant.agency} →
-          </a>
+          {stateUrls ? (
+            <StateApplyButton
+              slug={grant.slug}
+              fallbackUrl={grant.application_url}
+              stateUrls={stateUrls}
+              agencyName={grant.agency}
+            />
+          ) : (
+            <a
+              href={grant.application_url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center justify-center h-12 px-8 rounded-full bg-zinc-900 text-white text-sm font-medium hover:bg-zinc-700 transition-colors"
+            >
+              Apply at {grant.agency} →
+            </a>
+          )}
         </div>
 
         <hr className="border-zinc-200 mb-10" />
@@ -277,14 +289,23 @@ export default async function GrantDetailPage({
               Visit the official {grant.agency} page to start your application.
             </p>
           </div>
-          <a
-            href={grant.application_url}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-flex items-center justify-center h-10 px-6 rounded-full bg-zinc-900 text-white text-sm font-medium hover:bg-zinc-700 transition-colors whitespace-nowrap"
-          >
-            Start Application →
-          </a>
+          {stateUrls ? (
+            <StateApplyButton
+              slug={grant.slug}
+              fallbackUrl={grant.application_url}
+              stateUrls={stateUrls}
+              agencyName={grant.agency}
+            />
+          ) : (
+            <a
+              href={grant.application_url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center justify-center h-10 px-6 rounded-full bg-zinc-900 text-white text-sm font-medium hover:bg-zinc-700 transition-colors whitespace-nowrap"
+            >
+              Start Application →
+            </a>
+          )}
         </div>
       </main>
 
