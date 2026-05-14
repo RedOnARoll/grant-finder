@@ -4,6 +4,9 @@ import { getGrants, getGrantBySlug } from "@/lib/supabase"
 import type { Grant, EligibilityCriteria } from "@/lib/types"
 import DocumentChecklist from "./DocumentChecklist"
 
+export const dynamic = "force-dynamic"
+export const dynamicParams = true
+
 export async function generateStaticParams() {
   const grants = await getGrants()
   return grants.map((g) => ({ slug: g.slug }))
