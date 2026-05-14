@@ -189,14 +189,7 @@ export default async function GrantDetailPage({
             )}
           </div>
 
-          {stateUrls ? (
-            <StateApplyButton
-              slug={grant.slug}
-              fallbackUrl={grant.application_url}
-              stateUrls={stateUrls}
-              agencyName={grant.agency}
-            />
-          ) : (
+          {!stateUrls && (
             <a
               href={grant.application_url}
               target="_blank"
@@ -260,53 +253,54 @@ export default async function GrantDetailPage({
           </ol>
         </section>
 
-        {/* Official source iframe */}
-        <section className="mb-10">
-          <h2 className="text-xl font-semibold text-zinc-900 mb-2">Official Program Page</h2>
-          <p className="text-sm text-zinc-500 mb-4">
-            Preview of{" "}
-            <a href={grant.official_source_url} target="_blank" rel="noopener noreferrer" className="underline hover:text-zinc-900">
-              {grant.official_source_url}
-            </a>
-            . If the preview doesn&apos;t load, visit the link directly.
-          </p>
-          <div className="rounded-xl border border-zinc-200 overflow-hidden">
-            <iframe
-              src={grant.official_source_url}
-              title={`${grant.name} – official program page`}
-              className="w-full h-[600px]"
-              loading="lazy"
-              sandbox="allow-scripts allow-same-origin allow-forms allow-popups"
-            />
-          </div>
-        </section>
+        {/* State-specific apply + iframe (replaces static iframe for state programs) */}
+        {stateUrls ? (
+          <StateApplyButton
+            slug={grant.slug}
+            fallbackUrl={grant.application_url}
+            stateUrls={stateUrls}
+            agencyName={grant.agency}
+            officialSourceUrl={grant.official_source_url}
+          />
+        ) : (
+          <>
+            <section className="mb-10">
+              <h2 className="text-xl font-semibold text-zinc-900 mb-2">Official Program Page</h2>
+              <p className="text-sm text-zinc-500 mb-4">
+                <a href={grant.official_source_url} target="_blank" rel="noopener noreferrer" className="underline hover:text-zinc-900">
+                  {grant.official_source_url}
+                </a>
+                {" "}— if the preview doesn&apos;t load, open in a new tab.
+              </p>
+              <div className="rounded-xl border border-zinc-200 overflow-hidden">
+                <iframe
+                  src={grant.official_source_url}
+                  title={`${grant.name} – official program page`}
+                  className="w-full h-[600px]"
+                  loading="lazy"
+                  sandbox="allow-scripts allow-same-origin allow-forms allow-popups"
+                />
+              </div>
+            </section>
 
-        {/* Footer CTA */}
-        <div className="rounded-xl bg-zinc-50 border border-zinc-200 p-6 flex items-center justify-between gap-6 flex-wrap">
-          <div>
-            <p className="font-semibold text-zinc-900 mb-1">Ready to apply?</p>
-            <p className="text-sm text-zinc-500">
-              Visit the official {grant.agency} page to start your application.
-            </p>
-          </div>
-          {stateUrls ? (
-            <StateApplyButton
-              slug={grant.slug}
-              fallbackUrl={grant.application_url}
-              stateUrls={stateUrls}
-              agencyName={grant.agency}
-            />
-          ) : (
-            <a
-              href={grant.application_url}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center justify-center h-10 px-6 rounded-full bg-zinc-900 text-white text-sm font-medium hover:bg-zinc-700 transition-colors whitespace-nowrap"
-            >
-              Start Application →
-            </a>
-          )}
-        </div>
+            <div className="rounded-xl bg-zinc-50 border border-zinc-200 p-6 flex items-center justify-between gap-6 flex-wrap">
+              <div>
+                <p className="font-semibold text-zinc-900 mb-1">Ready to apply?</p>
+                <p className="text-sm text-zinc-500">
+                  Visit the official {grant.agency} page to start your application.
+                </p>
+              </div>
+              <a
+                href={grant.application_url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center justify-center h-10 px-6 rounded-full bg-zinc-900 text-white text-sm font-medium hover:bg-zinc-700 transition-colors whitespace-nowrap"
+              >
+                Start Application →
+              </a>
+            </div>
+          </>
+        )}
       </main>
 
       <footer className="border-t border-zinc-200 py-8 px-6 text-center text-sm text-zinc-500 mt-10">
