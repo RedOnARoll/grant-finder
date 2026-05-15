@@ -61,12 +61,8 @@ const CATEGORY_LABELS: Record<string, string> = {
   individual:     "Individual",
   agricultural:   "Agricultural",
   research:       "Research",
-  education:      "Education",
   veterans:       "Veterans",
   arts:           "Arts",
-  housing:        "Housing",
-  energy:         "Energy",
-  health:         "Health",
 }
 
 export default async function GrantsPage({
@@ -95,7 +91,10 @@ export default async function GrantsPage({
           </Link>
           <div className="flex gap-6 text-sm font-medium text-zinc-600">
             <Link href="/grants" className="text-zinc-900 font-semibold">
-              Browse Grants
+              Grants
+            </Link>
+            <Link href="/benefits" className="hover:text-zinc-900 transition-colors">
+              Benefits
             </Link>
             <Link href="/quiz" className="hover:text-zinc-900 transition-colors">
               Eligibility Quiz
