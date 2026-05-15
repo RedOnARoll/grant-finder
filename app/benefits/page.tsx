@@ -1,6 +1,7 @@
 import Link from "next/link"
 import { getBenefits } from "@/lib/supabase"
 import type { Grant } from "@/lib/types"
+import SortSelect from "@/components/SortSelect"
 
 type BenefitSort = "name_asc" | "subcategory_asc" | "amount_desc"
 
@@ -132,7 +133,6 @@ export default async function BenefitsPage({
 
         {/* Filters */}
         <form className="flex gap-3 mb-8 flex-wrap items-center">
-          {subcategory && <input type="hidden" name="subcategory" value={subcategory} />}
           <input
             type="text"
             name="q"
@@ -140,16 +140,10 @@ export default async function BenefitsPage({
             placeholder="Search benefits..."
             className="h-10 px-4 rounded-lg border border-zinc-300 text-sm text-zinc-900 placeholder:text-zinc-400 focus:outline-none focus:ring-2 focus:ring-zinc-900 min-w-[220px]"
           />
-          <select
-            name="sort"
-            defaultValue={sort ?? ""}
-            className="h-10 px-3 rounded-lg border border-zinc-300 text-sm text-zinc-700 focus:outline-none focus:ring-2 focus:ring-zinc-900 bg-white"
-          >
-            <option value="">Sort by…</option>
-            {(Object.entries(BENEFIT_SORT_LABELS) as [BenefitSort, string][]).map(([val, label]) => (
-              <option key={val} value={val}>{label}</option>
-            ))}
-          </select>
+          <SortSelect
+            value={sort ?? ""}
+            options={(Object.entries(BENEFIT_SORT_LABELS) as [BenefitSort, string][]).map(([val, label]) => ({ value: val, label }))}
+          />
           <div className="flex gap-2 flex-wrap">
             <Link
               href={`/benefits${sort ? `?sort=${sort}` : ""}`}

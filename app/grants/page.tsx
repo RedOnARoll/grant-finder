@@ -1,6 +1,7 @@
 import Link from "next/link"
 import { getGrants } from "@/lib/supabase"
-import type { Grant, GrantCategory } from "@/lib/types"
+import type { Grant } from "@/lib/types"
+import SortSelect from "@/components/SortSelect"
 
 export const dynamic = "force-dynamic"
 
@@ -142,7 +143,6 @@ export default async function GrantsPage({
 
         {/* Filters */}
         <form className="flex gap-3 mb-8 flex-wrap items-center">
-          {category && <input type="hidden" name="category" value={category} />}
           <input
             type="text"
             name="q"
@@ -150,16 +150,10 @@ export default async function GrantsPage({
             placeholder="Search grants..."
             className="h-10 px-4 rounded-lg border border-zinc-300 text-sm text-zinc-900 placeholder:text-zinc-400 focus:outline-none focus:ring-2 focus:ring-zinc-900 min-w-[220px]"
           />
-          <select
-            name="sort"
-            defaultValue={sort ?? ""}
-            className="h-10 px-3 rounded-lg border border-zinc-300 text-sm text-zinc-700 focus:outline-none focus:ring-2 focus:ring-zinc-900 bg-white"
-          >
-            <option value="">Sort by…</option>
-            {(Object.entries(SORT_LABELS) as [GrantSort, string][]).map(([val, label]) => (
-              <option key={val} value={val}>{label}</option>
-            ))}
-          </select>
+          <SortSelect
+            value={sort ?? ""}
+            options={(Object.entries(SORT_LABELS) as [GrantSort, string][]).map(([val, label]) => ({ value: val, label }))}
+          />
           <div className="flex gap-2 flex-wrap">
             <Link
               href={`/grants${sort ? `?sort=${sort}` : ""}`}
