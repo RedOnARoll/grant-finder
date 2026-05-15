@@ -597,12 +597,20 @@ const SUBCATEGORY_LABELS: Record<string, string> = {
   health: "Healthcare",
 }
 
+const SUBCATEGORY_ICONS: Record<string, string> = {
+  housing: "🏠", food: "🥗", disability: "♿",
+  education: "🎓", childcare: "👶", energy: "⚡", health: "❤️",
+}
+
 function Results({ benefits, onReset }: { benefits: Grant[]; onReset: () => void }) {
+  const [activeTab, setActiveTab] = useState<string>("all")
+  const [search, setSearch] = useState("")
+
   if (benefits.length === 0) {
     return (
       <div>
         <h2 className="text-2xl font-semibold text-zinc-900 mb-2">No matches found</h2>
-        <p className="text-zinc-500 mb-6">We couldn't find programs that match your current answers. Try adjusting your responses or browse all benefits.</p>
+        <p className="text-zinc-500 mb-6">We couldn't find programs matching your answers. Try adjusting your responses or browse all benefits.</p>
         <div className="flex gap-3">
           <button onClick={onReset} className="h-10 px-5 rounded-lg border border-zinc-300 text-sm font-medium text-zinc-700 hover:border-zinc-500 transition-colors">Start over</button>
           <Link href="/benefits" className="h-10 px-5 rounded-lg bg-blue-600 text-white text-sm font-medium hover:bg-blue-700 transition-colors inline-flex items-center">Browse all benefits</Link>
@@ -611,48 +619,79 @@ function Results({ benefits, onReset }: { benefits: Grant[]; onReset: () => void
     )
   }
 
-  const grouped: Record<string, Grant[]> = {}
-  for (const b of benefits) {
-    const key = b.subcategory ?? "other"
-    grouped[key] = [...(grouped[key] ?? []), b]
-  }
+  const tabs = Array.from(new Set(benefits.map((b) => b.subcategory ?? "other")))
+  const filtered = benefits.filter((b) => {
+    const matchTab = activeTab === "all" || b.subcategory === activeTab
+    const q = search.toLowerCase()
+    const matchSearch = !q || b.name.toLowerCase().includes(q) || b.description.toLowerCase().includes(q) || b.agency.toLowerCase().includes(q)
+    return matchTab && matchSearch
+  })
 
   return (
     <div>
-      <h2 className="text-2xl font-semibold text-zinc-900 mb-1">You may be eligible for {benefits.length} program{benefits.length === 1 ? "" : "s"}</h2>
-      <p className="text-zinc-500 mb-8">These are programs that match your situation. Verify eligibility directly with each program before applying.</p>
+      <h2 className="text-2xl font-semibold text-zinc-900 mb-1">
+        You may be eligible for {benefits.length} program{benefits.length === 1 ? "" : "s"}
+      </h2>
+      <p className="text-zinc-500 mb-6">Verify eligibility directly with each program before applying.</p>
 
-      <div className="space-y-8">
-        {Object.entries(grouped).map(([sub, items]) => (
-          <div key={sub}>
-            {Object.keys(grouped).length > 1 && (
-              <h3 className="text-sm font-semibold text-zinc-500 uppercase tracking-wide mb-3">
-                {SUBCATEGORY_LABELS[sub] ?? sub}
-              </h3>
-            )}
-            <div className="space-y-3">
-              {items.map((b) => (
-                <Link
-                  key={b.id}
-                  href={`/benefits/${b.slug}`}
-                  className="block rounded-xl border border-zinc-200 p-5 hover:border-blue-400 transition-colors"
-                >
-                  <div className="flex items-start justify-between gap-4 mb-1">
-                    <span className="font-semibold text-zinc-900 text-sm leading-snug">{b.name}</span>
-                    {b.subcategory && (
-                      <span className="shrink-0 text-xs px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 font-medium">
-                        {SUBCATEGORY_LABELS[b.subcategory] ?? b.subcategory}
-                      </span>
-                    )}
-                  </div>
-                  <p className="text-xs text-zinc-500 mb-1">{b.agency}</p>
-                  <p className="text-xs text-zinc-600 line-clamp-2">{b.description}</p>
-                </Link>
-              ))}
-            </div>
-          </div>
-        ))}
-      </div>
+      {/* Search */}
+      <input
+        type="text"
+        placeholder="Search programs…"
+        value={search}
+        onChange={(e) => setSearch(e.target.value)}
+        className="w-full h-10 px-4 rounded-lg border border-zinc-300 text-sm text-zinc-900 placeholder:text-zinc-400 focus:outline-none focus:ring-2 focus:ring-blue-500 mb-4"
+      />
+
+      {/* Category tabs */}
+      {tabs.length > 1 && (
+        <div className="flex gap-2 flex-wrap mb-6">
+          <button
+            onClick={() => setActiveTab("all")}
+            className={`h-8 px-3 rounded-full text-xs font-medium transition-colors ${activeTab === "all" ? "bg-blue-600 text-white" : "bg-zinc-100 text-zinc-600 hover:bg-zinc-200"}`}
+          >
+            All ({benefits.length})
+          </button>
+          {tabs.map((sub) => {
+            const count = benefits.filter((b) => (b.subcategory ?? "other") === sub).length
+            return (
+              <button
+                key={sub}
+                onClick={() => setActiveTab(sub)}
+                className={`h-8 px-3 rounded-full text-xs font-medium transition-colors ${activeTab === sub ? "bg-blue-600 text-white" : "bg-zinc-100 text-zinc-600 hover:bg-zinc-200"}`}
+              >
+                {SUBCATEGORY_ICONS[sub] ?? ""} {SUBCATEGORY_LABELS[sub] ?? sub} ({count})
+              </button>
+            )
+          })}
+        </div>
+      )}
+
+      {/* Results list */}
+      {filtered.length === 0 ? (
+        <p className="text-sm text-zinc-500 py-6 text-center">No programs match your search.</p>
+      ) : (
+        <div className="space-y-3">
+          {filtered.map((b) => (
+            <Link
+              key={b.id}
+              href={`/benefits/${b.slug}`}
+              className="block rounded-xl border border-zinc-200 p-5 hover:border-blue-400 transition-colors"
+            >
+              <div className="flex items-start justify-between gap-4 mb-1">
+                <span className="font-semibold text-zinc-900 text-sm leading-snug">{b.name}</span>
+                {b.subcategory && activeTab === "all" && (
+                  <span className="shrink-0 text-xs px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 font-medium whitespace-nowrap">
+                    {SUBCATEGORY_ICONS[b.subcategory]} {SUBCATEGORY_LABELS[b.subcategory] ?? b.subcategory}
+                  </span>
+                )}
+              </div>
+              <p className="text-xs text-zinc-500 mb-1">{b.agency}</p>
+              <p className="text-xs text-zinc-600 line-clamp-2">{b.description}</p>
+            </Link>
+          ))}
+        </div>
+      )}
 
       <div className="flex gap-3 mt-8">
         <button onClick={onReset} className="h-10 px-5 rounded-lg border border-zinc-300 text-sm font-medium text-zinc-700 hover:border-zinc-500 transition-colors">Start over</button>
