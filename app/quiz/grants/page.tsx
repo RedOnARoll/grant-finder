@@ -341,15 +341,53 @@ function StepIndividual({ profile, onChange, onNext, onBack }: { profile: Profil
   )
 }
 
+type GrantSortKey = "default" | "amount_desc" | "amount_asc" | "processing_asc" | "deadline_asc" | "name_asc"
+
+function applyGrantSort(grants: Grant[], sort: GrantSortKey): Grant[] {
+  const arr = [...grants]
+  switch (sort) {
+    case "amount_desc":    return arr.sort((a, b) => (b.max_amount ?? -1) - (a.max_amount ?? -1))
+    case "amount_asc":     return arr.sort((a, b) => (a.max_amount ?? Infinity) - (b.max_amount ?? Infinity))
+    case "processing_asc": return arr.sort((a, b) => (a.processing_time_days ?? Infinity) - (b.processing_time_days ?? Infinity))
+    case "deadline_asc":   return arr.sort((a, b) => {
+      if (!a.deadline && !b.deadline) return 0
+      if (!a.deadline) return 1
+      if (!b.deadline) return -1
+      return new Date(a.deadline).getTime() - new Date(b.deadline).getTime()
+    })
+    case "name_asc":       return arr.sort((a, b) => a.name.localeCompare(b.name))
+    default:               return arr
+  }
+}
+
 function Results({ matches, category, onReset }: { matches: Grant[]; category: Category; onReset: () => void }) {
+  const [sort, setSort] = useState<GrantSortKey>("default")
   const catLabel = CATEGORIES.find((c) => c.key === category)?.label ?? category
+  const sorted = applyGrantSort(matches, sort)
+
   return (
     <div>
-      <h2 className="text-2xl font-semibold text-zinc-900 mb-2">
-        {matches.length > 0
-          ? `${matches.length} ${catLabel} grant${matches.length === 1 ? "" : "s"} found`
-          : "No exact matches found"}
-      </h2>
+      <div className="flex items-start justify-between gap-4 mb-2 flex-wrap">
+        <h2 className="text-2xl font-semibold text-zinc-900">
+          {matches.length > 0
+            ? `${matches.length} ${catLabel} grant${matches.length === 1 ? "" : "s"} found`
+            : "No exact matches found"}
+        </h2>
+        {matches.length > 1 && (
+          <select
+            value={sort}
+            onChange={(e) => setSort(e.target.value as GrantSortKey)}
+            className="h-9 px-3 rounded-lg border border-zinc-300 text-sm text-zinc-700 focus:outline-none focus:ring-2 focus:ring-zinc-900 bg-white"
+          >
+            <option value="default">Sort by…</option>
+            <option value="amount_desc">Amount: High → Low</option>
+            <option value="amount_asc">Amount: Low → High</option>
+            <option value="processing_asc">Fastest processing</option>
+            <option value="deadline_asc">Deadline: Soonest</option>
+            <option value="name_asc">Name: A–Z</option>
+          </select>
+        )}
+      </div>
       <p className="text-zinc-500 mb-8">
         {matches.length > 0
           ? "Based on your answers. Always verify eligibility directly with the granting agency."
@@ -362,7 +400,7 @@ function Results({ matches, category, onReset }: { matches: Grant[]; category: C
         </Link>
       ) : (
         <div className="space-y-4 mb-8">
-          {matches.map((g) => (
+          {sorted.map((g) => (
             <div key={g.id} className="rounded-xl border border-zinc-200 p-5">
               <div className="flex items-start justify-between gap-4 mb-2">
                 <h3 className="font-semibold text-zinc-900">{g.name}</h3>

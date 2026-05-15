@@ -602,9 +602,22 @@ const SUBCATEGORY_ICONS: Record<string, string> = {
   education: "🎓", childcare: "👶", energy: "⚡", health: "❤️",
 }
 
+type BenefitSortKey = "default" | "name_asc" | "subcategory_asc" | "amount_desc"
+
+function applyBenefitSort(benefits: Grant[], sort: BenefitSortKey): Grant[] {
+  const arr = [...benefits]
+  switch (sort) {
+    case "name_asc":        return arr.sort((a, b) => a.name.localeCompare(b.name))
+    case "subcategory_asc": return arr.sort((a, b) => (a.subcategory ?? "").localeCompare(b.subcategory ?? ""))
+    case "amount_desc":     return arr.sort((a, b) => (b.max_amount ?? -1) - (a.max_amount ?? -1))
+    default:                return arr
+  }
+}
+
 function Results({ benefits, onReset }: { benefits: Grant[]; onReset: () => void }) {
   const [activeTab, setActiveTab] = useState<string>("all")
   const [search, setSearch] = useState("")
+  const [sort, setSort] = useState<BenefitSortKey>("default")
 
   if (benefits.length === 0) {
     return (
@@ -620,12 +633,15 @@ function Results({ benefits, onReset }: { benefits: Grant[]; onReset: () => void
   }
 
   const tabs = Array.from(new Set(benefits.map((b) => b.subcategory ?? "other")))
-  const filtered = benefits.filter((b) => {
-    const matchTab = activeTab === "all" || b.subcategory === activeTab
-    const q = search.toLowerCase()
-    const matchSearch = !q || b.name.toLowerCase().includes(q) || b.description.toLowerCase().includes(q) || b.agency.toLowerCase().includes(q)
-    return matchTab && matchSearch
-  })
+  const filtered = applyBenefitSort(
+    benefits.filter((b) => {
+      const matchTab = activeTab === "all" || b.subcategory === activeTab
+      const q = search.toLowerCase()
+      const matchSearch = !q || b.name.toLowerCase().includes(q) || b.description.toLowerCase().includes(q) || b.agency.toLowerCase().includes(q)
+      return matchTab && matchSearch
+    }),
+    sort
+  )
 
   return (
     <div>
@@ -634,14 +650,26 @@ function Results({ benefits, onReset }: { benefits: Grant[]; onReset: () => void
       </h2>
       <p className="text-zinc-500 mb-6">Verify eligibility directly with each program before applying.</p>
 
-      {/* Search */}
-      <input
-        type="text"
-        placeholder="Search programs…"
-        value={search}
-        onChange={(e) => setSearch(e.target.value)}
-        className="w-full h-10 px-4 rounded-lg border border-zinc-300 text-sm text-zinc-900 placeholder:text-zinc-400 focus:outline-none focus:ring-2 focus:ring-blue-500 mb-4"
-      />
+      {/* Search + Sort */}
+      <div className="flex gap-3 mb-4 flex-wrap">
+        <input
+          type="text"
+          placeholder="Search programs…"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          className="flex-1 min-w-[180px] h-10 px-4 rounded-lg border border-zinc-300 text-sm text-zinc-900 placeholder:text-zinc-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
+        />
+        <select
+          value={sort}
+          onChange={(e) => setSort(e.target.value as BenefitSortKey)}
+          className="h-10 px-3 rounded-lg border border-zinc-300 text-sm text-zinc-700 focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+        >
+          <option value="default">Sort by…</option>
+          <option value="name_asc">Name: A–Z</option>
+          <option value="subcategory_asc">Category</option>
+          <option value="amount_desc">Amount: High → Low</option>
+        </select>
+      </div>
 
       {/* Category tabs */}
       {tabs.length > 1 && (

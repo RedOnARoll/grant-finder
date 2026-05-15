@@ -1,6 +1,6 @@
 import Link from "next/link"
 import { getGrants } from "@/lib/supabase"
-import type { Grant } from "@/lib/types"
+import type { Grant, GrantCategory } from "@/lib/types"
 
 export const dynamic = "force-dynamic"
 
@@ -65,22 +65,51 @@ const CATEGORY_LABELS: Record<string, string> = {
   arts:           "Arts",
 }
 
+type GrantSort = "amount_desc" | "amount_asc" | "processing_asc" | "deadline_asc" | "name_asc"
+
+function sortGrants(grants: Grant[], sort: GrantSort | undefined): Grant[] {
+  const arr = [...grants]
+  switch (sort) {
+    case "amount_desc":  return arr.sort((a, b) => (b.max_amount ?? -1) - (a.max_amount ?? -1))
+    case "amount_asc":   return arr.sort((a, b) => (a.max_amount ?? Infinity) - (b.max_amount ?? Infinity))
+    case "processing_asc": return arr.sort((a, b) => (a.processing_time_days ?? Infinity) - (b.processing_time_days ?? Infinity))
+    case "deadline_asc": return arr.sort((a, b) => {
+      if (!a.deadline && !b.deadline) return 0
+      if (!a.deadline) return 1
+      if (!b.deadline) return -1
+      return new Date(a.deadline).getTime() - new Date(b.deadline).getTime()
+    })
+    case "name_asc":     return arr.sort((a, b) => a.name.localeCompare(b.name))
+    default:             return arr
+  }
+}
+
+const SORT_LABELS: Record<GrantSort, string> = {
+  amount_desc:     "Amount: High → Low",
+  amount_asc:      "Amount: Low → High",
+  processing_asc:  "Fastest processing",
+  deadline_asc:    "Deadline: Soonest",
+  name_asc:        "Name: A–Z",
+}
+
 export default async function GrantsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ category?: string; q?: string }>
+  searchParams: Promise<{ category?: string; q?: string; sort?: string }>
 }) {
-  const { category, q } = await searchParams
+  const { category, q, sort } = await searchParams
   const allGrants = await getGrants()
   const categories = Object.keys(CATEGORY_LABELS)
 
-  const grants = allGrants.filter((g) => {
+  const filtered = allGrants.filter((g) => {
     if (category && g.category !== category) return false
     if (q && !g.name.toLowerCase().includes(q.toLowerCase()) &&
         !g.description.toLowerCase().includes(q.toLowerCase()) &&
         !g.agency.toLowerCase().includes(q.toLowerCase())) return false
     return true
   })
+
+  const grants = sortGrants(filtered, sort as GrantSort | undefined)
 
   return (
     <div className="flex flex-col min-h-full">
@@ -112,7 +141,8 @@ export default async function GrantsPage({
         </div>
 
         {/* Filters */}
-        <form className="flex gap-3 mb-8 flex-wrap">
+        <form className="flex gap-3 mb-8 flex-wrap items-center">
+          {category && <input type="hidden" name="category" value={category} />}
           <input
             type="text"
             name="q"
@@ -120,9 +150,19 @@ export default async function GrantsPage({
             placeholder="Search grants..."
             className="h-10 px-4 rounded-lg border border-zinc-300 text-sm text-zinc-900 placeholder:text-zinc-400 focus:outline-none focus:ring-2 focus:ring-zinc-900 min-w-[220px]"
           />
+          <select
+            name="sort"
+            defaultValue={sort ?? ""}
+            className="h-10 px-3 rounded-lg border border-zinc-300 text-sm text-zinc-700 focus:outline-none focus:ring-2 focus:ring-zinc-900 bg-white"
+          >
+            <option value="">Sort by…</option>
+            {(Object.entries(SORT_LABELS) as [GrantSort, string][]).map(([val, label]) => (
+              <option key={val} value={val}>{label}</option>
+            ))}
+          </select>
           <div className="flex gap-2 flex-wrap">
             <Link
-              href="/grants"
+              href={`/grants${sort ? `?sort=${sort}` : ""}`}
               className={`h-10 px-4 rounded-lg border text-sm font-medium transition-colors flex items-center ${
                 !category
                   ? "bg-zinc-900 text-white border-zinc-900"
@@ -134,7 +174,7 @@ export default async function GrantsPage({
             {categories.map((cat) => (
               <Link
                 key={cat}
-                href={`/grants?category=${cat}`}
+                href={`/grants?category=${cat}${sort ? `&sort=${sort}` : ""}`}
                 className={`h-10 px-4 rounded-lg border text-sm font-medium transition-colors flex items-center ${
                   category === cat
                     ? "bg-zinc-900 text-white border-zinc-900"

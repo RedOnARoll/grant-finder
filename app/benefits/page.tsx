@@ -2,6 +2,24 @@ import Link from "next/link"
 import { getBenefits } from "@/lib/supabase"
 import type { Grant } from "@/lib/types"
 
+type BenefitSort = "name_asc" | "subcategory_asc" | "amount_desc"
+
+function sortBenefits(benefits: Grant[], sort: BenefitSort | undefined): Grant[] {
+  const arr = [...benefits]
+  switch (sort) {
+    case "name_asc":        return arr.sort((a, b) => a.name.localeCompare(b.name))
+    case "subcategory_asc": return arr.sort((a, b) => (a.subcategory ?? "").localeCompare(b.subcategory ?? ""))
+    case "amount_desc":     return arr.sort((a, b) => (b.max_amount ?? -1) - (a.max_amount ?? -1))
+    default:                return arr
+  }
+}
+
+const BENEFIT_SORT_LABELS: Record<BenefitSort, string> = {
+  name_asc:        "Name: A–Z",
+  subcategory_asc: "Category",
+  amount_desc:     "Amount: High → Low",
+}
+
 export const dynamic = "force-dynamic"
 
 function formatAmount(amount: number | null) {
@@ -67,18 +85,20 @@ const SUBCATEGORY_LABELS: Record<string, string> = {
 export default async function BenefitsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ subcategory?: string; q?: string }>
+  searchParams: Promise<{ subcategory?: string; q?: string; sort?: string }>
 }) {
-  const { subcategory, q } = await searchParams
+  const { subcategory, q, sort } = await searchParams
   const allBenefits = await getBenefits()
 
-  const benefits = allBenefits.filter((b) => {
+  const filtered = allBenefits.filter((b) => {
     if (subcategory && b.subcategory !== subcategory) return false
     if (q && !b.name.toLowerCase().includes(q.toLowerCase()) &&
         !b.description.toLowerCase().includes(q.toLowerCase()) &&
         !b.agency.toLowerCase().includes(q.toLowerCase())) return false
     return true
   })
+
+  const benefits = sortBenefits(filtered, sort as BenefitSort | undefined)
 
   return (
     <div className="flex flex-col min-h-full">
@@ -111,7 +131,8 @@ export default async function BenefitsPage({
         </div>
 
         {/* Filters */}
-        <form className="flex gap-3 mb-8 flex-wrap">
+        <form className="flex gap-3 mb-8 flex-wrap items-center">
+          {subcategory && <input type="hidden" name="subcategory" value={subcategory} />}
           <input
             type="text"
             name="q"
@@ -119,9 +140,19 @@ export default async function BenefitsPage({
             placeholder="Search benefits..."
             className="h-10 px-4 rounded-lg border border-zinc-300 text-sm text-zinc-900 placeholder:text-zinc-400 focus:outline-none focus:ring-2 focus:ring-zinc-900 min-w-[220px]"
           />
+          <select
+            name="sort"
+            defaultValue={sort ?? ""}
+            className="h-10 px-3 rounded-lg border border-zinc-300 text-sm text-zinc-700 focus:outline-none focus:ring-2 focus:ring-zinc-900 bg-white"
+          >
+            <option value="">Sort by…</option>
+            {(Object.entries(BENEFIT_SORT_LABELS) as [BenefitSort, string][]).map(([val, label]) => (
+              <option key={val} value={val}>{label}</option>
+            ))}
+          </select>
           <div className="flex gap-2 flex-wrap">
             <Link
-              href="/benefits"
+              href={`/benefits${sort ? `?sort=${sort}` : ""}`}
               className={`h-10 px-4 rounded-lg border text-sm font-medium transition-colors flex items-center ${
                 !subcategory
                   ? "bg-zinc-900 text-white border-zinc-900"
@@ -133,7 +164,7 @@ export default async function BenefitsPage({
             {Object.entries(SUBCATEGORY_LABELS).map(([key, label]) => (
               <Link
                 key={key}
-                href={`/benefits?subcategory=${key}`}
+                href={`/benefits?subcategory=${key}${sort ? `&sort=${sort}` : ""}`}
                 className={`h-10 px-4 rounded-lg border text-sm font-medium transition-colors flex items-center ${
                   subcategory === key
                     ? "bg-zinc-900 text-white border-zinc-900"
