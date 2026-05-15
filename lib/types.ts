@@ -10,6 +10,15 @@ export type GrantCategory =
   | "energy"
   | "health"
 
+export type BenefitSubcategory =
+  | "housing"
+  | "food"
+  | "disability"
+  | "education"
+  | "childcare"
+  | "energy"
+  | "health"
+
 export interface EligibilityCriteria {
   industries?: string[]
   max_employees?: number
@@ -35,11 +44,12 @@ export interface Grant {
   agency: string
   category: GrantCategory
   subcategory: string | null
+  type: "grant" | "benefit"
   description: string
   max_amount: number | null
   is_recurring: boolean
   deadline: string | null
-  eligibility_criteria: EligibilityCriteria
+  eligibility_criteria: EligibilityCriteria | string[]
   required_documents: string[]
   application_url: string
   official_source_url: string
