@@ -370,15 +370,16 @@ function DocVisual({ category }: { category: DocCategory }) {
 // ─── Main component ─────────────────────────────────────────────────────────
 
 export default function DocumentGuide({ documents }: { documents: string[] }) {
-  const [checked, setChecked] = useState<boolean[]>(documents.map(() => false))
-  const [expanded, setExpanded] = useState<boolean[]>(documents.map(() => false))
+  // Strip out the application form itself — that's what we're helping them fill out
+  const filtered = documents.filter(doc => categorize(doc) !== "application_form")
 
-  const categories = documents.map(categorize)
-  const nonFormDocs = documents.filter((_, i) => categories[i] !== "application_form")
-  const checkableCount = nonFormDocs.length
-  const checkedCount = checked.filter((v, i) => v && categories[i] !== "application_form").length
+  const [checked, setChecked] = useState<boolean[]>(filtered.map(() => false))
+  const [expanded, setExpanded] = useState<boolean[]>(filtered.map(() => false))
 
-  if (documents.length === 0) {
+  const checkableCount = filtered.length
+  const checkedCount = checked.filter(Boolean).length
+
+  if (filtered.length === 0) {
     return (
       <div className="rounded-xl border border-zinc-200 p-6 text-center text-zinc-500 text-sm">
         No specific documents listed for this program.
@@ -405,45 +406,34 @@ export default function DocumentGuide({ documents }: { documents: string[] }) {
       )}
 
       <div className="space-y-3">
-        {documents.map((doc, i) => {
-          const cat = categories[i]
-          const isForm = cat === "application_form"
+        {filtered.map((doc, i) => {
+          const cat = categorize(doc)
           const info = CATEGORY_INFO[cat]
 
           return (
             <div
               key={i}
               className={`rounded-xl border transition-colors ${
-                isForm
-                  ? "border-blue-200 bg-blue-50"
-                  : checked[i]
-                  ? "border-green-200 bg-green-50"
-                  : "border-zinc-200 bg-white"
+                checked[i] ? "border-green-200 bg-green-50" : "border-zinc-200 bg-white"
               }`}
             >
               {/* Header row */}
               <div className="flex items-center gap-4 p-4">
-                {isForm ? (
-                  <div className="shrink-0 w-6 h-6 rounded-full bg-blue-100 border border-blue-300 flex items-center justify-center text-blue-500 text-xs font-bold">→</div>
-                ) : (
-                  <button
-                    type="button"
-                    onClick={() => setChecked((prev) => prev.map((v, j) => (j === i ? !v : v)))}
-                    className={`shrink-0 w-6 h-6 rounded-full border-2 flex items-center justify-center transition-colors ${
-                      checked[i] ? "bg-green-600 border-green-600" : "border-zinc-300 hover:border-zinc-500"
-                    }`}
-                  >
-                    {checked[i] && (
-                      <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 12 12">
-                        <path d="M2 6l3 3 5-5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-                      </svg>
-                    )}
-                  </button>
-                )}
+                <button
+                  type="button"
+                  onClick={() => setChecked((prev) => prev.map((v, j) => (j === i ? !v : v)))}
+                  className={`shrink-0 w-6 h-6 rounded-full border-2 flex items-center justify-center transition-colors ${
+                    checked[i] ? "bg-green-600 border-green-600" : "border-zinc-300 hover:border-zinc-500"
+                  }`}
+                >
+                  {checked[i] && (
+                    <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 12 12">
+                      <path d="M2 6l3 3 5-5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                    </svg>
+                  )}
+                </button>
 
-                <span className={`flex-1 text-sm font-medium ${
-                  isForm ? "text-blue-900" : checked[i] ? "line-through text-zinc-400" : "text-zinc-900"
-                }`}>
+                <span className={`flex-1 text-sm font-medium ${checked[i] ? "line-through text-zinc-400" : "text-zinc-900"}`}>
                   {doc}
                 </span>
 
@@ -463,19 +453,14 @@ export default function DocumentGuide({ documents }: { documents: string[] }) {
               {expanded[i] && (
                 <div className="px-4 pb-4 border-t border-zinc-100">
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-4">
-                    {/* Visual */}
                     <DocVisual category={cat} />
-
-                    {/* Text */}
                     <div className="space-y-3">
                       <div>
                         <p className="text-xs font-semibold text-zinc-400 uppercase tracking-wide mb-1">What it is</p>
                         <p className="text-sm text-zinc-700 leading-6">{info.what}</p>
                       </div>
                       <div>
-                        <p className="text-xs font-semibold text-zinc-400 uppercase tracking-wide mb-1">
-                          {isForm ? "What to expect" : "How to get it"}
-                        </p>
+                        <p className="text-xs font-semibold text-zinc-400 uppercase tracking-wide mb-1">How to get it</p>
                         <p className="text-sm text-zinc-700 leading-6">{info.how}</p>
                       </div>
                     </div>
