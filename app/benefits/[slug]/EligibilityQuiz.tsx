@@ -51,6 +51,37 @@ function isInformational(text: string): boolean {
   const programSubject = /^(individual patients|coverage entities|uninsured patients|this program|the program|benefit recipients|recipients automatically|annual|enrollment|access)/i.test(text)
   if (programSubject && !personalSubject && !/\bmust\b/.test(lower)) return true
 
+  // Priority/availability notes
+  if (/^priority (given|is given) to/i.test(text)) return true
+  if (/\bgiven priority\b/i.test(text) && !/^must\b/i.test(text)) return true
+  if (/^benefits? are distributed first.come/i.test(text)) return true
+  if (/^(enrollment|participation) may be limited/i.test(text)) return true
+
+  // Open/no-requirement notes
+  if (/^open to all/i.test(text)) return true
+  if (/^available to (renters?|prospective|current|all|individuals)/i.test(text)) return true
+  if (/^no (income|prior|separate|documentation|additional application|individual income)/i.test(text)) return true
+  if (lower.includes("no income requirement")) return true
+  if (lower.includes("income limits vary")) return true
+  if (lower.includes("may not participate in both")) return true
+
+  // Informational program notes
+  if (/^(eligibility criteria|documentation requirements|specific (eligibility|services|criteria)).*vary/i.test(text)) return true
+  if (/^some states? or local/i.test(text)) return true
+  if (/^participation is voluntary/i.test(text)) return true
+  if (/^program (availability|funds|funding|provides|design)/i.test(text)) return true
+  if (/^(schools?|sites?|facilities?) are selected/i.test(text)) return true
+  if (/^(congregate meals?|home.delivered meals?|meals?) (are )?available/i.test(text)) return true
+  if (/^(cil|program) (boards?|staff)\b/i.test(text)) return true
+  if (lower.startsWith("services available to")) return true
+  if (/^(elderly|seniors?|children|families|spouses?).*(given priority|may also qualify)/i.test(text)) return true
+  if (/^automatic eligibility/i.test(text)) return true
+  if (/^(children|adults?) in (foster care|head start|medicaid).*(categorically eligible|may be enrolled)/i.test(text)) return true
+  if (/^households? may not participate in both/i.test(text)) return true
+  if (/^(no|services? available|benefit recipients)/i.test(text) && !lower.includes("must")) return true
+  if (/^income limits? vary\b/i.test(text)) return true
+  if (/^starting january/i.test(text)) return true
+
   return false
 }
 
@@ -126,8 +157,20 @@ function parseStringRequirement(req: string, index: number): Question {
     }
   }
 
-  // General US residency
-  if (lower.includes("resident") || lower.includes("residency") || lower.includes("reside in")) {
+  // School/facility enrollment (check before residency — "residential care institution" contains "resident")
+  if ((lower.includes("enrolled") || lower.includes("enrollment")) &&
+      (lower.includes("school") || lower.includes("care") || lower.includes("facility") || lower.includes("institution"))) {
+    return {
+      kind: "yesno", id, qualifyingAnswer: "yes", failReason,
+      label: "Are you (or your child) enrolled in a participating program or school?",
+      meaning: req,
+      proof: "Enrollment confirmation letter or school ID from the institution. The institution typically registers with the program on your behalf — contact the school or facility's administration to confirm they participate.",
+    }
+  }
+
+  // General US residency — exclude "residential care" which matches "resident" spuriously
+  if ((lower.includes("resident") || lower.includes("residency") || lower.includes("reside in")) &&
+      !lower.includes("residential care") && !lower.includes("residential facility")) {
     return {
       kind: "yesno", id, qualifyingAnswer: "yes", failReason,
       label: "Are you a US resident?",
@@ -257,6 +300,82 @@ function parseStringRequirement(req: string, index: number): Question {
     }
   }
 
+  // Professional employment requirement
+  if (lower.includes("must be employed") || lower.includes("employed full-time as") || lower.includes("employed by an agency")) {
+    const profMatch = req.match(/(?:employed(?:\s+full-time)?\s+as\s+(?:a|an)\s+)(.+?)(?:\s*,|\s+or\b|$)/i)
+    const profession = profMatch ? profMatch[1].trim() : "an eligible profession for this program"
+    return {
+      kind: "yesno", id, qualifyingAnswer: "yes", failReason,
+      label: `Are you currently employed as ${profession}?`,
+      meaning: `This program requires you to be employed full-time in a qualifying profession. ${req}`,
+      proof: "An official letter on your employer's letterhead confirming your job title, full-time status, and the agency or organization you work for. HR departments can usually provide this same-day.",
+    }
+  }
+
+  // Home non-ownership
+  if (lower.includes("must not have owned") || lower.includes("not have owned a primary residence") || (lower.includes("owned") && lower.includes("prior"))) {
+    return {
+      kind: "yesno", id, qualifyingAnswer: "yes", failReason,
+      label: "Have you NOT owned a primary residence in the past 12 months?",
+      meaning: "You must not have been a homeowner in the year before applying. This is a first-time or returning homebuyer requirement. Owning investment property or inheriting a share of a home may also count — ask the program for clarification.",
+      proof: "You may be asked to sign a self-certification form. If you previously owned a home and sold it, you may need closing documents showing the sale date.",
+    }
+  }
+
+  // Occupancy commitment
+  if (lower.includes("must commit to occupying") || lower.includes("sole residence for at least") || lower.includes("commit to living")) {
+    const monthsMatch = req.match(/(\d+)\s*months/i)
+    const months = monthsMatch ? monthsMatch[1] : "36"
+    return {
+      kind: "yesno", id, qualifyingAnswer: "yes", failReason,
+      label: `Can you commit to living in the home as your sole residence for at least ${months} months?`,
+      meaning: `You must use the property as your primary, full-time residence for at least ${months} months — you cannot rent it out, use it as a vacation home, or leave it vacant during this period. Violating this may require repaying the benefit.`,
+      proof: "You'll sign a legal agreement at closing committing to this occupancy requirement. No advance document is needed to apply.",
+    }
+  }
+
+  // Financing/purchase readiness
+  if (lower.includes("obtain financing") || lower.includes("pay cash at the time") || lower.includes("proof of cash financing") || lower.includes("mortgage pre-approval")) {
+    return {
+      kind: "yesno", id, qualifyingAnswer: "yes", failReason,
+      label: "Do you have financing (mortgage) or cash ready to purchase the home?",
+      meaning: "You must either have a mortgage pre-approval letter from a lender or documented funds sufficient to buy the property outright in cash. This confirms you are a serious buyer who can close.",
+      proof: "Mortgage pre-approval letter from a HUD-approved lender (shows loan amount and terms), OR bank/investment account statements showing liquid funds equal to the purchase price.",
+    }
+  }
+
+  // Wartime military service
+  if (lower.includes("wartime period") || lower.includes("active duty with at least one day during")) {
+    return {
+      kind: "yesno", id, qualifyingAnswer: "yes", failReason,
+      label: "Did you serve on active duty during a qualifying wartime period?",
+      meaning: "Qualifying wartime periods include: World War II (Dec 7, 1941–Dec 31, 1946), Korean War (Jun 27, 1950–Jan 31, 1955), Vietnam Era (Aug 5, 1964–May 7, 1975), Gulf War (Aug 2, 1990–present). You must have served at least one day during one of these periods, with a minimum of 90 days of active service total.",
+      proof: "DD-214 (Certificate of Release or Discharge from Active Duty) — it shows your service dates and period. Look at Block 18 'Remarks' and Block 12 for service dates.",
+    }
+  }
+
+  // Service-connected disability
+  if ((lower.includes("connection between") && lower.includes("military service")) || lower.includes("service-connected") || lower.includes("in-service event")) {
+    return {
+      kind: "yesno", id, qualifyingAnswer: "yes", failReason,
+      label: "Do you have a health condition connected to your military service?",
+      meaning: "A service-connected condition is a disability, illness, or injury that was caused or worsened by your active duty service. This includes physical injuries, mental health conditions (PTSD, depression), toxic exposure conditions (Agent Orange, burn pits), and many chronic diseases. The VA uses a 'benefit of the doubt' standard — you don't need to prove it beyond a reasonable doubt.",
+      proof: "Medical records documenting your current condition, and any service records showing the in-service event or exposure. If records are unavailable, 'buddy statements' from fellow service members who witnessed the event are accepted. A VA-accredited attorney or Veterans Service Organization (VSO) can help for free.",
+    }
+  }
+
+  // Net worth / asset limit
+  if ((lower.includes("net worth") || lower.includes("net worth limit")) && (lower.includes("must meet") || lower.includes("must not exceed"))) {
+    const limitMatch = req.match(/\$([0-9,]+)/)
+    const limit = limitMatch ? `$${limitMatch[1]}` : "the program limit"
+    return {
+      kind: "yesno", id, qualifyingAnswer: "yes", failReason,
+      label: `Is your net worth under ${limit}?`,
+      meaning: `Net worth means the total value of everything you own (savings, investments, property other than your primary home) minus what you owe. Your primary home and one vehicle are typically excluded. Net worth above the limit disqualifies you, but certain asset transfers to family or trusts may affect this calculation.`,
+      proof: "Bank statements, investment account statements, property appraisals (for non-primary-home property), and vehicle values. Exclude your primary residence and one car from the total.",
+    }
+  }
+
   // Fallback: convert statement to question
   return {
     kind: "yesno", id, qualifyingAnswer: "yes", failReason,
@@ -327,8 +446,33 @@ function buildFromObject(c: EligibilityCriteria): Question[] {
 }
 
 function buildQuestions(criteria: EligibilityCriteria | string[]): Question[] {
-  if (Array.isArray(criteria)) return criteria.map((req, i) => parseStringRequirement(req, i))
-  return buildFromObject(criteria)
+  const raw = Array.isArray(criteria) ? criteria.map((req, i) => parseStringRequirement(req, i)) : buildFromObject(criteria)
+
+  // Deduplicate: keep only one income question per type (highest limit = most inclusive)
+  const seen = new Set<string>()
+  const deduped: Question[] = []
+  let maxPovertyPct = 0, maxAmiPct = 0, maxDollar = 0
+  let povertyIdx = -1, amiIdx = -1, dollarIdx = -1
+
+  for (const q of raw) {
+    if (q.kind === "poverty") {
+      if (q.percent > maxPovertyPct) { maxPovertyPct = q.percent; if (povertyIdx >= 0) deduped[povertyIdx] = q; else { povertyIdx = deduped.length; deduped.push(q) } }
+      continue
+    }
+    if (q.kind === "ami") {
+      if (q.percent > maxAmiPct) { maxAmiPct = q.percent; if (amiIdx >= 0) deduped[amiIdx] = q; else { amiIdx = deduped.length; deduped.push(q) } }
+      continue
+    }
+    if (q.kind === "dollar") {
+      if (q.limit > maxDollar) { maxDollar = q.limit; if (dollarIdx >= 0) deduped[dollarIdx] = q; else { dollarIdx = deduped.length; deduped.push(q) } }
+      continue
+    }
+    // Deduplicate yesno by label similarity
+    const key = q.kind === "yesno" ? q.label.toLowerCase().slice(0, 40) : q.id
+    if (!seen.has(key)) { seen.add(key); deduped.push(q) }
+  }
+
+  return deduped
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────

@@ -23,11 +23,20 @@ type DocCategory =
   | "immunization"
   | "pregnancy"
   | "veteran"
+  | "employment"
+  | "tribal"
+  | "transcript"
+  | "fafsa"
+  | "recommendation"
+  | "snap_ebt"
+  | "rental_history"
+  | "housing_instability"
+  | "mortgage_finance"
   | "generic"
 
 function categorize(doc: string): DocCategory {
   const d = doc.toLowerCase()
-  if (d.includes("application") || d.includes("enrollment form")) return "application_form"
+  if (!d.includes("fafsa") && (d.includes("application") || d.includes("enrollment form"))) return "application_form"
   if (d.includes("social security") && (d.includes("card") || d.includes("number"))) return "ssn"
   if (d.includes("birth certificate") || d.includes("identity and age") || d.includes("proof of age")) return "birth_certificate"
   if (d.includes("photo id") || d.includes("government-issued") || d.includes("driver") || d.includes("passport") || (d.includes("proof of identity") && !d.includes("age"))) return "photo_id"
@@ -45,6 +54,15 @@ function categorize(doc: string): DocCategory {
   if (d.includes("immunization") || d.includes("vaccination") || d.includes("shot record")) return "immunization"
   if (d.includes("pregnancy") || d.includes("prenatal") || d.includes("due date")) return "pregnancy"
   if (d.includes("veteran") || d.includes("dd-214") || d.includes("military discharge")) return "veteran"
+  if (d.includes("tribal enrollment") || d.includes("degree of indian blood") || d.includes("cdib") || d.includes("tribal membership") || d.includes("tribal enrollment card")) return "tribal"
+  if (d.includes("fafsa") || d.includes("student aid report") || d.includes("sar)") || d.includes("financial aid")) return "fafsa"
+  if (d.includes("transcript") || d.includes("academic record")) return "transcript"
+  if (d.includes("letter of recommendation") || d.includes("letters of recommendation") || d.includes("recommendation from") || d.includes("letters from mentor")) return "recommendation"
+  if (d.includes("ebt card") || (d.includes("snap") && d.includes("card"))) return "snap_ebt"
+  if (d.includes("rental history") || d.includes("landlord reference")) return "rental_history"
+  if (d.includes("housing instability") || d.includes("homelessness risk") || d.includes("unstable housing")) return "housing_instability"
+  if (d.includes("mortgage pre-approval") || d.includes("proof of cash financing") || d.includes("cash financing") || (d.includes("mortgage") && d.includes("pre-approval"))) return "mortgage_finance"
+  if (d.includes("proof of employment") || d.includes("employment verification") || d.includes("full-time employment") || d.includes("employer letter") || (d.includes("employed") && d.includes("profession"))) return "employment"
   return "generic"
 }
 
@@ -127,6 +145,42 @@ const CATEGORY_INFO: Record<DocCategory, DocInfo> = {
   veteran: {
     what: "Your military discharge document proving your service record.",
     how: "You need Form DD-214 (Certificate of Release or Discharge from Active Duty) — specifically Member Copy 4, which contains the most complete information. If you've lost yours, request a free replacement at archives.gov/veterans/military-service-records — it takes 1–10 days online.",
+  },
+  employment: {
+    what: "An official document proving you are employed in a qualifying profession.",
+    how: "Ask your HR department or supervisor for an employment verification letter on official letterhead. It must include your name, employer name, job title, full-time status, and start date. Most HR departments can produce this same-day at no cost.",
+  },
+  tribal: {
+    what: "Official documentation of your enrollment in a federally recognized Indian tribe.",
+    how: "Your tribal enrollment card or Certificate of Degree of Indian Blood (CDIB) is issued by your tribe's enrollment office. If you need a replacement or don't have one, contact your tribe's enrollment department directly — this is a free service for tribal members.",
+  },
+  transcript: {
+    what: "An official academic record showing your courses, grades, and degree(s) earned.",
+    how: "Request official transcripts from your school's registrar office — 'official' means sealed or sent directly from the institution. Processing takes 1–5 business days and may cost $5–$15 per transcript. Most schools also offer electronic transcripts (eSCRIP or similar) that are delivered the same day.",
+  },
+  fafsa: {
+    what: "The Free Application for Federal Student Aid — the government's financial need form.",
+    how: "Complete the FAFSA online at studentaid.gov — it's free. You'll need your (and your parents', if dependent) Social Security number, tax return from 2 years prior, and bank account information. The Student Aid Report (SAR) is generated after submission and summarizes your eligibility. You can download your SAR from studentaid.gov.",
+  },
+  recommendation: {
+    what: "Letters written by professors, supervisors, or mentors supporting your application.",
+    how: "Ask recommenders at least 4–6 weeks before your deadline. Provide each person with your resume, the program description, and key talking points. Most programs accept letters sent directly from the recommender's institutional email via the program's online portal — they do not need to be physical letters.",
+  },
+  snap_ebt: {
+    what: "Your EBT (Electronic Benefit Transfer) card that holds your SNAP food assistance balance.",
+    how: "Your EBT card was mailed to you when you were approved for SNAP benefits. It works like a debit card at participating grocery stores and markets. If your card is lost or stolen, call the number on the back of the card or contact your state's EBT customer service — replacement is free and takes 3–5 days.",
+  },
+  rental_history: {
+    what: "A record of your past rental experience and references from previous landlords.",
+    how: "Collect contact information for landlords from your last 2–3 residences. Ask each landlord if they're willing to provide a reference. Some housing authorities have a specific form; others accept a simple letter confirming dates of tenancy and your standing as a tenant (on-time payments, no lease violations). If you have no rental history, a personal reference from an employer or social worker may be accepted.",
+  },
+  housing_instability: {
+    what: "Documentation proving you are currently homeless, at risk of homelessness, or in unstable housing.",
+    how: "Acceptable forms vary by program but typically include: a letter from a shelter or transitional housing provider, a letter from a social worker or case manager, an eviction notice, a utility shutoff notice, or a signed statement from a family/friend confirming you are doubling up with them. The program's intake worker can help you determine what will be accepted.",
+  },
+  mortgage_finance: {
+    what: "A lender's letter confirming you qualify for a home loan, or bank records showing you have funds to purchase outright.",
+    how: "For a mortgage pre-approval: contact a HUD-approved lender — they'll review your credit, income, and assets and issue a pre-approval letter (usually within 1–3 days, free of charge). For cash purchases: printouts of your bank or investment account statements showing liquid funds equal to the purchase price, dated within the last 60 days.",
   },
   generic: {
     what: "Supporting documentation for your application.",
@@ -346,6 +400,132 @@ function DocVisual({ category }: { category: DocCategory }) {
           <div><span className="text-white/50">Branch: </span>U.S. ARMY</div>
           <div><span className="text-white/50">Service Dates: </span>01/2018 – 01/2022</div>
           <div><span className="text-white/50">Character: </span>HONORABLE</div>
+        </div>
+      )
+
+    case "employment":
+      return (
+        <div className="rounded-lg border border-zinc-300 bg-white p-4 text-xs text-zinc-700 space-y-2">
+          <div className="font-bold text-zinc-900 border-b border-zinc-200 pb-1">EMPLOYMENT VERIFICATION</div>
+          <p className="text-[11px] leading-4 text-zinc-600">To Whom It May Concern,</p>
+          <p className="text-[11px] leading-4">This is to confirm that <span className="font-semibold">EMPLOYEE NAME</span> has been employed full-time as a <span className="font-semibold">JOB TITLE</span> with our organization since <span className="font-semibold">START DATE</span>.</p>
+          <div className="border-t border-zinc-200 pt-2 text-[10px] text-zinc-500">
+            Employer: ORGANIZATION NAME<br />
+            HR Contact: _________________<br />
+            Signature: _________________
+          </div>
+        </div>
+      )
+
+    case "tribal":
+      return (
+        <div className="rounded-lg bg-gradient-to-br from-amber-800 to-amber-900 p-4 text-white font-mono text-xs space-y-2">
+          <div className="flex items-center gap-2 border-b border-white/20 pb-2">
+            <div className="text-[16px]">⭐</div>
+            <div>
+              <div className="font-bold text-yellow-300 text-[11px]">TRIBAL ENROLLMENT CARD</div>
+              <div className="text-white/60 text-[10px]">Federally Recognized Tribe</div>
+            </div>
+          </div>
+          <div><span className="text-white/50">Name: </span>MEMBER NAME</div>
+          <div><span className="text-white/50">Tribal #: </span>XXXX-XXXX</div>
+          <div><span className="text-white/50">Blood Quantum: </span>X/X</div>
+          <div className="text-yellow-300 text-[10px] mt-1">Issued by: Tribal Enrollment Office</div>
+        </div>
+      )
+
+    case "transcript":
+      return (
+        <div className="rounded-lg border border-zinc-300 bg-white p-4 font-mono text-xs text-zinc-700 space-y-1">
+          <div className="font-bold text-zinc-900 border-b border-zinc-200 pb-1 mb-1">OFFICIAL TRANSCRIPT</div>
+          <div className="text-[11px] text-zinc-500">University Name · Student ID: XXXXXXX</div>
+          {[["MATH 101", "A", "3.0"], ["ENG 201", "B+", "3.3"], ["BIO 150", "A-", "3.7"]].map(([c,g,q]) => (
+            <div key={c} className="flex justify-between text-[11px]">
+              <span>{c}</span><span>{g}</span><span className="text-zinc-400">{q}</span>
+            </div>
+          ))}
+          <div className="flex justify-between border-t border-zinc-200 pt-1 mt-1 font-semibold text-[11px]">
+            <span>Cumulative GPA:</span><span>3.45</span>
+          </div>
+          <div className="text-zinc-400 text-[10px] mt-1 italic">Official — Registrar Seal Required</div>
+        </div>
+      )
+
+    case "fafsa":
+      return (
+        <div className="rounded-lg border border-blue-200 bg-blue-50 p-4 text-xs text-blue-900 space-y-2">
+          <div className="flex items-center gap-2 border-b border-blue-200 pb-2">
+            <div className="w-6 h-6 rounded bg-blue-600 flex items-center justify-center text-white font-bold text-[10px] shrink-0">ED</div>
+            <span className="font-bold">FAFSA — Student Aid Report</span>
+          </div>
+          <div className="flex justify-between"><span>EFC:</span><span className="font-semibold">$0</span></div>
+          <div className="flex justify-between"><span>Dependency Status:</span><span>Independent</span></div>
+          <div className="flex justify-between"><span>Pell Grant Eligible:</span><span className="text-green-700 font-semibold">Yes</span></div>
+          <div className="text-blue-600 text-[10px] mt-1">Available at studentaid.gov after submitting FAFSA</div>
+        </div>
+      )
+
+    case "recommendation":
+      return (
+        <div className="rounded-lg border border-zinc-300 bg-white p-4 text-xs text-zinc-700 space-y-2">
+          <div className="font-bold text-zinc-900 border-b border-zinc-200 pb-1">LETTER OF RECOMMENDATION</div>
+          <p className="text-[11px] leading-4">Dear Selection Committee,<br /><br />I write to enthusiastically recommend <span className="font-semibold">APPLICANT NAME</span> for this program. In my X years working with them, I have found them to be exceptionally...</p>
+          <div className="border-t border-zinc-200 pt-2 text-[10px] text-zinc-500">
+            Dr. Jane Smith, Professor<br />
+            Department of [Field]<br />
+            University Name
+          </div>
+        </div>
+      )
+
+    case "snap_ebt":
+      return (
+        <div className="rounded-lg bg-gradient-to-br from-green-700 to-green-800 p-4 text-white font-mono text-xs space-y-1">
+          <div className="text-[10px] text-green-300 uppercase tracking-widest mb-1">EBT Card</div>
+          <div className="text-lg font-bold tracking-widest">●●●● ●●●● ●●●● 1234</div>
+          <div className="flex justify-between mt-1">
+            <div><div className="text-green-300 text-[10px]">Name</div><div className="text-sm">CARDHOLDER NAME</div></div>
+            <div><div className="text-green-300 text-[10px]">Expires</div><div className="text-sm">12/27</div></div>
+          </div>
+          <div className="text-green-300 text-[10px] mt-1">SNAP / Food Benefits</div>
+        </div>
+      )
+
+    case "rental_history":
+      return (
+        <div className="rounded-lg border border-zinc-300 bg-white p-4 text-xs text-zinc-700 space-y-2">
+          <div className="font-bold text-zinc-900 border-b border-zinc-200 pb-1">LANDLORD REFERENCE</div>
+          <p className="text-[11px] leading-4">To Whom It May Concern,<br /><br /><span className="font-semibold">TENANT NAME</span> rented the property at <span className="font-semibold">123 Main St</span> from <span className="font-semibold">01/2023</span> to <span className="font-semibold">01/2025</span>. Rent was paid on time and the unit was left in good condition.</p>
+          <div className="border-t border-zinc-200 pt-2 text-[10px] text-zinc-500">
+            Landlord Signature: _____________<br />
+            Phone: (XXX) XXX-XXXX
+          </div>
+        </div>
+      )
+
+    case "housing_instability":
+      return (
+        <div className="rounded-lg border border-orange-200 bg-orange-50 p-4 text-xs text-orange-900 space-y-2">
+          <div className="font-bold border-b border-orange-200 pb-1">HOUSING STATUS DOCUMENTATION</div>
+          <p className="text-[11px] leading-4">Examples of accepted documents:</p>
+          <ul className="text-[11px] space-y-0.5 list-none">
+            {["Shelter or transitional housing letter", "Eviction notice or court summons", "Utility shutoff notice", "Social worker / case manager letter", "Written statement from host (doubling up)"].map(item => (
+              <li key={item} className="flex items-start gap-1"><span className="text-orange-500 mt-0.5">•</span>{item}</li>
+            ))}
+          </ul>
+        </div>
+      )
+
+    case "mortgage_finance":
+      return (
+        <div className="rounded-lg border border-zinc-300 bg-white p-4 text-xs text-zinc-700 space-y-1">
+          <div className="font-bold text-zinc-900 border-b border-zinc-200 pb-1">MORTGAGE PRE-APPROVAL</div>
+          <div className="flex justify-between"><span>Borrower:</span><span>YOUR NAME</span></div>
+          <div className="flex justify-between"><span>Approved Amount:</span><span className="font-semibold text-green-700">$XXX,XXX</span></div>
+          <div className="flex justify-between"><span>Interest Rate:</span><span>X.XX%</span></div>
+          <div className="flex justify-between"><span>Loan Type:</span><span>30-yr Fixed</span></div>
+          <div className="flex justify-between"><span>Expiration:</span><span>90 days</span></div>
+          <div className="text-zinc-400 text-[10px] mt-1">Issued by: [HUD-Approved Lender]</div>
         </div>
       )
 
