@@ -82,8 +82,14 @@ export default function AccountPage() {
               </div>
               <div className="flex flex-wrap justify-end gap-3">
                 <Link
-                  href="/account/profile"
+                  href="/account/dashboard"
                   className="inline-flex h-10 items-center justify-center rounded-full bg-zinc-900 px-4 text-sm font-medium text-white transition-colors hover:bg-zinc-700"
+                >
+                  Dashboard
+                </Link>
+                <Link
+                  href="/account/profile"
+                  className="inline-flex h-10 items-center justify-center rounded-full border border-zinc-300 px-4 text-sm font-medium text-zinc-700 transition-colors hover:bg-zinc-50"
                 >
                   {completion === 100 ? "Edit profile" : "Complete profile"}
                 </Link>
@@ -124,6 +130,9 @@ export default function AccountPage() {
           </section>
 
           <div className="mt-8 grid gap-4 sm:grid-cols-3">
+            <Link href="/account/dashboard" className="rounded-xl border border-zinc-200 bg-white p-5 font-medium text-zinc-900 transition-colors hover:border-zinc-400">
+              Application dashboard
+            </Link>
             <Link href="/quiz" className="rounded-xl border border-zinc-200 bg-white p-5 font-medium text-zinc-900 transition-colors hover:border-zinc-400">
               Eligibility quiz
             </Link>
