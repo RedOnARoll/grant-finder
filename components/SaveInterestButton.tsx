@@ -34,6 +34,7 @@ export default function SaveInterestButton({ slug, type, label = "full" }: SaveI
 
   async function toggleSaved() {
     setPending(true)
+    const previousSaved = saved
 
     const { data } = await supabase.auth.getUser()
     const user = data.user
@@ -46,6 +47,8 @@ export default function SaveInterestButton({ slug, type, label = "full" }: SaveI
 
     const dashboard = readDashboard(user.user_metadata?.grantfinder_dashboard)
     const alreadySaved = dashboard.saved_programs.some((item) => item.slug === slug && item.type === type)
+    setSaved(!alreadySaved)
+
     const nextDashboard: AccountDashboard = alreadySaved
       ? {
           saved_programs: dashboard.saved_programs.filter((item) => !(item.slug === slug && item.type === type)),
@@ -67,8 +70,8 @@ export default function SaveInterestButton({ slug, type, label = "full" }: SaveI
       data: { grantfinder_dashboard: nextDashboard },
     })
 
-    if (!error) {
-      setSaved(!alreadySaved)
+    if (error) {
+      setSaved(previousSaved)
     }
 
     setPending(false)
@@ -87,11 +90,13 @@ export default function SaveInterestButton({ slug, type, label = "full" }: SaveI
       aria-pressed={saved}
       className={`inline-flex h-10 items-center justify-center gap-2 rounded-full border px-4 text-sm font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-60 ${
         saved
-          ? "border-amber-200 bg-amber-50 text-amber-800 hover:bg-amber-100"
+          ? "border-yellow-300 bg-yellow-50 text-zinc-900 hover:bg-yellow-100"
           : "border-zinc-300 bg-white text-zinc-700 hover:border-zinc-500 hover:text-zinc-900"
       } ${label === "icon" ? "w-10 px-0" : ""}`}
     >
-      <span className="text-base leading-none">{symbol}</span>
+      <span className={`text-base leading-none ${saved ? "text-yellow-500" : "text-zinc-400"}`}>
+        {symbol}
+      </span>
       {label === "full" && <span>{text}</span>}
     </button>
   )
