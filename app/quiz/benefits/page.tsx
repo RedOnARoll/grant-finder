@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react"
 import Link from "next/link"
 import type { Grant } from "@/lib/types"
+import SiteNav from "@/components/SiteNav"
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -800,16 +801,7 @@ export default function BenefitsQuizPage() {
 
   return (
     <div className="flex flex-col min-h-full">
-      <nav className="border-b border-zinc-200 bg-white px-6 py-4">
-        <div className="max-w-5xl mx-auto flex items-center justify-between">
-          <Link href="/" className="text-lg font-semibold text-zinc-900">GrantFinder</Link>
-          <div className="flex gap-6 text-sm font-medium text-zinc-600">
-            <Link href="/grants" className="hover:text-zinc-900 transition-colors">Grants</Link>
-            <Link href="/benefits" className="hover:text-zinc-900 transition-colors">Benefits</Link>
-            <Link href="/quiz" className="text-zinc-900 font-semibold">Eligibility Quiz</Link>
-          </div>
-        </div>
-      </nav>
+      <SiteNav active="quiz" />
 
       <main className="flex-1 max-w-2xl mx-auto w-full px-6 py-10">
         <nav className="flex items-center gap-2 text-sm text-zinc-500 mb-8">

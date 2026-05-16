@@ -5,6 +5,7 @@ import type { Grant, EligibilityCriteria } from "@/lib/types"
 import DocumentChecklist from "./DocumentChecklist"
 import StateApplyButton from "./StateApplyButton"
 import { STATE_APPLY_URLS } from "@/lib/state-programs"
+import SiteNav from "@/components/SiteNav"
 
 export const dynamic = "force-dynamic"
 export const dynamicParams = true
@@ -119,22 +120,7 @@ export default async function GrantDetailPage({
 
   return (
     <div className="flex flex-col min-h-full">
-      {/* Nav */}
-      <nav className="border-b border-zinc-200 bg-white px-6 py-4">
-        <div className="max-w-5xl mx-auto flex items-center justify-between">
-          <Link href="/" className="text-lg font-semibold text-zinc-900">
-            GrantFinder
-          </Link>
-          <div className="flex gap-6 text-sm font-medium text-zinc-600">
-            <Link href="/grants" className="text-zinc-900 font-semibold">
-              Browse Grants
-            </Link>
-            <Link href="/quiz" className="hover:text-zinc-900 transition-colors">
-              Eligibility Quiz
-            </Link>
-          </div>
-        </div>
-      </nav>
+      <SiteNav active="grants" />
 
       <main className="flex-1 max-w-3xl mx-auto w-full px-6 py-10">
         {/* Breadcrumb */}

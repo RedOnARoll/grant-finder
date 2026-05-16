@@ -2,6 +2,7 @@ import Link from "next/link"
 import { getGrants } from "@/lib/supabase"
 import type { Grant } from "@/lib/types"
 import SortSelect from "@/components/SortSelect"
+import SiteNav from "@/components/SiteNav"
 
 export const dynamic = "force-dynamic"
 
@@ -114,24 +115,7 @@ export default async function GrantsPage({
 
   return (
     <div className="flex flex-col min-h-full">
-      <nav className="border-b border-zinc-200 bg-white px-6 py-4">
-        <div className="max-w-5xl mx-auto flex items-center justify-between">
-          <Link href="/" className="text-lg font-semibold text-zinc-900">
-            GrantFinder
-          </Link>
-          <div className="flex gap-6 text-sm font-medium text-zinc-600">
-            <Link href="/grants" className="text-zinc-900 font-semibold">
-              Grants
-            </Link>
-            <Link href="/benefits" className="hover:text-zinc-900 transition-colors">
-              Benefits
-            </Link>
-            <Link href="/quiz" className="hover:text-zinc-900 transition-colors">
-              Eligibility Quiz
-            </Link>
-          </div>
-        </div>
-      </nav>
+      <SiteNav active="grants" />
 
       <main className="flex-1 max-w-5xl mx-auto w-full px-6 py-10">
         <div className="mb-8">

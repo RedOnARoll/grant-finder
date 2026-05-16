@@ -3,6 +3,7 @@ import { notFound } from "next/navigation"
 import { getBenefits, getBenefitBySlug } from "@/lib/supabase"
 import { getBenefitStats } from "@/lib/benefit-stats"
 import EligibilityQuiz from "./EligibilityQuiz"
+import SiteNav from "@/components/SiteNav"
 
 export const dynamic = "force-dynamic"
 export const dynamicParams = true
@@ -67,16 +68,7 @@ export default async function BenefitDetailPage({
 
   return (
     <div className="flex flex-col min-h-full">
-      <nav className="border-b border-zinc-200 bg-white px-6 py-4">
-        <div className="max-w-5xl mx-auto flex items-center justify-between">
-          <Link href="/" className="text-lg font-semibold text-zinc-900">GrantFinder</Link>
-          <div className="flex gap-6 text-sm font-medium text-zinc-600">
-            <Link href="/grants" className="hover:text-zinc-900 transition-colors">Grants</Link>
-            <Link href="/benefits" className="text-zinc-900 font-semibold">Benefits</Link>
-            <Link href="/quiz" className="hover:text-zinc-900 transition-colors">Eligibility Quiz</Link>
-          </div>
-        </div>
-      </nav>
+      <SiteNav active="benefits" />
 
       <main className="flex-1 max-w-3xl mx-auto w-full px-6 py-10">
         {/* Breadcrumb */}
