@@ -30,6 +30,8 @@ export default function AuthForm({
   const [error, setError] = useState<string | null>(null)
   const [pending, setPending] = useState(false)
 
+  const targetAfterAuth = mode === "signup" && next === "/account" ? "/account/profile" : next
+
   async function continueWithProvider(provider: OAuthProvider) {
     setPending(true)
     setError(null)
@@ -38,7 +40,7 @@ export default function AuthForm({
     const { error: oauthError } = await supabase.auth.signInWithOAuth({
       provider,
       options: {
-        redirectTo: getRedirectUrl(next),
+        redirectTo: getRedirectUrl(targetAfterAuth),
       },
     })
 
@@ -62,7 +64,7 @@ export default function AuthForm({
             password,
             options: {
               data: { full_name: fullName.trim() },
-              emailRedirectTo: getRedirectUrl(next),
+              emailRedirectTo: getRedirectUrl(targetAfterAuth),
             },
           })
         : await supabase.auth.signInWithPassword({
@@ -82,7 +84,7 @@ export default function AuthForm({
       return
     }
 
-    router.push(next)
+    router.push(targetAfterAuth)
     router.refresh()
   }
 

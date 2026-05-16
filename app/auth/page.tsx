@@ -13,7 +13,7 @@ export default async function AuthPage({
 }) {
   const { mode, next } = await searchParams
   const initialMode = mode === "signup" ? "signup" : "login"
-  const safeNext = next?.startsWith("/") ? next : "/account"
+  const safeNext = next?.startsWith("/") ? next : initialMode === "signup" ? "/account/profile" : "/account"
 
   return (
     <div className="flex min-h-full flex-col">
@@ -29,8 +29,8 @@ export default async function AuthPage({
             </h1>
             <p className="max-w-xl text-lg leading-8 text-zinc-600">
               Create an account to use Google, Microsoft, or email/password sign-in.
-              Once you are signed in, your account page gives you one place to return after quizzes,
-              benefit prep, and grant research.
+              Once you are signed in, complete your profile so GrantFinder can tailor matches
+              around your state, household, veteran status, business details, and interests.
             </p>
             <div className="mt-8 flex gap-3 text-sm text-zinc-500">
               <Link href="/grants" className="font-medium text-zinc-900 hover:underline">

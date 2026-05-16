@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation"
 import type { User } from "@supabase/supabase-js"
 import SiteNav from "@/components/SiteNav"
 import { getBrowserSupabase } from "@/lib/supabase-browser"
+import { profileCompletion, type UserProfile } from "@/lib/profile"
 
 export default function AccountPage() {
   const router = useRouter()
@@ -60,6 +61,8 @@ export default function AccountPage() {
   }
 
   const displayName = user.user_metadata?.full_name || user.email
+  const profile = user.user_metadata?.grantfinder_profile as Partial<UserProfile> | undefined
+  const completion = profileCompletion(profile)
 
   return (
     <div className="flex min-h-full flex-col">
@@ -75,18 +78,36 @@ export default function AccountPage() {
             <div className="mb-6 flex items-start justify-between gap-6">
               <div>
                 <h2 className="text-lg font-semibold text-zinc-900">Profile</h2>
-                <p className="text-sm text-zinc-500">Authentication is managed securely by Supabase.</p>
+                <p className="text-sm text-zinc-500">Authentication and profile data are managed securely by Supabase.</p>
               </div>
-              <button
-                type="button"
-                onClick={signOut}
-                className="h-10 rounded-full border border-zinc-300 px-4 text-sm font-medium text-zinc-700 transition-colors hover:bg-zinc-50"
-              >
-                Sign out
-              </button>
+              <div className="flex flex-wrap justify-end gap-3">
+                <Link
+                  href="/account/profile"
+                  className="inline-flex h-10 items-center justify-center rounded-full bg-zinc-900 px-4 text-sm font-medium text-white transition-colors hover:bg-zinc-700"
+                >
+                  {completion === 100 ? "Edit profile" : "Complete profile"}
+                </Link>
+                <button
+                  type="button"
+                  onClick={signOut}
+                  className="h-10 rounded-full border border-zinc-300 px-4 text-sm font-medium text-zinc-700 transition-colors hover:bg-zinc-50"
+                >
+                  Sign out
+                </button>
+              </div>
             </div>
 
-            <dl className="grid gap-4 text-sm sm:grid-cols-2">
+            <div className="mb-6">
+              <div className="mb-1 flex items-center justify-between text-xs font-medium text-zinc-500">
+                <span>Profile complete</span>
+                <span>{completion}%</span>
+              </div>
+              <div className="h-2 overflow-hidden rounded-full bg-zinc-100">
+                <div className="h-full rounded-full bg-zinc-900 transition-all" style={{ width: `${completion}%` }} />
+              </div>
+            </div>
+
+            <dl className="grid gap-4 text-sm sm:grid-cols-3">
               <div className="rounded-lg bg-zinc-50 p-4">
                 <dt className="mb-1 font-medium text-zinc-500">Email</dt>
                 <dd className="break-words text-zinc-900">{user.email}</dd>
@@ -94,6 +115,10 @@ export default function AccountPage() {
               <div className="rounded-lg bg-zinc-50 p-4">
                 <dt className="mb-1 font-medium text-zinc-500">Sign-in method</dt>
                 <dd className="capitalize text-zinc-900">{user.app_metadata.provider ?? "email"}</dd>
+              </div>
+              <div className="rounded-lg bg-zinc-50 p-4">
+                <dt className="mb-1 font-medium text-zinc-500">State</dt>
+                <dd className="text-zinc-900">{profile?.state || "Not set"}</dd>
               </div>
             </dl>
           </section>
