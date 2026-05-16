@@ -1,4 +1,5 @@
 import AccountDashboard from "@/components/AccountDashboard"
+import EligibleBenefits from "@/components/EligibleBenefits"
 import SiteNav from "@/components/SiteNav"
 import Link from "next/link"
 
@@ -23,9 +24,6 @@ export default function AccountDashboardPage() {
               </p>
             </div>
             <div className="flex flex-wrap gap-2">
-              <Link href="/account/eligible" className="h-10 rounded-full border border-zinc-300 px-4 text-sm font-medium text-zinc-700 transition-colors hover:bg-white">
-                Eligible for
-              </Link>
               <Link href="/account" className="h-10 rounded-full border border-zinc-300 px-4 text-sm font-medium text-zinc-700 transition-colors hover:bg-white">
                 Account
               </Link>
@@ -35,6 +33,15 @@ export default function AccountDashboardPage() {
             </div>
           </div>
           <AccountDashboard />
+          <section className="mt-8">
+            <div className="mb-4">
+              <p className="mb-1 text-sm font-semibold uppercase tracking-wide text-zinc-500">
+                Eligible for
+              </p>
+              <h2 className="text-2xl font-bold text-zinc-900">Likely benefit matches</h2>
+            </div>
+            <EligibleBenefits />
+          </section>
         </div>
       </main>
     </div>
