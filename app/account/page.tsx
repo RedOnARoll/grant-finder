@@ -130,6 +130,9 @@ export default function AccountPage() {
           </section>
 
           <div className="mt-8 grid gap-4 sm:grid-cols-3">
+            <Link href="/account/eligible" className="rounded-xl border border-zinc-200 bg-white p-5 font-medium text-zinc-900 transition-colors hover:border-zinc-400">
+              Eligible benefits
+            </Link>
             <Link href="/account/dashboard" className="rounded-xl border border-zinc-200 bg-white p-5 font-medium text-zinc-900 transition-colors hover:border-zinc-400">
               Application dashboard
             </Link>
