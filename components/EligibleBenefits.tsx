@@ -10,6 +10,8 @@ import { profileCompletion, type UserProfile } from "@/lib/profile"
 import { getBrowserSupabase } from "@/lib/supabase-browser"
 import type { Grant } from "@/lib/types"
 
+type EligibleSort = "score_desc" | "name_asc" | "category_asc" | "amount_desc" | "amount_asc"
+
 function formatAmount(amount: number | null) {
   if (!amount) return "Varies"
   if (amount >= 1_000_000) return `$${(amount / 1_000_000).toFixed(1)}M`
@@ -35,6 +37,8 @@ export default function EligibleBenefits({ hideSignedOutState = false }: { hideS
   const [user, setUser] = useState<User | null>(null)
   const [profile, setProfile] = useState<Partial<UserProfile> | null>(null)
   const [matches, setMatches] = useState<EligibleBenefitMatch[]>([])
+  const [search, setSearch] = useState("")
+  const [sort, setSort] = useState<EligibleSort>("score_desc")
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
@@ -99,6 +103,36 @@ export default function EligibleBenefits({ hideSignedOutState = false }: { hideS
     )
   }
 
+  const visibleMatches = matches
+    .filter(({ benefit, reasons }) => {
+      const query = search.trim().toLowerCase()
+      if (!query) return true
+
+      return (
+        benefit.name.toLowerCase().includes(query) ||
+        benefit.agency.toLowerCase().includes(query) ||
+        benefit.description.toLowerCase().includes(query) ||
+        subcategoryLabel(benefit.subcategory).toLowerCase().includes(query) ||
+        reasons.join(" ").toLowerCase().includes(query)
+      )
+    })
+    .sort((a, b) => {
+      switch (sort) {
+        case "name_asc":
+          return a.benefit.name.localeCompare(b.benefit.name)
+        case "category_asc":
+          return subcategoryLabel(a.benefit.subcategory).localeCompare(subcategoryLabel(b.benefit.subcategory)) ||
+            a.benefit.name.localeCompare(b.benefit.name)
+        case "amount_desc":
+          return (b.benefit.max_amount ?? -1) - (a.benefit.max_amount ?? -1)
+        case "amount_asc":
+          return (a.benefit.max_amount ?? Infinity) - (b.benefit.max_amount ?? Infinity)
+        case "score_desc":
+        default:
+          return b.score - a.score || a.benefit.name.localeCompare(b.benefit.name)
+      }
+    })
+
   return (
     <div className="grid gap-6">
       <section className="rounded-xl border border-zinc-200 bg-white p-6 shadow-sm">
@@ -116,6 +150,31 @@ export default function EligibleBenefits({ hideSignedOutState = false }: { hideS
         {error && <p className="mt-4 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">{error}</p>}
       </section>
 
+      {matches.length > 0 && (
+        <section className="rounded-xl border border-zinc-200 bg-white p-4 shadow-sm">
+          <div className="grid gap-3 md:grid-cols-[minmax(0,1fr)_220px]">
+            <input
+              type="text"
+              value={search}
+              onChange={(event) => setSearch(event.target.value)}
+              placeholder="Search eligible benefits..."
+              className="h-11 min-w-0 rounded-lg border border-zinc-300 px-3 text-sm text-zinc-900 outline-none transition placeholder:text-zinc-400 focus:border-zinc-900 focus:ring-2 focus:ring-zinc-900/10"
+            />
+            <select
+              value={sort}
+              onChange={(event) => setSort(event.target.value as EligibleSort)}
+              className="h-11 min-w-0 rounded-lg border border-zinc-300 bg-white px-3 text-sm text-zinc-900 outline-none transition focus:border-zinc-900 focus:ring-2 focus:ring-zinc-900/10"
+            >
+              <option value="score_desc">Match score</option>
+              <option value="name_asc">Name: A-Z</option>
+              <option value="category_asc">Category</option>
+              <option value="amount_desc">Max $: High to low</option>
+              <option value="amount_asc">Max $: Low to high</option>
+            </select>
+          </div>
+        </section>
+      )}
+
       {matches.length === 0 ? (
         <section className="rounded-xl border border-zinc-200 bg-white p-8 text-center shadow-sm">
           <h3 className="mb-2 text-lg font-semibold text-zinc-900">No likely matches yet</h3>
@@ -126,9 +185,14 @@ export default function EligibleBenefits({ hideSignedOutState = false }: { hideS
             Browse benefits
           </Link>
         </section>
+      ) : visibleMatches.length === 0 ? (
+        <section className="rounded-xl border border-zinc-200 bg-white p-8 text-center shadow-sm">
+          <h3 className="mb-2 text-lg font-semibold text-zinc-900">No matches for that search</h3>
+          <p className="text-sm text-zinc-500">Try searching by program name, agency, category, or match reason.</p>
+        </section>
       ) : (
         <section className="divide-y divide-zinc-200 overflow-hidden rounded-xl border border-zinc-200 bg-white shadow-sm">
-          {matches.map(({ benefit, reasons, score }) => (
+          {visibleMatches.map(({ benefit, reasons, score }) => (
             <article key={benefit.id} className="p-6">
               <div className="mb-4 flex flex-wrap items-start justify-between gap-4">
                 <div>

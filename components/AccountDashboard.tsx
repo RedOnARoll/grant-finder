@@ -247,8 +247,8 @@ export default function AccountDashboard() {
         </div>
       </section>
 
-      <div className="grid gap-6 lg:grid-cols-[1fr_320px]">
-        <section className="rounded-xl border border-zinc-200 bg-white shadow-sm">
+      <div className="grid min-w-0 gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,320px)]">
+        <section className="min-w-0 rounded-xl border border-zinc-200 bg-white shadow-sm">
           <div className="border-b border-zinc-200 p-6">
             <h2 className="text-lg font-semibold text-zinc-900">Saved grants and benefits</h2>
             <p className="mt-1 text-sm text-zinc-500">Track deadlines, award amounts, and application progress.</p>
@@ -274,7 +274,7 @@ export default function AccountDashboard() {
               {savedPrograms.map(({ saved, program }) => (
                 <article key={`${saved.type}-${saved.slug}`} className="p-5">
                   <div className="mb-4 flex flex-wrap items-start justify-between gap-4">
-                    <div>
+                    <div className="min-w-0">
                       <div className="mb-2 flex flex-wrap gap-2">
                         <span className={`rounded-full px-2.5 py-1 text-xs font-medium ${
                           program.type === "grant" ? "bg-zinc-100 text-zinc-700" : "bg-blue-50 text-blue-700"
@@ -285,7 +285,7 @@ export default function AccountDashboard() {
                           {statusLabel(saved.status)}
                         </span>
                       </div>
-                      <Link href={`/${program.type === "grant" ? "grants" : "benefits"}/${program.slug}`} className="font-semibold text-zinc-900 hover:underline">
+                      <Link href={`/${program.type === "grant" ? "grants" : "benefits"}/${program.slug}`} className="break-words font-semibold text-zinc-900 hover:underline">
                         {program.name}
                       </Link>
                       <p className="mt-1 text-sm text-zinc-500">{program.agency}</p>
@@ -328,8 +328,8 @@ export default function AccountDashboard() {
           )}
         </section>
 
-        <aside className="grid content-start gap-6">
-          <section className="rounded-xl border border-zinc-200 bg-white p-6 shadow-sm">
+        <aside className="grid min-w-0 content-start gap-6">
+          <section className="min-w-0 rounded-xl border border-zinc-200 bg-white p-6 shadow-sm">
             <h2 className="mb-1 text-lg font-semibold text-zinc-900">Add a program</h2>
             <p className="mb-5 text-sm text-zinc-500">Saved items appear here and in your tracker.</p>
             <form onSubmit={addSavedProgram} className="grid gap-3">
@@ -337,7 +337,7 @@ export default function AccountDashboard() {
                 value={selectedSlug}
                 onChange={(event) => setSelectedSlug(event.target.value)}
                 required
-                className="h-11 rounded-lg border border-zinc-300 bg-white px-3 text-sm text-zinc-900 outline-none transition focus:border-zinc-900 focus:ring-2 focus:ring-zinc-900/10"
+                className="h-11 w-full min-w-0 rounded-lg border border-zinc-300 bg-white px-3 text-sm text-zinc-900 outline-none transition focus:border-zinc-900 focus:ring-2 focus:ring-zinc-900/10"
               >
                 <option value="">Choose a program...</option>
                 <optgroup label="Grants">
@@ -358,7 +358,7 @@ export default function AccountDashboard() {
               <select
                 value={selectedStatus}
                 onChange={(event) => setSelectedStatus(event.target.value as ApplicationStatus)}
-                className="h-11 rounded-lg border border-zinc-300 bg-white px-3 text-sm text-zinc-900 outline-none transition focus:border-zinc-900 focus:ring-2 focus:ring-zinc-900/10"
+                className="h-11 w-full min-w-0 rounded-lg border border-zinc-300 bg-white px-3 text-sm text-zinc-900 outline-none transition focus:border-zinc-900 focus:ring-2 focus:ring-zinc-900/10"
               >
                 {APPLICATION_STATUSES.map((status) => (
                   <option key={status.value} value={status.value}>
@@ -379,7 +379,7 @@ export default function AccountDashboard() {
             {message && <p className="mt-4 rounded-lg border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-800">{message}</p>}
           </section>
 
-          <section className="rounded-xl border border-zinc-200 bg-white p-6 shadow-sm">
+          <section className="min-w-0 rounded-xl border border-zinc-200 bg-white p-6 shadow-sm">
             <h2 className="text-lg font-semibold text-zinc-900">Quick read</h2>
             <div className="mt-4 grid gap-3 text-sm">
               <div className="flex items-center justify-between">
