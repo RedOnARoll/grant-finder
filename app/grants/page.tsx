@@ -3,6 +3,7 @@ import { getGrants } from "@/lib/supabase"
 import type { Grant } from "@/lib/types"
 import SortSelect from "@/components/SortSelect"
 import SiteNav from "@/components/SiteNav"
+import SaveInterestButton from "@/components/SaveInterestButton"
 
 export const dynamic = "force-dynamic"
 
@@ -44,6 +45,7 @@ function GrantCard({ grant }: { grant: Grant }) {
           )}
         </div>
         <div className="flex gap-3 items-center relative z-10">
+          <SaveInterestButton slug={grant.slug} type="grant" />
           <a
             href={grant.application_url}
             target="_blank"

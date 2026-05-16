@@ -4,6 +4,7 @@ import { useState } from "react"
 import Link from "next/link"
 import type { Grant, EligibilityCriteria } from "@/lib/types"
 import SiteNav from "@/components/SiteNav"
+import SaveInterestButton from "@/components/SaveInterestButton"
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -416,7 +417,10 @@ function Results({ matches, category, onReset }: { matches: Grant[]; category: C
                   {g.required_documents.length > 3 && ` · +${g.required_documents.length - 3} more`}
                 </p>
               )}
-              <Link href={`/grants/${g.slug}`} className="text-sm font-medium text-zinc-900 hover:underline">View details →</Link>
+              <div className="flex flex-wrap items-center gap-3">
+                <SaveInterestButton slug={g.slug} type="grant" />
+                <Link href={`/grants/${g.slug}`} className="text-sm font-medium text-zinc-900 hover:underline">View details →</Link>
+              </div>
             </div>
           ))}
         </div>

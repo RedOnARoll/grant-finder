@@ -3,6 +3,7 @@ import { getBenefits } from "@/lib/supabase"
 import type { Grant } from "@/lib/types"
 import SortSelect from "@/components/SortSelect"
 import SiteNav from "@/components/SiteNav"
+import SaveInterestButton from "@/components/SaveInterestButton"
 
 type BenefitSort = "name_asc" | "subcategory_asc" | "amount_desc"
 
@@ -61,14 +62,17 @@ function BenefitCard({ benefit }: { benefit: Grant }) {
             </span>
           )}
         </div>
-        <a
-          href={benefit.application_url}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="text-sm font-medium text-zinc-900 hover:underline relative z-10"
-        >
-          Apply →
-        </a>
+        <div className="relative z-10 flex items-center gap-3">
+          <SaveInterestButton slug={benefit.slug} type="benefit" />
+          <a
+            href={benefit.application_url}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-sm font-medium text-zinc-900 hover:underline"
+          >
+            Apply →
+          </a>
+        </div>
       </div>
     </div>
   )

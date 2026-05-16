@@ -6,6 +6,7 @@ import DocumentChecklist from "./DocumentChecklist"
 import StateApplyButton from "./StateApplyButton"
 import { STATE_APPLY_URLS } from "@/lib/state-programs"
 import SiteNav from "@/components/SiteNav"
+import SaveInterestButton from "@/components/SaveInterestButton"
 
 export const dynamic = "force-dynamic"
 export const dynamicParams = true
@@ -176,16 +177,19 @@ export default async function GrantDetailPage({
             )}
           </div>
 
-          {!stateUrls && (
-            <a
-              href={grant.application_url}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center justify-center h-12 px-8 rounded-full bg-zinc-900 text-white text-sm font-medium hover:bg-zinc-700 transition-colors"
-            >
-              Apply at {grant.agency} →
-            </a>
-          )}
+          <div className="flex flex-wrap gap-3">
+            <SaveInterestButton slug={grant.slug} type="grant" />
+            {!stateUrls && (
+              <a
+                href={grant.application_url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center justify-center h-12 px-8 rounded-full bg-zinc-900 text-white text-sm font-medium hover:bg-zinc-700 transition-colors"
+              >
+                Apply at {grant.agency} →
+              </a>
+            )}
+          </div>
         </div>
 
         <hr className="border-zinc-200 mb-10" />

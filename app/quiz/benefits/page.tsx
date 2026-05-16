@@ -4,6 +4,7 @@ import { useState, useEffect } from "react"
 import Link from "next/link"
 import type { Grant } from "@/lib/types"
 import SiteNav from "@/components/SiteNav"
+import SaveInterestButton from "@/components/SaveInterestButton"
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -702,13 +703,14 @@ function Results({ benefits, onReset }: { benefits: Grant[]; onReset: () => void
       ) : (
         <div className="space-y-3">
           {filtered.map((b) => (
-            <Link
+            <div
               key={b.id}
-              href={`/benefits/${b.slug}`}
-              className="block rounded-xl border border-zinc-200 p-5 hover:border-blue-400 transition-colors"
+              className="rounded-xl border border-zinc-200 p-5 transition-colors hover:border-blue-400"
             >
               <div className="flex items-start justify-between gap-4 mb-1">
-                <span className="font-semibold text-zinc-900 text-sm leading-snug">{b.name}</span>
+                <Link href={`/benefits/${b.slug}`} className="font-semibold text-zinc-900 text-sm leading-snug hover:underline">
+                  {b.name}
+                </Link>
                 {b.subcategory && activeTab === "all" && (
                   <span className="shrink-0 text-xs px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 font-medium whitespace-nowrap">
                     {SUBCATEGORY_ICONS[b.subcategory]} {SUBCATEGORY_LABELS[b.subcategory] ?? b.subcategory}
@@ -716,8 +718,14 @@ function Results({ benefits, onReset }: { benefits: Grant[]; onReset: () => void
                 )}
               </div>
               <p className="text-xs text-zinc-500 mb-1">{b.agency}</p>
-              <p className="text-xs text-zinc-600 line-clamp-2">{b.description}</p>
-            </Link>
+              <p className="text-xs text-zinc-600 line-clamp-2 mb-3">{b.description}</p>
+              <div className="flex flex-wrap items-center gap-3">
+                <SaveInterestButton slug={b.slug} type="benefit" />
+                <Link href={`/benefits/${b.slug}`} className="text-sm font-medium text-zinc-900 hover:underline">
+                  View details →
+                </Link>
+              </div>
+            </div>
           ))}
         </div>
       )}

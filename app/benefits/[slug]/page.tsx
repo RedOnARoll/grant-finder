@@ -4,6 +4,7 @@ import { getBenefits, getBenefitBySlug } from "@/lib/supabase"
 import { getBenefitStats } from "@/lib/benefit-stats"
 import EligibilityQuiz from "./EligibilityQuiz"
 import SiteNav from "@/components/SiteNav"
+import SaveInterestButton from "@/components/SaveInterestButton"
 
 export const dynamic = "force-dynamic"
 export const dynamicParams = true
@@ -92,6 +93,9 @@ export default async function BenefitDetailPage({
 
           <h1 className="text-3xl font-bold text-zinc-900 mb-2 leading-tight">{benefit.name}</h1>
           <p className="text-zinc-500 text-base mb-6">{benefit.agency}</p>
+          <div className="mb-6">
+            <SaveInterestButton slug={benefit.slug} type="benefit" />
+          </div>
 
           {/* Key stats row */}
           <div className="flex flex-wrap gap-8 mb-2">
