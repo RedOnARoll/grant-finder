@@ -30,7 +30,7 @@ function subcategoryLabel(value: string | null) {
   return value ? labels[value] ?? value : "Benefit"
 }
 
-export default function EligibleBenefits() {
+export default function EligibleBenefits({ hideSignedOutState = false }: { hideSignedOutState?: boolean }) {
   const supabase = useMemo(() => getBrowserSupabase(), [])
   const [user, setUser] = useState<User | null>(null)
   const [profile, setProfile] = useState<Partial<UserProfile> | null>(null)
@@ -74,11 +74,13 @@ export default function EligibleBenefits() {
   }
 
   if (!user) {
+    if (hideSignedOutState) return null
+
     return (
       <div className="rounded-xl border border-zinc-200 bg-white p-8 text-center shadow-sm">
         <h2 className="mb-3 text-2xl font-bold text-zinc-900">Log in to see eligible benefits</h2>
         <p className="mb-6 text-zinc-500">Your matches are based on your GrantFinder profile.</p>
-        <Link href="/auth?next=/account/dashboard" className="inline-flex h-11 items-center rounded-full bg-zinc-900 px-6 text-sm font-medium text-white hover:bg-zinc-700">
+        <Link href="/auth?next=/account/eligible" className="inline-flex h-11 items-center rounded-full bg-zinc-900 px-6 text-sm font-medium text-white hover:bg-zinc-700">
           Log in or sign up
         </Link>
       </div>

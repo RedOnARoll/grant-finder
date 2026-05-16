@@ -156,7 +156,7 @@ export default function AccountDashboard() {
         <h1 className="mb-3 text-2xl font-bold text-zinc-900">Log in to view your dashboard</h1>
         <p className="mb-6 text-zinc-500">Save programs and track applications from your GrantFinder account.</p>
         <Link
-          href="/auth?next=/account/dashboard"
+          href="/auth?next=/account"
           className="inline-flex h-11 items-center justify-center rounded-full bg-zinc-900 px-6 text-sm font-medium text-white transition-colors hover:bg-zinc-700"
         >
           Log in or sign up
