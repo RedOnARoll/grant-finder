@@ -83,3 +83,41 @@ DELETE FROM grants WHERE slug = 'federal-supplemental-educational-opportunity-gr
 
 -- Duplicate REAP (keep rural-energy-for-america-reap, remove the other)
 DELETE FROM grants WHERE slug = 'usda-rural-energy-for-america-program';
+
+-- ═══════════════════════════════════════════════════════
+-- FIX 4: Move institutional/community grants out of benefits
+--         These go to organizations/governments, not individuals
+-- ═══════════════════════════════════════════════════════
+
+-- Institutional housing grants (to cities, nonprofits, tribes)
+UPDATE grants SET type = 'grant', category = 'small_business', subcategory = NULL
+WHERE slug IN (
+  'hud-choice-neighborhoods-initiative',
+  'hud-continuum-of-care-program',
+  'emergency-solutions-grant-program',
+  'home-investment-partnerships-program',
+  'native-american-housing-block-grants'
+);
+
+-- Institutional health block grants (to states, health centers, orgs)
+UPDATE grants SET type = 'grant', category = 'research', subcategory = NULL
+WHERE slug IN (
+  'hrsa-federally-qualified-health-center-grant',
+  'hrsa-maternal-child-health-block-grant',
+  'community-mental-health-block-grant',
+  'samhsa-substance-abuse-prevention-treatment-grant',
+  'cdc-community-health-worker-training-grant'
+);
+
+-- Institutional childcare/education grants (to states, school districts, nonprofits)
+UPDATE grants SET type = 'grant', category = 'small_business', subcategory = NULL
+WHERE slug IN (
+  'ccdf-tribal-grants',
+  'child-care-social-services-block-grant',
+  '21st-century-community-learning-centers',
+  'adult-education-family-literacy',
+  'gear-up-program'
+);
+
+-- Duplicate Section 8 (keep hud-section-8-housing-choice-voucher, remove the other)
+DELETE FROM grants WHERE slug = 'section-8-housing-voucher';
