@@ -1,6 +1,7 @@
 import Link from "next/link"
 import { notFound } from "next/navigation"
 import { getBenefits, getBenefitBySlug } from "@/lib/supabase"
+import { getBenefitStats } from "@/lib/benefit-stats"
 import EligibilityQuiz from "./EligibilityQuiz"
 
 export const dynamic = "force-dynamic"
@@ -62,14 +63,13 @@ export default async function BenefitDetailPage({
   const subcategoryLabel = benefit.subcategory
     ? (SUBCATEGORY_LABELS[benefit.subcategory] ?? benefit.subcategory.replace("_", " "))
     : null
+  const stats = getBenefitStats(benefit.slug)
 
   return (
     <div className="flex flex-col min-h-full">
       <nav className="border-b border-zinc-200 bg-white px-6 py-4">
         <div className="max-w-5xl mx-auto flex items-center justify-between">
-          <Link href="/" className="text-lg font-semibold text-zinc-900">
-            GrantFinder
-          </Link>
+          <Link href="/" className="text-lg font-semibold text-zinc-900">GrantFinder</Link>
           <div className="flex gap-6 text-sm font-medium text-zinc-600">
             <Link href="/grants" className="hover:text-zinc-900 transition-colors">Grants</Link>
             <Link href="/benefits" className="text-zinc-900 font-semibold">Benefits</Link>
@@ -87,7 +87,7 @@ export default async function BenefitDetailPage({
         </nav>
 
         {/* Header */}
-        <div className="mb-10">
+        <div className="mb-8">
           <div className="flex flex-wrap gap-2 mb-4">
             <span className="text-xs px-2.5 py-1 rounded-full bg-blue-50 text-blue-700 font-medium">Benefit</span>
             {subcategoryLabel && (
@@ -101,36 +101,80 @@ export default async function BenefitDetailPage({
           <h1 className="text-3xl font-bold text-zinc-900 mb-2 leading-tight">{benefit.name}</h1>
           <p className="text-zinc-500 text-base mb-6">{benefit.agency}</p>
 
-          {/* Key stats */}
-          <div className="flex flex-wrap gap-8">
+          {/* Key stats row */}
+          <div className="flex flex-wrap gap-8 mb-2">
             {amount && (
               <div>
                 <p className="text-xs text-zinc-400 uppercase tracking-wide font-medium mb-1">Max Benefit</p>
                 <p className="text-2xl font-bold text-zinc-900">{amount}</p>
               </div>
             )}
-            {deadline && (
+            {deadline ? (
               <div>
                 <p className="text-xs text-zinc-400 uppercase tracking-wide font-medium mb-1">Application Deadline</p>
                 <p className="text-2xl font-bold text-zinc-900">{deadline}</p>
               </div>
-            )}
-            {!deadline && (
+            ) : (
               <div>
                 <p className="text-xs text-zinc-400 uppercase tracking-wide font-medium mb-1">Application Deadline</p>
                 <p className="text-lg font-medium text-zinc-500">Open enrollment</p>
               </div>
             )}
+            {stats?.yearEstablished && (
+              <div>
+                <p className="text-xs text-zinc-400 uppercase tracking-wide font-medium mb-1">Established</p>
+                <p className="text-2xl font-bold text-zinc-900">{stats.yearEstablished}</p>
+              </div>
+            )}
           </div>
         </div>
 
-        <hr className="border-zinc-200 mb-10" />
+        <hr className="border-zinc-200 mb-8" />
 
         {/* Description */}
-        <section className="mb-10">
-          <h2 className="text-xl font-semibold text-zinc-900 mb-4">About this benefit</h2>
+        <section className="mb-8">
+          <h2 className="text-xl font-semibold text-zinc-900 mb-3">About this benefit</h2>
           <p className="text-zinc-600 leading-7">{benefit.description}</p>
         </section>
+
+        {/* Program stats */}
+        {stats && (
+          <section className="mb-8">
+            <h2 className="text-xl font-semibold text-zinc-900 mb-4">Program Impact</h2>
+
+            {stats.keyFact && (
+              <div className="rounded-xl bg-blue-50 border border-blue-100 px-5 py-4 mb-4">
+                <p className="text-sm text-blue-800 leading-6">{stats.keyFact}</p>
+              </div>
+            )}
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="rounded-xl border border-zinc-200 px-5 py-4">
+                <p className="text-xs text-zinc-400 uppercase tracking-wide font-medium mb-1">People Helped</p>
+                <p className="text-xl font-bold text-zinc-900">{stats.recipientsLabel}</p>
+                {stats.recipientsNote && (
+                  <p className="text-xs text-zinc-500 mt-0.5">{stats.recipientsNote}</p>
+                )}
+              </div>
+              <div className="rounded-xl border border-zinc-200 px-5 py-4">
+                <p className="text-xs text-zinc-400 uppercase tracking-wide font-medium mb-1">Annual Federal Budget</p>
+                <p className="text-xl font-bold text-zinc-900">{stats.annualBudget}</p>
+              </div>
+              {stats.avgBenefit && (
+                <div className="rounded-xl border border-zinc-200 px-5 py-4">
+                  <p className="text-xs text-zinc-400 uppercase tracking-wide font-medium mb-1">Average Benefit</p>
+                  <p className="text-base font-semibold text-zinc-900">{stats.avgBenefit}</p>
+                </div>
+              )}
+              <div className="rounded-xl border border-zinc-200 px-5 py-4">
+                <p className="text-xs text-zinc-400 uppercase tracking-wide font-medium mb-1">Where Available</p>
+                <p className="text-sm font-medium text-zinc-900">{stats.availability}</p>
+              </div>
+            </div>
+          </section>
+        )}
+
+        <hr className="border-zinc-200 mb-8" />
 
         {/* Inline eligibility quiz */}
         <section className="mb-10">
