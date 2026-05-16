@@ -1,6 +1,6 @@
 import Link from "next/link"
 import { notFound } from "next/navigation"
-import { getBenefitBySlug } from "@/lib/supabase"
+import { getGrantBySlug } from "@/lib/supabase"
 import DocumentGuide from "@/components/DocumentGuide"
 import SiteNav from "@/components/SiteNav"
 
@@ -8,32 +8,32 @@ export const dynamic = "force-dynamic"
 
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params
-  const benefit = await getBenefitBySlug(slug)
-  if (!benefit) return {}
-  return { title: `Apply – ${benefit.name} – GrantFinder` }
+  const grant = await getGrantBySlug(slug)
+  if (!grant) return {}
+  return { title: `Apply – ${grant.name} – GrantFinder` }
 }
 
-export default async function BenefitApplyPage({
+export default async function GrantApplyPage({
   params,
 }: {
   params: Promise<{ slug: string }>
 }) {
   const { slug } = await params
-  const benefit = await getBenefitBySlug(slug)
+  const grant = await getGrantBySlug(slug)
 
-  if (!benefit) notFound()
+  if (!grant) notFound()
 
   return (
     <div className="flex flex-col min-h-full">
-      <SiteNav active="benefits" />
+      <SiteNav active="grants" />
 
       <main className="flex-1 max-w-3xl mx-auto w-full px-6 py-10">
         {/* Breadcrumb */}
         <nav className="flex items-center gap-2 text-sm text-zinc-500 mb-8">
-          <Link href="/benefits" className="hover:text-zinc-900 transition-colors">Benefits</Link>
+          <Link href="/grants" className="hover:text-zinc-900 transition-colors">Grants</Link>
           <span>/</span>
-          <Link href={`/benefits/${benefit.slug}`} className="hover:text-zinc-900 transition-colors truncate max-w-[200px]">
-            {benefit.name}
+          <Link href={`/grants/${grant.slug}`} className="hover:text-zinc-900 transition-colors truncate max-w-[200px]">
+            {grant.name}
           </Link>
           <span>/</span>
           <span className="text-zinc-900">Apply</span>
@@ -42,9 +42,9 @@ export default async function BenefitApplyPage({
         {/* Header */}
         <div className="mb-10">
           <h1 className="text-3xl font-bold text-zinc-900 mb-2 leading-tight">
-            Apply for {benefit.name}
+            Apply for {grant.name}
           </h1>
-          <p className="text-zinc-500 text-base">{benefit.agency}</p>
+          <p className="text-zinc-500 text-base">{grant.agency}</p>
         </div>
 
         <hr className="border-zinc-200 mb-10" />
@@ -54,13 +54,13 @@ export default async function BenefitApplyPage({
           <h2 className="text-xl font-semibold text-zinc-900 mb-2">Before you start</h2>
           <p className="text-zinc-600 leading-7">
             Gather all required documents before opening your application. Having everything ready upfront
-            prevents delays and reduces the chance of your application being rejected or put on hold.
+            prevents delays and reduces the chance of your application being rejected.
           </p>
         </section>
 
         {/* Document guide */}
         <section className="mb-12">
-          <DocumentGuide documents={benefit.required_documents} />
+          <DocumentGuide documents={grant.required_documents} />
         </section>
 
         {/* Apply Now button */}
@@ -68,7 +68,7 @@ export default async function BenefitApplyPage({
           <div>
             <p className="font-semibold text-zinc-900 mb-1">Ready? Submit your application</p>
             <p className="text-sm text-zinc-500">
-              You&apos;ll be taken to the official {benefit.agency} application portal.
+              You&apos;ll be taken to the official {grant.agency} application portal.
             </p>
           </div>
           <button
@@ -81,7 +81,7 @@ export default async function BenefitApplyPage({
       </main>
 
       <footer className="border-t border-zinc-200 py-8 px-6 text-center text-sm text-zinc-500 mt-10">
-        Benefit information is for reference only. Verify eligibility with the issuing agency.
+        Grant information is for reference only. Verify eligibility with the issuing agency.
       </footer>
     </div>
   )
