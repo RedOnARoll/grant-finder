@@ -88,6 +88,14 @@ interface CategoryProfile {
   healthIsPregnant?: boolean
 }
 
+type BenefitQuizMatch = {
+  benefit: Grant
+  score: number
+  confidence: "likely" | "may_qualify"
+  reasons: string[]
+  possibleDisqualifiers: string[]
+}
+
 const defaultSituation: SituationProfile = {
   ageGroup: "",
   householdSize: undefined,
@@ -212,15 +220,46 @@ function scoreSituation(profile: SituationProfile, benefit: Grant): number {
   return score
 }
 
-function matchBySituation(profile: SituationProfile, all: Grant[]): Grant[] {
-  const scored = all
-    .map((b) => ({ benefit: b, score: scoreSituation(profile as any, b) }))
-    .filter(({ score }) => score > 0)
-    .sort((a, b) => b.score - a.score)
-  return scored.map(({ benefit }) => benefit)
+function benefitCaveats(benefit: Grant) {
+  const caveats = ["Agency review may include extra rules or document checks."]
+  if (["housing", "food", "health", "childcare", "energy"].includes(benefit.subcategory ?? "")) {
+    caveats.push("Income limits may vary by household size, state, or local agency.")
+  }
+  caveats.push("Residency, citizenship, age, disability, or household-status rules may apply.")
+  return caveats
 }
 
-function matchByCategory(profile: CategoryProfile, all: Grant[]): Grant[] {
+function situationReasons(profile: SituationProfile, benefit: Grant, score: number) {
+  const reasons: string[] = []
+  const sub = benefit.subcategory
+  if (profile.householdIncome !== undefined && ["housing", "food", "health", "childcare", "energy"].includes(sub ?? "")) reasons.push("Matches income-sensitive benefit categories")
+  if (profile.numChildren && (sub === "childcare" || benefit.slug.includes("wic") || benefit.slug.includes("chip") || benefit.slug.includes("head-start"))) reasons.push("Matches a household with children")
+  if (profile.hasDisability && (sub === "disability" || benefit.slug.includes("811"))) reasons.push("Matches disability-related answers")
+  if (profile.isVeteran && (benefit.slug.includes("veteran") || benefit.slug.includes("vash") || benefit.slug.includes("tricare"))) reasons.push("Matches veteran or military answers")
+  if (profile.isRural && (benefit.slug.includes("rural") || benefit.slug.includes("usda"))) reasons.push("Matches rural-location answers")
+  if (profile.isStudent && sub === "education") reasons.push("Matches student or education answers")
+  if (reasons.length === 0) reasons.push(score >= 4 ? "Several of your answers align with this program" : "This program may fit your selected situation")
+  return reasons.slice(0, 3)
+}
+
+function matchBySituation(profile: SituationProfile, all: Grant[]): BenefitQuizMatch[] {
+  const scored = all
+    .map((b) => {
+      const score = scoreSituation(profile as any, b)
+      return {
+        benefit: b,
+        score,
+        confidence: score >= 4 ? "likely" : "may_qualify",
+        reasons: situationReasons(profile, b, score),
+        possibleDisqualifiers: benefitCaveats(b),
+      } satisfies BenefitQuizMatch
+    })
+    .filter(({ score }) => score > 0)
+    .sort((a, b) => b.score - a.score || a.benefit.name.localeCompare(b.benefit.name))
+  return scored
+}
+
+function matchByCategory(profile: CategoryProfile, all: Grant[]): BenefitQuizMatch[] {
   const sub = profile.subcategory
   if (!sub) return []
   const inSub = all.filter((b) => b.subcategory === sub)
@@ -303,7 +342,13 @@ function matchByCategory(profile: CategoryProfile, all: Grant[]): Grant[] {
     }
 
     return true
-  })
+  }).map((benefit) => ({
+    benefit,
+    score: 1,
+    confidence: "may_qualify",
+    reasons: [`Matches your ${SUBCATEGORY_LABELS[sub] ?? sub} quiz path`],
+    possibleDisqualifiers: benefitCaveats(benefit),
+  }))
 }
 
 // ─── Shared UI helpers ────────────────────────────────────────────────────────
@@ -606,17 +651,17 @@ const SUBCATEGORY_ICONS: Record<string, string> = {
 
 type BenefitSortKey = "default" | "name_asc" | "subcategory_asc" | "amount_desc"
 
-function applyBenefitSort(benefits: Grant[], sort: BenefitSortKey): Grant[] {
-  const arr = [...benefits]
+function applyBenefitSort(matches: BenefitQuizMatch[], sort: BenefitSortKey): BenefitQuizMatch[] {
+  const arr = [...matches]
   switch (sort) {
-    case "name_asc":        return arr.sort((a, b) => a.name.localeCompare(b.name))
-    case "subcategory_asc": return arr.sort((a, b) => (a.subcategory ?? "").localeCompare(b.subcategory ?? ""))
-    case "amount_desc":     return arr.sort((a, b) => (b.max_amount ?? -1) - (a.max_amount ?? -1))
+    case "name_asc":        return arr.sort((a, b) => a.benefit.name.localeCompare(b.benefit.name))
+    case "subcategory_asc": return arr.sort((a, b) => (a.benefit.subcategory ?? "").localeCompare(b.benefit.subcategory ?? ""))
+    case "amount_desc":     return arr.sort((a, b) => (b.benefit.max_amount ?? -1) - (a.benefit.max_amount ?? -1))
     default:                return arr
   }
 }
 
-function Results({ benefits, onReset }: { benefits: Grant[]; onReset: () => void }) {
+function Results({ benefits, onReset }: { benefits: BenefitQuizMatch[]; onReset: () => void }) {
   const [activeTab, setActiveTab] = useState<string>("all")
   const [search, setSearch] = useState("")
   const [sort, setSort] = useState<BenefitSortKey>("default")
@@ -634,12 +679,17 @@ function Results({ benefits, onReset }: { benefits: Grant[]; onReset: () => void
     )
   }
 
-  const tabs = Array.from(new Set(benefits.map((b) => b.subcategory ?? "other")))
+  const tabs = Array.from(new Set(benefits.map((match) => match.benefit.subcategory ?? "other")))
   const filtered = applyBenefitSort(
-    benefits.filter((b) => {
-      const matchTab = activeTab === "all" || b.subcategory === activeTab
+    benefits.filter(({ benefit, reasons, possibleDisqualifiers }) => {
+      const matchTab = activeTab === "all" || benefit.subcategory === activeTab
       const q = search.toLowerCase()
-      const matchSearch = !q || b.name.toLowerCase().includes(q) || b.description.toLowerCase().includes(q) || b.agency.toLowerCase().includes(q)
+      const matchSearch = !q ||
+        benefit.name.toLowerCase().includes(q) ||
+        benefit.description.toLowerCase().includes(q) ||
+        benefit.agency.toLowerCase().includes(q) ||
+        reasons.join(" ").toLowerCase().includes(q) ||
+        possibleDisqualifiers.join(" ").toLowerCase().includes(q)
       return matchTab && matchSearch
     }),
     sort
@@ -683,7 +733,7 @@ function Results({ benefits, onReset }: { benefits: Grant[]; onReset: () => void
             All ({benefits.length})
           </button>
           {tabs.map((sub) => {
-            const count = benefits.filter((b) => (b.subcategory ?? "other") === sub).length
+            const count = benefits.filter((match) => (match.benefit.subcategory ?? "other") === sub).length
             return (
               <button
                 key={sub}
@@ -702,7 +752,7 @@ function Results({ benefits, onReset }: { benefits: Grant[]; onReset: () => void
         <p className="text-sm text-zinc-500 py-6 text-center">No programs match your search.</p>
       ) : (
         <div className="space-y-3">
-          {filtered.map((b) => (
+          {filtered.map(({ benefit: b, confidence, reasons, possibleDisqualifiers, score }) => (
             <div
               key={b.id}
               className="rounded-xl border border-zinc-200 p-5 transition-colors hover:border-blue-400"
@@ -711,6 +761,11 @@ function Results({ benefits, onReset }: { benefits: Grant[]; onReset: () => void
                 <Link href={`/benefits/${b.slug}`} className="font-semibold text-zinc-900 text-sm leading-snug hover:underline">
                   {b.name}
                 </Link>
+                <span className={`shrink-0 text-xs px-2 py-0.5 rounded-full font-medium whitespace-nowrap ${
+                  confidence === "likely" ? "bg-green-50 text-green-700" : "bg-amber-50 text-amber-700"
+                }`}>
+                  {confidence === "likely" ? "Likely eligible" : "May qualify"}
+                </span>
                 {b.subcategory && activeTab === "all" && (
                   <span className="shrink-0 text-xs px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 font-medium whitespace-nowrap">
                     {SUBCATEGORY_ICONS[b.subcategory]} {SUBCATEGORY_LABELS[b.subcategory] ?? b.subcategory}
@@ -719,6 +774,11 @@ function Results({ benefits, onReset }: { benefits: Grant[]; onReset: () => void
               </div>
               <p className="text-xs text-zinc-500 mb-1">{b.agency}</p>
               <p className="text-xs text-zinc-600 line-clamp-2 mb-3">{b.description}</p>
+              <div className="mb-3 grid gap-2 rounded-lg bg-zinc-50 p-3 text-xs text-zinc-600">
+                <p><span className="font-semibold text-zinc-900">Why this may match:</span> {reasons.join(" · ")}</p>
+                <p><span className="font-semibold text-zinc-900">What may disqualify you:</span> {possibleDisqualifiers.slice(0, 2).join(" · ")}</p>
+                <p className="text-zinc-400">Score {score} is used only to sort quiz matches.</p>
+              </div>
               <div className="flex flex-wrap items-center gap-3">
                 <SaveInterestButton slug={b.slug} type="benefit" />
                 <Link href={`/benefits/${b.slug}`} className="text-sm font-medium text-zinc-900 hover:underline">
@@ -753,7 +813,7 @@ export default function BenefitsQuizPage() {
   const [situation, setSituation] = useState<SituationProfile>(defaultSituation)
   const [catProfile, setCatProfile] = useState<CategoryProfile>({ subcategory: null })
   const [allBenefits, setAllBenefits] = useState<Grant[]>([])
-  const [results, setResults] = useState<Grant[]>([])
+  const [results, setResults] = useState<BenefitQuizMatch[]>([])
   const [loading, setLoading] = useState(false)
 
   const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL!

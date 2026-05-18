@@ -2,6 +2,8 @@
 
 import { FormEvent, useMemo, useState } from "react"
 import { useRouter } from "next/navigation"
+import { sanitizeNextPath } from "@/lib/auth"
+import { profileCompletion, type UserProfile } from "@/lib/profile"
 import { getBrowserSupabase } from "@/lib/supabase-browser"
 
 type AuthMode = "login" | "signup"
@@ -30,7 +32,16 @@ export default function AuthForm({
   const [error, setError] = useState<string | null>(null)
   const [pending, setPending] = useState(false)
 
-  const targetAfterAuth = mode === "signup" && next === "/account" ? "/account/profile" : next
+  const safeNext = sanitizeNextPath(next)
+  const targetAfterAuth = mode === "signup" && safeNext === "/account" ? "/account/profile" : safeNext
+
+  function targetForUser(userProfile: Partial<UserProfile> | undefined) {
+    if (targetAfterAuth.startsWith("/account") && targetAfterAuth !== "/account/profile" && profileCompletion(userProfile) === 0) {
+      return "/account/profile"
+    }
+
+    return targetAfterAuth
+  }
 
   async function continueWithProvider(provider: OAuthProvider) {
     setPending(true)
@@ -84,7 +95,8 @@ export default function AuthForm({
       return
     }
 
-    router.push(targetAfterAuth)
+    const userProfile = result.data.user?.user_metadata?.grantfinder_profile as Partial<UserProfile> | undefined
+    router.push(targetForUser(userProfile))
     router.refresh()
   }
 

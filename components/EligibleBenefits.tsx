@@ -104,7 +104,7 @@ export default function EligibleBenefits({ hideSignedOutState = false }: { hideS
   }
 
   const visibleMatches = matches
-    .filter(({ benefit, reasons }) => {
+    .filter(({ benefit, matchedReasons, possibleDisqualifiers }) => {
       const query = search.trim().toLowerCase()
       if (!query) return true
 
@@ -113,7 +113,8 @@ export default function EligibleBenefits({ hideSignedOutState = false }: { hideS
         benefit.agency.toLowerCase().includes(query) ||
         benefit.description.toLowerCase().includes(query) ||
         subcategoryLabel(benefit.subcategory).toLowerCase().includes(query) ||
-        reasons.join(" ").toLowerCase().includes(query)
+        matchedReasons.join(" ").toLowerCase().includes(query) ||
+        possibleDisqualifiers.join(" ").toLowerCase().includes(query)
       )
     })
     .sort((a, b) => {
@@ -133,6 +134,9 @@ export default function EligibleBenefits({ hideSignedOutState = false }: { hideS
       }
     })
 
+  const likelyCount = matches.filter((match) => match.confidence === "likely").length
+  const possibleCount = matches.length - likelyCount
+
   return (
     <div className="grid gap-6">
       <section className="rounded-xl border border-zinc-200 bg-white p-6 shadow-sm">
@@ -140,7 +144,8 @@ export default function EligibleBenefits({ hideSignedOutState = false }: { hideS
           <div>
             <p className="text-sm font-medium text-zinc-500">Based on your profile</p>
             <h2 className="mt-1 text-2xl font-bold text-zinc-900">
-              {matches.length} likely benefit match{matches.length === 1 ? "" : "es"}
+              {likelyCount} likely match{likelyCount === 1 ? "" : "es"}
+              {possibleCount > 0 ? `, ${possibleCount} may qualify` : ""}
             </h2>
           </div>
           <Link href="/account/profile" className="h-10 rounded-full border border-zinc-300 px-4 text-sm font-medium text-zinc-700 transition-colors hover:bg-zinc-50">
@@ -192,7 +197,7 @@ export default function EligibleBenefits({ hideSignedOutState = false }: { hideS
         </section>
       ) : (
         <section className="divide-y divide-zinc-200 overflow-hidden rounded-xl border border-zinc-200 bg-white shadow-sm">
-          {visibleMatches.map(({ benefit, reasons, score }) => (
+          {visibleMatches.map(({ benefit, matchedReasons, possibleDisqualifiers, confidence, score }) => (
             <article key={benefit.id} className="p-6">
               <div className="mb-4 flex flex-wrap items-start justify-between gap-4">
                 <div>
@@ -200,8 +205,10 @@ export default function EligibleBenefits({ hideSignedOutState = false }: { hideS
                     <span className="rounded-full bg-blue-50 px-2.5 py-1 text-xs font-medium text-blue-700">
                       {subcategoryLabel(benefit.subcategory)}
                     </span>
-                    <span className="rounded-full bg-green-50 px-2.5 py-1 text-xs font-medium text-green-700">
-                      Match score {score}
+                    <span className={`rounded-full px-2.5 py-1 text-xs font-medium ${
+                      confidence === "likely" ? "bg-green-50 text-green-700" : "bg-amber-50 text-amber-700"
+                    }`}>
+                      {confidence === "likely" ? "Likely eligible" : "May qualify"}
                     </span>
                   </div>
                   <Link href={`/benefits/${benefit.slug}`} className="text-lg font-semibold text-zinc-900 hover:underline">
@@ -214,7 +221,7 @@ export default function EligibleBenefits({ hideSignedOutState = false }: { hideS
 
               <p className="mb-4 line-clamp-2 text-sm leading-6 text-zinc-600">{benefit.description}</p>
 
-              <div className="grid gap-4 sm:grid-cols-[1fr_1fr_2fr]">
+              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-[1fr_1fr_2fr]">
                 <div className="rounded-lg bg-zinc-50 p-3 text-sm">
                   <p className="font-semibold text-zinc-900">{formatAmount(benefit.max_amount)}</p>
                   <p className="text-zinc-500">Max benefit</p>
@@ -223,10 +230,19 @@ export default function EligibleBenefits({ hideSignedOutState = false }: { hideS
                   <p className="font-semibold text-zinc-900">{benefit.deadline ? new Date(benefit.deadline).toLocaleDateString("en-US") : "Open enrollment"}</p>
                   <p className="text-zinc-500">Deadline</p>
                 </div>
-                <div className="rounded-lg bg-zinc-50 p-3 text-sm">
-                  <p className="mb-1 font-semibold text-zinc-900">Why it matched</p>
-                  <p className="text-zinc-600">{reasons.slice(0, 2).join(" · ")}</p>
+                <div className="rounded-lg bg-zinc-50 p-3 text-sm sm:col-span-2 lg:col-span-1">
+                  <p className="mb-1 font-semibold text-zinc-900">Why this may match</p>
+                  <p className="text-zinc-600">{matchedReasons.slice(0, 2).join(" · ")}</p>
                 </div>
+              </div>
+              <div className="mt-3 rounded-lg border border-amber-100 bg-amber-50/60 p-3 text-sm">
+                <p className="mb-1 font-semibold text-amber-900">Check before applying</p>
+                <ul className="grid gap-1 text-amber-800">
+                  {possibleDisqualifiers.map((item) => (
+                    <li key={item}>• {item}</li>
+                  ))}
+                </ul>
+                <p className="mt-2 text-xs text-amber-700">Score {score} is used only to sort recommendations.</p>
               </div>
             </article>
           ))}

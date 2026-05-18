@@ -4,7 +4,9 @@ import type { UserProfile } from "@/lib/profile"
 export type EligibleBenefitMatch = {
   benefit: Grant
   score: number
-  reasons: string[]
+  confidence: "likely" | "may_qualify"
+  matchedReasons: string[]
+  possibleDisqualifiers: string[]
 }
 
 const INTEREST_TO_SUBCATEGORY: Record<string, string> = {
@@ -36,6 +38,39 @@ function isLowIncome(profile: Partial<UserProfile>) {
 
 function addReason(reasons: string[], reason: string) {
   if (!reasons.includes(reason)) reasons.push(reason)
+}
+
+function possibleDisqualifiersFor(benefit: Grant) {
+  const disqualifiers = [
+    "Final eligibility may depend on agency verification and local program rules.",
+  ]
+  const subcategory = benefit.subcategory ?? ""
+  const slug = benefit.slug.toLowerCase()
+  const criteriaText = Array.isArray(benefit.eligibility_criteria)
+    ? benefit.eligibility_criteria.join(" ").toLowerCase()
+    : JSON.stringify(benefit.eligibility_criteria).toLowerCase()
+
+  if (["housing", "food", "health", "childcare", "energy"].includes(subcategory) || criteriaText.includes("income") || criteriaText.includes("poverty")) {
+    disqualifiers.push("Income limits can vary by household size, state, or local administering agency.")
+  }
+
+  if (criteriaText.includes("citizen") || criteriaText.includes("immigration") || criteriaText.includes("qualified non-citizen")) {
+    disqualifiers.push("Citizenship or qualifying immigration status may be required.")
+  }
+
+  if (criteriaText.includes("state") || criteriaText.includes("resident")) {
+    disqualifiers.push("State residency or local availability may apply.")
+  }
+
+  if (slug.includes("veteran") || slug.includes("vash") || criteriaText.includes("veteran") || criteriaText.includes("military")) {
+    disqualifiers.push("Veteran, active-duty, or military-family documentation may be required.")
+  }
+
+  if (subcategory === "disability" || criteriaText.includes("disabil")) {
+    disqualifiers.push("Disability-related programs may require medical, SSA, or agency documentation.")
+  }
+
+  return disqualifiers.slice(0, 3)
 }
 
 export function matchEligibleBenefits(profile: Partial<UserProfile>, benefits: Grant[]): EligibleBenefitMatch[] {
@@ -102,7 +137,13 @@ export function matchEligibleBenefits(profile: Partial<UserProfile>, benefits: G
         addReason(reasons, "Uses state-specific eligibility")
       }
 
-      return { benefit, score, reasons }
+      return {
+        benefit,
+        score,
+        confidence: score >= 4 ? "likely" : "may_qualify",
+        matchedReasons: reasons,
+        possibleDisqualifiers: possibleDisqualifiersFor(benefit),
+      } satisfies EligibleBenefitMatch
     })
     .filter((match) => match.score > 0)
     .sort((a, b) => b.score - a.score || a.benefit.name.localeCompare(b.benefit.name))

@@ -730,8 +730,8 @@ export default function EligibilityQuiz({ criteria, slug }: { criteria: Eligibil
         <div className="mt-6">
           {isEligible ? (
             <div className="rounded-xl bg-green-50 border border-green-200 p-5 mb-4">
-              <p className="font-semibold text-green-800 mb-1">✓ You appear to be eligible</p>
-              <p className="text-sm text-green-700">Based on your answers, you meet the requirements. Click below to see what documents you'll need to apply.</p>
+              <p className="font-semibold text-green-800 mb-1">Likely eligible based on these answers</p>
+              <p className="text-sm text-green-700">Your answers match the criteria we checked. The agency may verify additional rules or documents.</p>
             </div>
           ) : (
             <div className="rounded-xl bg-amber-50 border border-amber-200 p-5 mb-4">

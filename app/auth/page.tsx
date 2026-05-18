@@ -1,6 +1,7 @@
 import Link from "next/link"
 import AuthForm from "@/components/AuthForm"
 import SiteNav from "@/components/SiteNav"
+import { sanitizeNextPath } from "@/lib/auth"
 
 export const metadata = {
   title: "Log in or sign up - GrantFinder",
@@ -13,7 +14,7 @@ export default async function AuthPage({
 }) {
   const { mode, next } = await searchParams
   const initialMode = mode === "signup" ? "signup" : "login"
-  const safeNext = next?.startsWith("/") ? next : initialMode === "signup" ? "/account/profile" : "/account"
+  const safeNext = sanitizeNextPath(next, initialMode === "signup" ? "/account/profile" : "/account")
 
   return (
     <div className="flex min-h-full flex-col">

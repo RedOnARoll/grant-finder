@@ -2,6 +2,7 @@ import Link from "next/link"
 import { notFound } from "next/navigation"
 import { getGrants, getGrantBySlug } from "@/lib/supabase"
 import SiteNav from "@/components/SiteNav"
+import SaveInterestButton from "@/components/SaveInterestButton"
 import GrantEligibilityQuiz from "./GrantEligibilityQuiz"
 
 export const dynamic = "force-dynamic"
@@ -71,10 +72,15 @@ export default async function GrantDetailPage({
             )}
           </div>
 
-          <h1 className="text-3xl font-bold text-zinc-900 mb-2 leading-tight">
-            {grant.name}
-          </h1>
-          <p className="text-zinc-500 text-base mb-6">{grant.agency}</p>
+          <div className="mb-6 flex flex-wrap items-start justify-between gap-4">
+            <div>
+              <h1 className="text-3xl font-bold text-zinc-900 mb-2 leading-tight">
+                {grant.name}
+              </h1>
+              <p className="text-zinc-500 text-base">{grant.agency}</p>
+            </div>
+            <SaveInterestButton slug={grant.slug} type="grant" />
+          </div>
 
           {/* Key stats row */}
           <div className="flex flex-wrap gap-8 mb-2">

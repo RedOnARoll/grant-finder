@@ -5,10 +5,27 @@ import { readDashboard } from "@/lib/dashboard"
 import type { AccountDashboard } from "@/lib/dashboard"
 import { getBrowserSupabase } from "@/lib/supabase-browser"
 
+const PENDING_SAVE_KEY = "grantfinder_pending_save"
+
 type SaveInterestButtonProps = {
   slug: string
   type: "grant" | "benefit"
   label?: "icon" | "full"
+}
+
+function readPendingSave() {
+  try {
+    const raw = window.localStorage.getItem(PENDING_SAVE_KEY)
+    if (!raw) return null
+    const parsed = JSON.parse(raw) as Partial<Pick<SaveInterestButtonProps, "slug" | "type">>
+    return parsed.slug && (parsed.type === "grant" || parsed.type === "benefit") ? parsed : null
+  } catch {
+    return null
+  }
+}
+
+function clearPendingSave() {
+  window.localStorage.removeItem(PENDING_SAVE_KEY)
 }
 
 export default function SaveInterestButton({ slug, type, label = "full" }: SaveInterestButtonProps) {
@@ -20,10 +37,42 @@ export default function SaveInterestButton({ slug, type, label = "full" }: SaveI
   useEffect(() => {
     let mounted = true
 
-    supabase.auth.getUser().then(({ data }) => {
+    supabase.auth.getUser().then(async ({ data }) => {
       if (!mounted) return
       const dashboard = readDashboard(data.user?.user_metadata?.grantfinder_dashboard)
-      setSaved(dashboard.saved_programs.some((item) => item.slug === slug && item.type === type))
+      const alreadySaved = dashboard.saved_programs.some((item) => item.slug === slug && item.type === type)
+      const pendingSave = data.user ? readPendingSave() : null
+
+      if (data.user && pendingSave?.slug === slug && pendingSave.type === type && !alreadySaved) {
+        const now = new Date().toISOString()
+        const nextDashboard: AccountDashboard = {
+          saved_programs: [
+            ...dashboard.saved_programs,
+            {
+              slug,
+              type,
+              status: "interested",
+              saved_at: now,
+              updated_at: now,
+            },
+          ],
+        }
+        const { error } = await supabase.auth.updateUser({
+          data: { grantfinder_dashboard: nextDashboard },
+        })
+
+        if (!mounted) return
+        if (!error) {
+          clearPendingSave()
+          setSaved(true)
+        } else {
+          setSaved(false)
+        }
+      } else {
+        if (pendingSave?.slug === slug && pendingSave.type === type) clearPendingSave()
+        setSaved(alreadySaved)
+      }
+
       setLoaded(true)
     })
 
@@ -41,6 +90,7 @@ export default function SaveInterestButton({ slug, type, label = "full" }: SaveI
 
     if (!user) {
       const next = `${window.location.pathname}${window.location.search}`
+      window.localStorage.setItem(PENDING_SAVE_KEY, JSON.stringify({ slug, type }))
       window.location.href = `/auth?next=${encodeURIComponent(next)}`
       return
     }

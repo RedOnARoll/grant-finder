@@ -2,9 +2,11 @@
 
 import { FormEvent, useEffect, useMemo, useState } from "react"
 import Link from "next/link"
+import { useRouter } from "next/navigation"
 import type { User } from "@supabase/supabase-js"
 import { APPLICATION_STATUSES, readDashboard } from "@/lib/dashboard"
 import type { AccountDashboard as DashboardData, ApplicationStatus } from "@/lib/dashboard"
+import { profileCompletion, type UserProfile } from "@/lib/profile"
 import type { Grant } from "@/lib/types"
 import { getBrowserSupabase } from "@/lib/supabase-browser"
 
@@ -38,11 +40,12 @@ function statusTone(status: ApplicationStatus) {
 }
 
 export default function AccountDashboard() {
+  const router = useRouter()
   const supabase = useMemo(() => getBrowserSupabase(), [])
   const [user, setUser] = useState<User | null>(null)
   const [programs, setPrograms] = useState<Grant[]>([])
   const [dashboard, setDashboard] = useState<DashboardData>({ saved_programs: [] })
-  const [selectedSlug, setSelectedSlug] = useState("")
+  const [selectedProgramKey, setSelectedProgramKey] = useState("")
   const [selectedStatus, setSelectedStatus] = useState<ApplicationStatus>("interested")
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
@@ -62,6 +65,11 @@ export default function AccountDashboard() {
 
       setUser(userData.user)
       setDashboard(readDashboard(userData.user?.user_metadata?.grantfinder_dashboard))
+      const userProfile = userData.user?.user_metadata?.grantfinder_profile as Partial<UserProfile> | undefined
+      if (userData.user && profileCompletion(userProfile) === 0) {
+        router.replace("/account/profile")
+        return
+      }
 
       if (programError) {
         setError(programError.message)
@@ -77,7 +85,7 @@ export default function AccountDashboard() {
     return () => {
       mounted = false
     }
-  }, [supabase])
+  }, [router, supabase])
 
   async function saveDashboard(nextDashboard: DashboardData, successMessage: string) {
     if (!user) return
@@ -105,14 +113,15 @@ export default function AccountDashboard() {
   async function addSavedProgram(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
 
-    const program = programs.find((item) => item.slug === selectedSlug)
+    const [selectedType, selectedSlug] = selectedProgramKey.split(":")
+    const program = programs.find((item) => item.slug === selectedSlug && item.type === selectedType)
     if (!program) return
 
     const now = new Date().toISOString()
-    const existing = dashboard.saved_programs.find((item) => item.slug === program.slug)
+    const existing = dashboard.saved_programs.find((item) => item.slug === program.slug && item.type === program.type)
     const nextSaved = existing
       ? dashboard.saved_programs.map((item) =>
-          item.slug === program.slug
+          item.slug === program.slug && item.type === program.type
             ? { ...item, status: selectedStatus, updated_at: now }
             : item
         )
@@ -128,21 +137,21 @@ export default function AccountDashboard() {
         ]
 
     await saveDashboard({ saved_programs: nextSaved }, existing ? "Status updated." : "Program saved.")
-    setSelectedSlug("")
+    setSelectedProgramKey("")
     setSelectedStatus("interested")
   }
 
-  async function updateStatus(slug: string, status: ApplicationStatus) {
+  async function updateStatus(slug: string, type: "grant" | "benefit", status: ApplicationStatus) {
     const now = new Date().toISOString()
     const nextSaved = dashboard.saved_programs.map((item) =>
-      item.slug === slug ? { ...item, status, updated_at: now } : item
+      item.slug === slug && item.type === type ? { ...item, status, updated_at: now } : item
     )
 
     await saveDashboard({ saved_programs: nextSaved }, "Application status updated.")
   }
 
-  async function removeSavedProgram(slug: string) {
-    const nextSaved = dashboard.saved_programs.filter((item) => item.slug !== slug)
+  async function removeSavedProgram(slug: string, type: "grant" | "benefit") {
+    const nextSaved = dashboard.saved_programs.filter((item) => !(item.slug === slug && item.type === type))
     await saveDashboard({ saved_programs: nextSaved }, "Saved program removed.")
   }
 
@@ -292,7 +301,7 @@ export default function AccountDashboard() {
                     </div>
                     <button
                       type="button"
-                      onClick={() => removeSavedProgram(saved.slug)}
+                      onClick={() => removeSavedProgram(saved.slug, saved.type)}
                       disabled={saving}
                       className="h-9 rounded-lg border border-zinc-300 px-3 text-sm font-medium text-zinc-500 transition-colors hover:bg-zinc-50 hover:text-zinc-900 disabled:cursor-not-allowed disabled:opacity-60"
                     >
@@ -311,7 +320,7 @@ export default function AccountDashboard() {
                     </div>
                     <select
                       value={saved.status}
-                      onChange={(event) => updateStatus(saved.slug, event.target.value as ApplicationStatus)}
+                      onChange={(event) => updateStatus(saved.slug, saved.type, event.target.value as ApplicationStatus)}
                       disabled={saving}
                       className="h-10 rounded-lg border border-zinc-300 bg-white px-3 text-sm text-zinc-900 outline-none transition focus:border-zinc-900 focus:ring-2 focus:ring-zinc-900/10"
                     >
@@ -334,22 +343,22 @@ export default function AccountDashboard() {
             <p className="mb-5 text-sm text-zinc-500">Saved items appear here and in your tracker.</p>
             <form onSubmit={addSavedProgram} className="grid gap-3">
               <select
-                value={selectedSlug}
-                onChange={(event) => setSelectedSlug(event.target.value)}
+                value={selectedProgramKey}
+                onChange={(event) => setSelectedProgramKey(event.target.value)}
                 required
                 className="h-11 w-full min-w-0 rounded-lg border border-zinc-300 bg-white px-3 text-sm text-zinc-900 outline-none transition focus:border-zinc-900 focus:ring-2 focus:ring-zinc-900/10"
               >
                 <option value="">Choose a program...</option>
                 <optgroup label="Grants">
                   {selectablePrograms.filter((program) => program.type === "grant").map((program) => (
-                    <option key={program.slug} value={program.slug}>
+                    <option key={`${program.type}-${program.slug}`} value={`${program.type}:${program.slug}`}>
                       {program.name}
                     </option>
                   ))}
                 </optgroup>
                 <optgroup label="Benefits">
                   {selectablePrograms.filter((program) => program.type === "benefit").map((program) => (
-                    <option key={program.slug} value={program.slug}>
+                    <option key={`${program.type}-${program.slug}`} value={`${program.type}:${program.slug}`}>
                       {program.name}
                     </option>
                   ))}

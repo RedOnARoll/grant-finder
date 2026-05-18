@@ -2,6 +2,8 @@
 
 import { Suspense, useEffect, useMemo, useState } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
+import { sanitizeNextPath } from "@/lib/auth"
+import { profileCompletion, type UserProfile } from "@/lib/profile"
 import { getBrowserSupabase } from "@/lib/supabase-browser"
 
 function AuthCallback() {
@@ -13,7 +15,7 @@ function AuthCallback() {
   useEffect(() => {
     async function finishSignIn() {
       const next = searchParams.get("next")
-      const safeNext = next?.startsWith("/") ? next : "/account"
+      const safeNext = sanitizeNextPath(next)
       const code = searchParams.get("code")
 
       if (code) {
@@ -30,7 +32,13 @@ function AuthCallback() {
         }
       }
 
-      router.replace(safeNext)
+      const { data: userData } = await supabase.auth.getUser()
+      const userProfile = userData.user?.user_metadata?.grantfinder_profile as Partial<UserProfile> | undefined
+      const target = safeNext.startsWith("/account") && safeNext !== "/account/profile" && profileCompletion(userProfile) === 0
+        ? "/account/profile"
+        : safeNext
+
+      router.replace(target)
       router.refresh()
     }
 
