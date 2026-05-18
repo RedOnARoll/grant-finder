@@ -20,7 +20,7 @@ type YesNoQuestion = {
 
 type PovertyQuestion  = { kind: "poverty"; id: string; percent: number; failReason: string }
 type AMIQuestion      = { kind: "ami";     id: string; percent: number; failReason: string }
-type DollarQuestion   = { kind: "dollar";  id: string; limit: number;   failReason: string }
+type DollarQuestion   = { kind: "dollar";  id: string; limit: number; failReason: string; subject?: "income" | "revenue" | "net_worth" }
 type InfoCard         = { kind: "info";    id: string; text: string }
 
 type Question = YesNoQuestion | PovertyQuestion | AMIQuestion | DollarQuestion | InfoCard
@@ -118,8 +118,14 @@ function parseStringRequirement(req: string, index: number): Question {
 
   // Dollar income limit
   const dollarMatch = req.match(/\$([0-9,]+)/)
-  if (dollarMatch && (lower.includes("income") || lower.includes("earn") || lower.includes("wages"))) {
-    return { kind: "dollar", id, limit: parseInt(dollarMatch[1].replace(/,/g, "")), failReason }
+  if (dollarMatch && (lower.includes("income") || lower.includes("earn") || lower.includes("wages") || lower.includes("revenue"))) {
+    return {
+      kind: "dollar",
+      id,
+      limit: parseInt(dollarMatch[1].replace(/,/g, "")),
+      failReason,
+      subject: lower.includes("revenue") ? "revenue" : "income",
+    }
   }
 
   // General "low-income" without specific %
@@ -134,6 +140,60 @@ function parseStringRequirement(req: string, index: number): Question {
       label: "Do you meet the resource limits for this program?",
       meaning: "Resource limits cap the total value of savings, investments, and other assets you're allowed to have (not counting your home or one car). These are separate from income limits.",
       proof: "Recent bank statements, investment account statements, and retirement account statements showing your current balances. Your caseworker will add these up against the program's asset limit.",
+    }
+  }
+
+  if (lower.includes("nonprofit") || lower.includes("501(c)(3)") || lower.includes("501c3") || lower.includes("tax-exempt")) {
+    return {
+      kind: "yesno", id, qualifyingAnswer: "yes", failReason,
+      label: "Is your organization a qualifying nonprofit or tax-exempt organization?",
+      meaning: "Many institutional grants are limited to nonprofit organizations, often 501(c)(3) public charities or other IRS-recognized tax-exempt entities. Fiscal sponsorship may qualify only if the program explicitly allows it.",
+      proof: "IRS determination letter, current tax-exempt status confirmation from irs.gov, and your organization's articles of incorporation or bylaws.",
+    }
+  }
+
+  if (lower.includes("state agency") || lower.includes("local government") || lower.includes("municipal") || lower.includes("county government") || lower.includes("tribal government")) {
+    return {
+      kind: "yesno", id, qualifyingAnswer: "yes", failReason,
+      label: "Are you applying on behalf of an eligible government or tribal entity?",
+      meaning: "This requirement usually means the applicant must be a state agency, city, county, public authority, federally recognized tribal government, or an official partner authorized to apply for that entity.",
+      proof: "Authorizing resolution, signed letter from the government executive or tribal official, UEI/SAM.gov registration, and documentation showing the entity's legal authority.",
+    }
+  }
+
+  if (lower.includes("small business") || lower.includes("for-profit") || lower.includes("sba size")) {
+    return {
+      kind: "yesno", id, qualifyingAnswer: "yes", failReason,
+      label: "Is your company an eligible small business for this grant?",
+      meaning: "Small business eligibility usually depends on ownership, US operations, employee count, revenue, and NAICS industry size standards. For federal grants, the business may also need active SAM.gov registration.",
+      proof: "State business registration, EIN letter, ownership documents, recent payroll records, revenue statements, and SAM.gov registration if required.",
+    }
+  }
+
+  if (lower.includes("farmer") || lower.includes("rancher") || lower.includes("agricultural producer") || lower.includes("farm operation")) {
+    return {
+      kind: "yesno", id, qualifyingAnswer: "yes", failReason,
+      label: "Are you an eligible farmer, rancher, or agricultural producer?",
+      meaning: "Agricultural grants generally require that you actively operate or manage a farm, ranch, or qualifying agricultural business, not just own rural land.",
+      proof: "Farm Service Agency records, Schedule F tax return, farm lease or deed, livestock/crop records, or sales receipts showing agricultural production.",
+    }
+  }
+
+  if (lower.includes("artist") || lower.includes("writer") || lower.includes("creative") || lower.includes("performer")) {
+    return {
+      kind: "yesno", id, qualifyingAnswer: "yes", failReason,
+      label: "Are you applying as an eligible artist, writer, performer, or creative professional?",
+      meaning: "Arts grants often require an active creative practice, recent public work, or a proposed project in a specific discipline such as visual art, writing, translation, music, theater, film, or dance.",
+      proof: "Artist resume or biography, portfolio/work samples, publication or exhibition history, project proposal, and letters of support when required.",
+    }
+  }
+
+  if (lower.includes("research") || lower.includes("principal investigator") || lower.includes("investigator") || lower.includes("faculty")) {
+    return {
+      kind: "yesno", id, qualifyingAnswer: "yes", failReason,
+      label: "Are you an eligible researcher or part of an eligible research organization?",
+      meaning: "Research grants usually require an eligible institution, qualified principal investigator, defined research plan, and approval for human subjects or animal research when applicable.",
+      proof: "Institutional letter or sign-off, biosketch or CV, research proposal, facilities statement, and IRB/IACUC approval or exemption if required.",
     }
   }
 
@@ -389,6 +449,13 @@ function statementToQuestion(text: string): string {
   const qualifiesMatch = cleaned.match(/^(.+?)\s+qualif(?:y|ies)\b/i)
   if (qualifiesMatch) return `Are you ${qualifiesMatch[1].trim().toLowerCase()}?`
 
+  if (/^applicants? must be\b/i.test(cleaned)) return cleaned.replace(/^applicants? must be\s+/i, "Are you ").replace(/\.$/, "?")
+  if (/^applicants? must have\b/i.test(cleaned)) return cleaned.replace(/^applicants? must have\s+/i, "Do you have ").replace(/\.$/, "?")
+  if (/^organizations? must be\b/i.test(cleaned)) return cleaned.replace(/^organizations? must be\s+/i, "Is your organization ").replace(/\.$/, "?")
+  if (/^organizations? must have\b/i.test(cleaned)) return cleaned.replace(/^organizations? must have\s+/i, "Does your organization have ").replace(/\.$/, "?")
+  if (/^business(?:es)? must be\b/i.test(cleaned)) return cleaned.replace(/^business(?:es)? must be\s+/i, "Is your business ").replace(/\.$/, "?")
+  if (/^business(?:es)? must have\b/i.test(cleaned)) return cleaned.replace(/^business(?:es)? must have\s+/i, "Does your business have ").replace(/\.$/, "?")
+
   let q = cleaned
     .replace(/^Must be a\s+/i, "Are you a ")
     .replace(/^Must be an\s+/i, "Are you an ")
@@ -401,6 +468,8 @@ function statementToQuestion(text: string): string {
     .replace(/^Must\s+/i, "Do you ")
     .replace(/^Required to\s+/i, "Do you ")
     .replace(/^Should be\s+/i, "Are you ")
+    .replace(/^Applicant must be\s+/i, "Are you ")
+    .replace(/^Applicant must have\s+/i, "Do you have ")
     .replace(/^Applicant must\s+/i, "Do you ")
 
   if (!q.endsWith("?")) q += "?"
@@ -441,7 +510,7 @@ function buildFromObject(c: EligibilityCriteria): Question[] {
   })
   if (c.max_household_income_percent_poverty) questions.push({ kind: "poverty", id: "poverty", percent: c.max_household_income_percent_poverty, failReason: `Household income must be at or below ${c.max_household_income_percent_poverty}% of the federal poverty level` })
   if (c.max_household_income_percent_ami) questions.push({ kind: "ami", id: "ami", percent: c.max_household_income_percent_ami, failReason: `Household income must be at or below ${c.max_household_income_percent_ami}% of Area Median Income` })
-  if (c.max_household_income && !c.max_household_income_percent_poverty && !c.max_household_income_percent_ami) questions.push({ kind: "dollar", id: "income", limit: c.max_household_income, failReason: `Annual household income must not exceed ${fmt(c.max_household_income)}` })
+  if (c.max_household_income && !c.max_household_income_percent_poverty && !c.max_household_income_percent_ami) questions.push({ kind: "dollar", id: "income", limit: c.max_household_income, failReason: `Annual household income must not exceed ${fmt(c.max_household_income)}`, subject: "income" })
 
   // Business fields
   if (c.max_employees) questions.push({
@@ -451,7 +520,7 @@ function buildFromObject(c: EligibilityCriteria): Question[] {
     meaning: `The SBA defines a "small business" by employee count for this program. Count all full-time, part-time, and temporary employees on your payroll.`,
     proof: "Your most recent payroll records, or IRS Form 941 (Employer's Quarterly Federal Tax Return) showing headcount. If you use a PEO, get a certification letter from them.",
   })
-  if (c.max_revenue) questions.push({ kind: "dollar", id: "revenue", limit: c.max_revenue, failReason: `Annual revenue must not exceed $${c.max_revenue.toLocaleString()}` })
+  if (c.max_revenue) questions.push({ kind: "dollar", id: "revenue", limit: c.max_revenue, failReason: `Annual revenue must not exceed $${c.max_revenue.toLocaleString()}`, subject: "revenue" })
   if (c.requires_us_ownership) questions.push({
     kind: "yesno", id: "us_ownership", qualifyingAnswer: "yes",
     failReason: "Business must be majority US-owned and controlled",
@@ -729,16 +798,24 @@ function AMIQuestionCard({ q, selectedState, selectedArea, answer, onState, onAr
 }
 
 function DollarQ({ q, answer, onAnswer }: { q: DollarQuestion; answer: "yes" | "no" | null; onAnswer: (v: "yes" | "no") => void }) {
+  const subject = q.subject ?? (q.id === "revenue" ? "revenue" : "income")
+  const label = subject === "revenue" ? "annual business revenue" : subject === "net_worth" ? "net worth" : "annual household income"
+  const explanation = subject === "revenue"
+    ? "Count gross business revenue before expenses, unless the grant instructions specifically ask for net revenue."
+    : subject === "net_worth"
+      ? "Count assets minus debts using the program's rules; some grants exclude your primary home or one vehicle."
+      : "Count household income from wages, self-employment, benefits, retirement, child support, and other recurring sources."
+
   return (
     <div className="border border-zinc-200 rounded-xl p-5">
-      <p className="text-sm font-semibold text-zinc-900 mb-1">What is your annual revenue or income?</p>
-      <p className="text-sm text-zinc-600 leading-6 mb-3">This program has a fixed annual limit. Count all revenue or income from all sources.</p>
+      <p className="text-sm font-semibold text-zinc-900 mb-1">What is your {label}?</p>
+      <p className="text-sm text-zinc-600 leading-6 mb-3">This program has a fixed annual limit. {explanation}</p>
       <div className="rounded-lg bg-zinc-50 border border-zinc-200 px-4 py-3 mb-4">
         <p className="text-xs text-zinc-500 mb-1">Your annual amount must be at or below:</p>
         <p className="text-2xl font-bold text-zinc-900">{fmt(q.limit)}<span className="text-base font-normal text-zinc-500">/year</span></p>
         <p className="text-sm text-zinc-500 mt-0.5">{fmt(Math.round(q.limit / 12))}/month &nbsp;·&nbsp; {fmt(Math.round(q.limit / 52))}/week</p>
       </div>
-      <p className="text-sm font-semibold text-zinc-900 mb-2">Is your annual amount below {fmt(q.limit)}?</p>
+      <p className="text-sm font-semibold text-zinc-900 mb-2">Is your {label} at or below {fmt(q.limit)}?</p>
       <div className="flex gap-3">
         {(["yes", "no"] as const).map(val => (
           <button key={val} type="button" onClick={() => onAnswer(val)}
@@ -804,8 +881,8 @@ export default function GrantEligibilityQuiz({ criteria, slug }: { criteria: Eli
         <div className="mt-6">
           {isEligible ? (
             <div className="rounded-xl bg-green-50 border border-green-200 p-5 mb-4">
-              <p className="font-semibold text-green-800 mb-1">✓ You appear to be eligible</p>
-              <p className="text-sm text-green-700">Based on your answers, you meet the requirements. Click below to start your application.</p>
+              <p className="font-semibold text-green-800 mb-1">Likely eligible based on these answers</p>
+              <p className="text-sm text-green-700">Your answers match the criteria we checked. The grantmaker may verify additional rules, documents, or funding priorities.</p>
             </div>
           ) : (
             <div className="rounded-xl bg-amber-50 border border-amber-200 p-5 mb-4">
