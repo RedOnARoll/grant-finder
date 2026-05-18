@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react"
 import Link from "next/link"
 import type { User } from "@supabase/supabase-js"
 import SaveInterestButton from "@/components/SaveInterestButton"
+import { getProfile, migrateAccountMetadata } from "@/lib/account-db"
 import { matchEligibleBenefits } from "@/lib/eligible-benefits"
 import type { EligibleBenefitMatch } from "@/lib/eligible-benefits"
 import { profileCompletion, type UserProfile } from "@/lib/profile"
@@ -53,14 +54,21 @@ export default function EligibleBenefits({ hideSignedOutState = false }: { hideS
 
       if (!mounted) return
 
-      const userProfile = userData.user?.user_metadata?.grantfinder_profile as Partial<UserProfile> | undefined
       setUser(userData.user)
-      setProfile(userProfile ?? null)
 
       if (benefitsError) {
         setError(benefitsError.message)
-      } else if (userProfile) {
-        setMatches(matchEligibleBenefits(userProfile, (benefitData ?? []) as Grant[]))
+      } else if (userData.user) {
+        try {
+          await migrateAccountMetadata(supabase, userData.user)
+          const userProfile = await getProfile(supabase, userData.user.id)
+          setProfile(userProfile)
+          if (userProfile) {
+            setMatches(matchEligibleBenefits(userProfile, (benefitData ?? []) as Grant[]))
+          }
+        } catch (profileError) {
+          setError(profileError instanceof Error ? profileError.message : "Could not load profile.")
+        }
       }
 
       setLoading(false)

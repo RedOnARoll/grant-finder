@@ -4,6 +4,7 @@ import { FormEvent, useEffect, useMemo, useState } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import type { User } from "@supabase/supabase-js"
+import { getProfile, migrateAccountMetadata, upsertProfile } from "@/lib/account-db"
 import { FUNDING_INTERESTS, PROFILE_DEFAULTS, US_STATES, profileCompletion } from "@/lib/profile"
 import type { UserProfile } from "@/lib/profile"
 import { getBrowserSupabase } from "@/lib/supabase-browser"
@@ -12,6 +13,15 @@ function readProfile(user: User | null): UserProfile {
   const saved = user?.user_metadata?.grantfinder_profile as Partial<UserProfile> | undefined
   return {
     ...PROFILE_DEFAULTS,
+    ...saved,
+    full_name: saved?.full_name || user?.user_metadata?.full_name || "",
+    funding_interests: saved?.funding_interests ?? [],
+  }
+}
+
+function mergeProfile(user: User | null, saved?: Partial<UserProfile> | null): UserProfile {
+  return {
+    ...readProfile(user),
     ...saved,
     full_name: saved?.full_name || user?.user_metadata?.full_name || "",
     funding_interests: saved?.funding_interests ?? [],
@@ -96,9 +106,19 @@ export default function ProfileForm() {
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
-    supabase.auth.getUser().then(({ data }) => {
+    supabase.auth.getUser().then(async ({ data }) => {
       setUser(data.user)
-      setProfile(readProfile(data.user))
+      if (data.user) {
+        try {
+          await migrateAccountMetadata(supabase, data.user)
+          const dbProfile = await getProfile(supabase, data.user.id)
+          setProfile(mergeProfile(data.user, dbProfile))
+        } catch {
+          setProfile(readProfile(data.user))
+        }
+      } else {
+        setProfile(readProfile(null))
+      }
       setLoading(false)
     })
   }, [supabase])
@@ -137,23 +157,24 @@ export default function ProfileForm() {
       profile_completed_at: new Date().toISOString(),
     }
 
-    const { data, error: updateError } = await supabase.auth.updateUser({
-      data: {
-        full_name: profileToSave.full_name,
-        grantfinder_profile: profileToSave,
-      },
-    })
-
-    setSaving(false)
-
-    if (updateError) {
-      setError(updateError.message)
-      return
+    try {
+      const savedProfile = await upsertProfile(supabase, user.id, profileToSave)
+      await supabase.auth.updateUser({
+        data: { full_name: profileToSave.full_name },
+      })
+      setProfile(mergeProfile(user, savedProfile))
+      setMessage("Profile saved. Your recommendations can now use this information.")
+    } catch (updateError) {
+      setError(updateError instanceof Error ? updateError.message : "Could not save profile.")
+    } finally {
+      setSaving(false)
     }
 
-    setUser(data.user)
-    setProfile(readProfile(data.user))
-    setMessage("Profile saved. Your recommendations can now use this information.")
+    const { data } = await supabase.auth.getUser()
+    if (data.user) {
+      setUser(data.user)
+      return
+    }
   }
 
   if (loading) {

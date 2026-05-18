@@ -1,8 +1,7 @@
 "use client"
 
 import { useEffect, useMemo, useState } from "react"
-import { readDashboard } from "@/lib/dashboard"
-import type { AccountDashboard } from "@/lib/dashboard"
+import { getSavedPrograms, migrateAccountMetadata, removeSavedProgram, saveProgram } from "@/lib/account-db"
 import { getBrowserSupabase } from "@/lib/supabase-browser"
 
 const PENDING_SAVE_KEY = "grantfinder_pending_save"
@@ -39,33 +38,18 @@ export default function SaveInterestButton({ slug, type, label = "full" }: SaveI
 
     supabase.auth.getUser().then(async ({ data }) => {
       if (!mounted) return
-      const dashboard = readDashboard(data.user?.user_metadata?.grantfinder_dashboard)
-      const alreadySaved = dashboard.saved_programs.some((item) => item.slug === slug && item.type === type)
+      if (data.user) await migrateAccountMetadata(supabase, data.user)
+      const savedPrograms = data.user ? await getSavedPrograms(supabase, data.user.id) : []
+      if (!mounted) return
+      const alreadySaved = savedPrograms.some((item) => item.slug === slug && item.type === type)
       const pendingSave = data.user ? readPendingSave() : null
 
       if (data.user && pendingSave?.slug === slug && pendingSave.type === type && !alreadySaved) {
-        const now = new Date().toISOString()
-        const nextDashboard: AccountDashboard = {
-          saved_programs: [
-            ...dashboard.saved_programs,
-            {
-              slug,
-              type,
-              status: "interested",
-              saved_at: now,
-              updated_at: now,
-            },
-          ],
-        }
-        const { error } = await supabase.auth.updateUser({
-          data: { grantfinder_dashboard: nextDashboard },
-        })
-
-        if (!mounted) return
-        if (!error) {
+        try {
+          await saveProgram(supabase, data.user.id, slug, type)
           clearPendingSave()
           setSaved(true)
-        } else {
+        } catch {
           setSaved(false)
         }
       } else {
@@ -95,32 +79,18 @@ export default function SaveInterestButton({ slug, type, label = "full" }: SaveI
       return
     }
 
-    const dashboard = readDashboard(user.user_metadata?.grantfinder_dashboard)
-    const alreadySaved = dashboard.saved_programs.some((item) => item.slug === slug && item.type === type)
+    await migrateAccountMetadata(supabase, user)
+    const savedPrograms = await getSavedPrograms(supabase, user.id)
+    const alreadySaved = savedPrograms.some((item) => item.slug === slug && item.type === type)
     setSaved(!alreadySaved)
 
-    const nextDashboard: AccountDashboard = alreadySaved
-      ? {
-          saved_programs: dashboard.saved_programs.filter((item) => !(item.slug === slug && item.type === type)),
-        }
-      : {
-          saved_programs: [
-            ...dashboard.saved_programs,
-            {
-              slug,
-              type,
-              status: "interested",
-              saved_at: new Date().toISOString(),
-              updated_at: new Date().toISOString(),
-            },
-          ],
-        }
-
-    const { error } = await supabase.auth.updateUser({
-      data: { grantfinder_dashboard: nextDashboard },
-    })
-
-    if (error) {
+    try {
+      if (alreadySaved) {
+        await removeSavedProgram(supabase, user.id, slug, type)
+      } else {
+        await saveProgram(supabase, user.id, slug, type)
+      }
+    } catch {
       setSaved(previousSaved)
     }
 

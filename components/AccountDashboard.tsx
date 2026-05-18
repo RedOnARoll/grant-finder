@@ -4,7 +4,8 @@ import { FormEvent, useEffect, useMemo, useState } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import type { User } from "@supabase/supabase-js"
-import { APPLICATION_STATUSES, readDashboard } from "@/lib/dashboard"
+import { getProfile, getSavedPrograms, migrateAccountMetadata, removeSavedProgram as removeSavedProgramRow, saveProgram, updateProgramStatus } from "@/lib/account-db"
+import { APPLICATION_STATUSES } from "@/lib/dashboard"
 import type { AccountDashboard as DashboardData, ApplicationStatus } from "@/lib/dashboard"
 import { profileCompletion, type UserProfile } from "@/lib/profile"
 import type { Grant } from "@/lib/types"
@@ -63,12 +64,29 @@ export default function AccountDashboard() {
 
       if (!mounted) return
 
-      setUser(userData.user)
-      setDashboard(readDashboard(userData.user?.user_metadata?.grantfinder_dashboard))
-      const userProfile = userData.user?.user_metadata?.grantfinder_profile as Partial<UserProfile> | undefined
-      if (userData.user && profileCompletion(userProfile) === 0) {
-        router.replace("/account/profile")
-        return
+      const currentUser = userData.user
+      setUser(currentUser)
+
+      if (currentUser) {
+        let userProfile: Partial<UserProfile> | null = null
+        let savedPrograms: DashboardData["saved_programs"] = []
+
+        try {
+          await migrateAccountMetadata(supabase, currentUser)
+          ;[userProfile, savedPrograms] = await Promise.all([
+            getProfile(supabase, currentUser.id),
+            getSavedPrograms(supabase, currentUser.id),
+          ])
+        } catch (accountError) {
+          setError(accountError instanceof Error ? accountError.message : "Could not load account data.")
+        }
+
+        if (profileCompletion(userProfile) === 0) {
+          router.replace("/account/profile")
+          return
+        }
+
+        setDashboard({ saved_programs: savedPrograms })
       }
 
       if (programError) {
@@ -87,27 +105,28 @@ export default function AccountDashboard() {
     }
   }, [router, supabase])
 
-  async function saveDashboard(nextDashboard: DashboardData, successMessage: string) {
+  async function refreshSavedPrograms(currentUser = user) {
+    if (!currentUser) return
+    const savedPrograms = await getSavedPrograms(supabase, currentUser.id)
+    setDashboard({ saved_programs: savedPrograms })
+  }
+
+  async function runSaveMutation(mutation: () => Promise<unknown>, successMessage: string) {
     if (!user) return
 
     setSaving(true)
     setError(null)
     setMessage(null)
 
-    const { data, error: updateError } = await supabase.auth.updateUser({
-      data: { grantfinder_dashboard: nextDashboard },
-    })
-
-    setSaving(false)
-
-    if (updateError) {
-      setError(updateError.message)
-      return
+    try {
+      await mutation()
+      await refreshSavedPrograms()
+      setMessage(successMessage)
+    } catch (updateError) {
+      setError(updateError instanceof Error ? updateError.message : "Could not save dashboard changes.")
+    } finally {
+      setSaving(false)
     }
-
-    setUser(data.user)
-    setDashboard(readDashboard(data.user.user_metadata?.grantfinder_dashboard))
-    setMessage(successMessage)
   }
 
   async function addSavedProgram(event: FormEvent<HTMLFormElement>) {
@@ -117,42 +136,30 @@ export default function AccountDashboard() {
     const program = programs.find((item) => item.slug === selectedSlug && item.type === selectedType)
     if (!program) return
 
-    const now = new Date().toISOString()
     const existing = dashboard.saved_programs.find((item) => item.slug === program.slug && item.type === program.type)
-    const nextSaved = existing
-      ? dashboard.saved_programs.map((item) =>
-          item.slug === program.slug && item.type === program.type
-            ? { ...item, status: selectedStatus, updated_at: now }
-            : item
-        )
-      : [
-          ...dashboard.saved_programs,
-          {
-            slug: program.slug,
-            type: program.type,
-            status: selectedStatus,
-            saved_at: now,
-            updated_at: now,
-          },
-        ]
 
-    await saveDashboard({ saved_programs: nextSaved }, existing ? "Status updated." : "Program saved.")
+    await runSaveMutation(
+      () => existing
+        ? updateProgramStatus(supabase, user!.id, program.slug, program.type, selectedStatus)
+        : saveProgram(supabase, user!.id, program.slug, program.type, selectedStatus),
+      existing ? "Status updated." : "Program saved."
+    )
     setSelectedProgramKey("")
     setSelectedStatus("interested")
   }
 
   async function updateStatus(slug: string, type: "grant" | "benefit", status: ApplicationStatus) {
-    const now = new Date().toISOString()
-    const nextSaved = dashboard.saved_programs.map((item) =>
-      item.slug === slug && item.type === type ? { ...item, status, updated_at: now } : item
+    await runSaveMutation(
+      () => updateProgramStatus(supabase, user!.id, slug, type, status),
+      "Application status updated."
     )
-
-    await saveDashboard({ saved_programs: nextSaved }, "Application status updated.")
   }
 
   async function removeSavedProgram(slug: string, type: "grant" | "benefit") {
-    const nextSaved = dashboard.saved_programs.filter((item) => !(item.slug === slug && item.type === type))
-    await saveDashboard({ saved_programs: nextSaved }, "Saved program removed.")
+    await runSaveMutation(
+      () => removeSavedProgramRow(supabase, user!.id, slug, type),
+      "Saved program removed."
+    )
   }
 
   if (loading) {

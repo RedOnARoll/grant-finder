@@ -2,6 +2,7 @@
 
 import { Suspense, useEffect, useMemo, useState } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
+import { getProfile, migrateAccountMetadata } from "@/lib/account-db"
 import { sanitizeNextPath } from "@/lib/auth"
 import { profileCompletion, type UserProfile } from "@/lib/profile"
 import { getBrowserSupabase } from "@/lib/supabase-browser"
@@ -33,7 +34,15 @@ function AuthCallback() {
       }
 
       const { data: userData } = await supabase.auth.getUser()
-      const userProfile = userData.user?.user_metadata?.grantfinder_profile as Partial<UserProfile> | undefined
+      let userProfile = userData.user?.user_metadata?.grantfinder_profile as Partial<UserProfile> | undefined
+      if (userData.user) {
+        try {
+          await migrateAccountMetadata(supabase, userData.user)
+          userProfile = await getProfile(supabase, userData.user.id) ?? userProfile
+        } catch {
+          userProfile = userData.user.user_metadata?.grantfinder_profile as Partial<UserProfile> | undefined
+        }
+      }
       const target = safeNext.startsWith("/account") && safeNext !== "/account/profile" && profileCompletion(userProfile) === 0
         ? "/account/profile"
         : safeNext

@@ -2,6 +2,7 @@
 
 import { FormEvent, useMemo, useState } from "react"
 import { useRouter } from "next/navigation"
+import { getProfile, migrateAccountMetadata } from "@/lib/account-db"
 import { sanitizeNextPath } from "@/lib/auth"
 import { profileCompletion, type UserProfile } from "@/lib/profile"
 import { getBrowserSupabase } from "@/lib/supabase-browser"
@@ -35,8 +36,19 @@ export default function AuthForm({
   const safeNext = sanitizeNextPath(next)
   const targetAfterAuth = mode === "signup" && safeNext === "/account" ? "/account/profile" : safeNext
 
-  function targetForUser(userProfile: Partial<UserProfile> | undefined) {
-    if (targetAfterAuth.startsWith("/account") && targetAfterAuth !== "/account/profile" && profileCompletion(userProfile) === 0) {
+  async function targetForUser(userId: string | undefined, userProfile?: Partial<UserProfile>) {
+    let profile = userProfile
+    if (userId) {
+      try {
+        const { data } = await supabase.auth.getUser()
+        if (data.user) await migrateAccountMetadata(supabase, data.user)
+        profile = await getProfile(supabase, userId) ?? undefined
+      } catch {
+        profile = userProfile
+      }
+    }
+
+    if (targetAfterAuth.startsWith("/account") && targetAfterAuth !== "/account/profile" && profileCompletion(profile) === 0) {
       return "/account/profile"
     }
 
@@ -96,7 +108,7 @@ export default function AuthForm({
     }
 
     const userProfile = result.data.user?.user_metadata?.grantfinder_profile as Partial<UserProfile> | undefined
-    router.push(targetForUser(userProfile))
+    router.push(await targetForUser(result.data.user?.id, userProfile))
     router.refresh()
   }
 
