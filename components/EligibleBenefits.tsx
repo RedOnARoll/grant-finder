@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react"
 import Link from "next/link"
 import type { User } from "@supabase/supabase-js"
+import ProgramGrid from "@/components/ProgramGrid"
 import SaveInterestButton from "@/components/SaveInterestButton"
 import { getProfile, migrateAccountMetadata } from "@/lib/account-db"
 import { matchEligibleBenefits } from "@/lib/eligible-benefits"
@@ -204,9 +205,10 @@ export default function EligibleBenefits({ hideSignedOutState = false }: { hideS
           <p className="text-sm text-zinc-500">Try searching by program name, agency, category, or match reason.</p>
         </section>
       ) : (
-        <section className="divide-y divide-zinc-200 overflow-hidden rounded-xl border border-zinc-200 bg-white shadow-sm">
+        <section>
+          <ProgramGrid itemLabel="benefits">
           {visibleMatches.map(({ benefit, matchedReasons, possibleDisqualifiers, confidence, score }) => (
-            <article key={benefit.id} className="p-6">
+            <article key={benefit.id} className="flex h-full flex-col rounded-xl border border-zinc-200 bg-white p-5 shadow-sm">
               <div className="mb-4 flex flex-wrap items-start justify-between gap-4">
                 <div>
                   <div className="mb-2 flex flex-wrap gap-2">
@@ -254,6 +256,7 @@ export default function EligibleBenefits({ hideSignedOutState = false }: { hideS
               </div>
             </article>
           ))}
+          </ProgramGrid>
         </section>
       )}
     </div>

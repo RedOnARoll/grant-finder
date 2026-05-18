@@ -5,6 +5,7 @@ import Link from "next/link"
 import type { Grant, EligibilityCriteria } from "@/lib/types"
 import SiteNav from "@/components/SiteNav"
 import SaveInterestButton from "@/components/SaveInterestButton"
+import ProgramGrid from "@/components/ProgramGrid"
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -401,9 +402,10 @@ function Results({ matches, category, onReset }: { matches: Grant[]; category: C
           Browse All {catLabel} Grants
         </Link>
       ) : (
-        <div className="space-y-4 mb-8">
+        <div className="mb-8">
+          <ProgramGrid itemLabel="grants">
           {sorted.map((g) => (
-            <div key={g.id} className="rounded-xl border border-zinc-200 p-5">
+            <div key={g.id} className="flex h-full flex-col rounded-xl border border-zinc-200 p-5">
               <div className="flex items-start justify-between gap-4 mb-2">
                 <h3 className="font-semibold text-zinc-900">{g.name}</h3>
                 <span className="shrink-0 text-sm font-semibold bg-zinc-100 px-2 py-0.5 rounded-full">{formatAmount(g.max_amount)}</span>
@@ -417,12 +419,13 @@ function Results({ matches, category, onReset }: { matches: Grant[]; category: C
                   {g.required_documents.length > 3 && ` · +${g.required_documents.length - 3} more`}
                 </p>
               )}
-              <div className="flex flex-wrap items-center gap-3">
+              <div className="mt-auto flex flex-wrap items-center gap-3">
                 <SaveInterestButton slug={g.slug} type="grant" />
                 <Link href={`/grants/${g.slug}`} className="text-sm font-medium text-zinc-900 hover:underline">View details →</Link>
               </div>
             </div>
           ))}
+          </ProgramGrid>
         </div>
       )}
 
@@ -515,7 +518,7 @@ function Layout({ children }: { children: React.ReactNode }) {
   return (
     <div className="flex flex-col min-h-full">
       <SiteNav active="quiz" />
-      <main className="flex-1 max-w-2xl mx-auto w-full px-6 py-10">
+      <main className="flex-1 max-w-6xl mx-auto w-full px-6 py-10">
         <div className="flex items-center gap-2 text-sm text-zinc-500 mb-8">
           <Link href="/quiz" className="hover:text-zinc-900 transition-colors">Quiz</Link>
           <span>/</span>

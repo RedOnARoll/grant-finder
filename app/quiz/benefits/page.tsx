@@ -5,6 +5,7 @@ import Link from "next/link"
 import type { Grant } from "@/lib/types"
 import SiteNav from "@/components/SiteNav"
 import SaveInterestButton from "@/components/SaveInterestButton"
+import ProgramGrid from "@/components/ProgramGrid"
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -751,13 +752,13 @@ function Results({ benefits, onReset }: { benefits: BenefitQuizMatch[]; onReset:
       {filtered.length === 0 ? (
         <p className="text-sm text-zinc-500 py-6 text-center">No programs match your search.</p>
       ) : (
-        <div className="space-y-3">
+        <ProgramGrid itemLabel="programs">
           {filtered.map(({ benefit: b, confidence, reasons, possibleDisqualifiers, score }) => (
             <div
               key={b.id}
-              className="rounded-xl border border-zinc-200 p-5 transition-colors hover:border-blue-400"
+              className="flex h-full flex-col rounded-xl border border-zinc-200 p-5 transition-colors hover:border-blue-400"
             >
-              <div className="flex items-start justify-between gap-4 mb-1">
+              <div className="mb-1 flex flex-wrap items-start justify-between gap-2">
                 <Link href={`/benefits/${b.slug}`} className="font-semibold text-zinc-900 text-sm leading-snug hover:underline">
                   {b.name}
                 </Link>
@@ -779,7 +780,7 @@ function Results({ benefits, onReset }: { benefits: BenefitQuizMatch[]; onReset:
                 <p><span className="font-semibold text-zinc-900">What may disqualify you:</span> {possibleDisqualifiers.slice(0, 2).join(" · ")}</p>
                 <p className="text-zinc-400">Score {score} is used only to sort quiz matches.</p>
               </div>
-              <div className="flex flex-wrap items-center gap-3">
+              <div className="mt-auto flex flex-wrap items-center gap-3">
                 <SaveInterestButton slug={b.slug} type="benefit" />
                 <Link href={`/benefits/${b.slug}`} className="text-sm font-medium text-zinc-900 hover:underline">
                   View details →
@@ -787,7 +788,7 @@ function Results({ benefits, onReset }: { benefits: BenefitQuizMatch[]; onReset:
               </div>
             </div>
           ))}
-        </div>
+        </ProgramGrid>
       )}
 
       <div className="flex gap-3 mt-8">
@@ -871,7 +872,7 @@ export default function BenefitsQuizPage() {
     <div className="flex flex-col min-h-full">
       <SiteNav active="quiz" />
 
-      <main className="flex-1 max-w-2xl mx-auto w-full px-6 py-10">
+      <main className="flex-1 max-w-6xl mx-auto w-full px-6 py-10">
         <nav className="flex items-center gap-2 text-sm text-zinc-500 mb-8">
           <Link href="/quiz" className="hover:text-zinc-900 transition-colors">Eligibility Quiz</Link>
           <span>/</span>

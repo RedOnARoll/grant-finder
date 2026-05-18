@@ -4,6 +4,7 @@ import type { Grant } from "@/lib/types"
 import SortSelect from "@/components/SortSelect"
 import SiteNav from "@/components/SiteNav"
 import SaveInterestButton from "@/components/SaveInterestButton"
+import ProgramGrid from "@/components/ProgramGrid"
 
 export const dynamic = "force-dynamic"
 
@@ -16,7 +17,7 @@ function formatAmount(amount: number | null) {
 
 function GrantCard({ grant }: { grant: Grant }) {
   return (
-    <div className="relative rounded-xl border border-zinc-200 p-6 hover:border-zinc-400 transition-colors">
+    <div className="relative flex h-full flex-col rounded-xl border border-zinc-200 p-5 transition-colors hover:border-zinc-400">
       <Link href={`/grants/${grant.slug}`} className="absolute inset-0 rounded-xl" aria-label={grant.name} />
       <div className="flex items-start justify-between gap-4 mb-3">
         <span className="text-base font-semibold text-zinc-900 leading-snug">
@@ -27,9 +28,9 @@ function GrantCard({ grant }: { grant: Grant }) {
         </span>
       </div>
       <p className="text-sm text-zinc-500 mb-1">{grant.agency}</p>
-      <p className="text-sm text-zinc-600 mb-4 line-clamp-2">{grant.description}</p>
-      <div className="flex items-center justify-between">
-        <div className="flex gap-2">
+      <p className="text-sm text-zinc-600 mb-4 line-clamp-3">{grant.description}</p>
+      <div className="mt-auto flex flex-wrap items-center justify-between gap-3">
+        <div className="flex flex-wrap gap-2">
           <span className="text-xs px-2 py-0.5 rounded-full bg-zinc-100 text-zinc-600 capitalize">
             {grant.category.replace("_", " ")}
           </span>
@@ -184,11 +185,11 @@ export default async function GrantsPage({
             <p className="text-sm text-zinc-500 mb-4">
               Showing {grants.length} {grants.length === 1 ? "grant" : "grants"}
             </p>
-            <div className="grid gap-4">
+            <ProgramGrid itemLabel="grants">
               {grants.map((grant) => (
                 <GrantCard key={grant.id} grant={grant} />
               ))}
-            </div>
+            </ProgramGrid>
           </>
         )}
       </main>

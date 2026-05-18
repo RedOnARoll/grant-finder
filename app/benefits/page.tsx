@@ -4,6 +4,7 @@ import type { Grant } from "@/lib/types"
 import SortSelect from "@/components/SortSelect"
 import SiteNav from "@/components/SiteNav"
 import SaveInterestButton from "@/components/SaveInterestButton"
+import ProgramGrid from "@/components/ProgramGrid"
 
 type BenefitSort = "name_asc" | "subcategory_asc" | "amount_desc"
 
@@ -35,7 +36,7 @@ function formatAmount(amount: number | null) {
 function BenefitCard({ benefit }: { benefit: Grant }) {
   const amount = formatAmount(benefit.max_amount)
   return (
-    <div className="relative rounded-xl border border-zinc-200 p-6 hover:border-zinc-400 transition-colors">
+    <div className="relative flex h-full flex-col rounded-xl border border-zinc-200 p-5 transition-colors hover:border-zinc-400">
       <Link href={`/benefits/${benefit.slug}`} className="absolute inset-0 rounded-xl" aria-label={benefit.name} />
       <div className="flex items-start justify-between gap-4 mb-3">
         <span className="text-base font-semibold text-zinc-900 leading-snug">
@@ -48,8 +49,8 @@ function BenefitCard({ benefit }: { benefit: Grant }) {
         )}
       </div>
       <p className="text-sm text-zinc-500 mb-1">{benefit.agency}</p>
-      <p className="text-sm text-zinc-600 mb-4 line-clamp-2">{benefit.description}</p>
-      <div className="flex items-center justify-between">
+      <p className="text-sm text-zinc-600 mb-4 line-clamp-3">{benefit.description}</p>
+      <div className="mt-auto flex flex-wrap items-center justify-between gap-3">
         <div className="flex gap-2 flex-wrap">
           {benefit.subcategory && (
             <span className="text-xs px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 capitalize font-medium">
@@ -176,11 +177,11 @@ export default async function BenefitsPage({
             <p className="text-sm text-zinc-500 mb-4">
               Showing {benefits.length} {benefits.length === 1 ? "program" : "programs"}
             </p>
-            <div className="grid gap-4">
+            <ProgramGrid itemLabel="programs">
               {benefits.map((benefit) => (
                 <BenefitCard key={benefit.id} benefit={benefit} />
               ))}
-            </div>
+            </ProgramGrid>
           </>
         )}
       </main>
