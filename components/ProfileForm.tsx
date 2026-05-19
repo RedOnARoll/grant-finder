@@ -174,7 +174,7 @@ function TextInput({
   label: string
   value: string
   onChange: (value: string) => void
-  onBlur: () => void
+  onBlur: (value: string) => void
   type?: string
   placeholder?: string
   note?: string
@@ -186,7 +186,7 @@ function TextInput({
         type={type}
         value={value}
         onChange={(event) => onChange(event.target.value)}
-        onBlur={onBlur}
+        onBlur={(event) => onBlur(event.currentTarget.value)}
         placeholder={placeholder}
         className="h-11 rounded-lg border border-zinc-300 px-3 text-sm text-zinc-900 outline-none transition focus:border-zinc-900 focus:ring-2 focus:ring-zinc-900/10"
       />
@@ -205,7 +205,7 @@ function SelectInput({
   label: string
   value: string
   onChange: (value: string) => void
-  onBlur: () => void
+  onBlur: (value: string) => void
   options: { value: string; label: string }[]
   note?: string
 }) {
@@ -215,7 +215,7 @@ function SelectInput({
       <select
         value={value}
         onChange={(event) => onChange(event.target.value)}
-        onBlur={onBlur}
+        onBlur={(event) => onBlur(event.currentTarget.value)}
         className="h-11 rounded-lg border border-zinc-300 bg-white px-3 text-sm text-zinc-900 outline-none transition focus:border-zinc-900 focus:ring-2 focus:ring-zinc-900/10"
       >
         <option value="">Select...</option>
@@ -359,7 +359,7 @@ export default function ProfileForm() {
         label={label}
         value={String(profile[key] ?? "")}
         onChange={(value) => update(key, value)}
-        onBlur={() => saveField(key, String(profile[key] ?? ""))}
+        onBlur={(value) => saveField(key, value)}
         type={options.type}
         placeholder={options.placeholder}
         note={options.note}
@@ -376,7 +376,7 @@ export default function ProfileForm() {
         label={label}
         value={String(profile[key] ?? "")}
         onChange={(value) => update(key, value)}
-        onBlur={() => saveField(key, String(profile[key] ?? ""))}
+        onBlur={(value) => saveField(key, value)}
         options={options}
         note={note}
       />
