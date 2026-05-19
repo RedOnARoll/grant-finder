@@ -1,5 +1,5 @@
 import Link from "next/link"
-import { Search } from "lucide-react"
+import { Search, Sparkles } from "lucide-react"
 import { getGrants } from "@/lib/supabase"
 import type { Grant } from "@/lib/types"
 import SortSelect from "@/components/SortSelect"
@@ -8,6 +8,7 @@ import SaveInterestButton from "@/components/SaveInterestButton"
 import ProgramGrid from "@/components/ProgramGrid"
 import { Badge, StatusBadge } from "@/components/ui/Badge"
 import { EmptyStateIllustration } from "@/components/illustrations/GeoShapes"
+import EligibleGrantsFilter from "@/components/EligibleGrantsFilter"
 
 export const dynamic = "force-dynamic"
 
@@ -94,17 +95,38 @@ const SORT_LABELS: Record<GrantSort, string> = {
   name_asc:        "Name: A–Z",
 }
 
+function buildGrantsUrl(p: { cats?: Set<string>; q?: string; sort?: string; eligible?: string }) {
+  const parts: string[] = []
+  if (p.cats?.size) parts.push(`category=${Array.from(p.cats).join(",")}`)
+  if (p.q) parts.push(`q=${encodeURIComponent(p.q)}`)
+  if (p.sort) parts.push(`sort=${p.sort}`)
+  if (p.eligible) parts.push(`eligible=${p.eligible}`)
+  return `/grants${parts.length ? `?${parts.join("&")}` : ""}`
+}
+
+function toggleCat(selected: Set<string>, cat: string): Set<string> {
+  const next = new Set(selected)
+  if (next.has(cat)) {
+    next.delete(cat)
+  } else {
+    next.add(cat)
+  }
+  return next
+}
+
 export default async function GrantsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ category?: string; q?: string; sort?: string }>
+  searchParams: Promise<{ category?: string; q?: string; sort?: string; eligible?: string }>
 }) {
-  const { category, q, sort } = await searchParams
+  const { category, q, sort, eligible } = await searchParams
+  const isEligibleMode = eligible === "1"
+  const selectedCategories = new Set((category ?? "").split(",").filter(Boolean))
   const allGrants = await getGrants()
   const categories = Object.keys(CATEGORY_LABELS)
 
   const filtered = allGrants.filter((g) => {
-    if (category && g.category !== category) return false
+    if (selectedCategories.size > 0 && !selectedCategories.has(g.category)) return false
     if (q && !g.name.toLowerCase().includes(q.toLowerCase()) &&
         !g.description.toLowerCase().includes(q.toLowerCase()) &&
         !g.agency.toLowerCase().includes(q.toLowerCase())) return false
@@ -138,11 +160,20 @@ export default async function GrantsPage({
         <div className="lg:hidden mb-6 overflow-x-auto">
           <form>
             <div className="flex gap-2 pb-1 min-w-max">
+              <Link
+                href={isEligibleMode ? `/grants${q ? `?q=${q}` : ""}` : `/grants?eligible=1`}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium whitespace-nowrap transition-colors ${
+                  isEligibleMode ? "bg-blue-600 text-white" : "bg-slate-100 text-slate-600 hover:bg-slate-200"
+                }`}
+              >
+                <Sparkles className="w-3 h-3" />
+                Eligible for me
+              </Link>
               <input type="hidden" name="q" value={q ?? ""} />
               <Link
-                href={`/grants${q ? `?q=${q}` : ""}${sort ? `${q ? "&" : "?"}sort=${sort}` : ""}`}
+                href={buildGrantsUrl({ q, sort })}
                 className={`px-3 py-1.5 rounded-lg text-sm font-medium whitespace-nowrap transition-colors ${
-                  !category
+                  selectedCategories.size === 0
                     ? "bg-blue-600 text-white"
                     : "bg-slate-100 text-slate-600 hover:bg-slate-200"
                 }`}
@@ -152,9 +183,9 @@ export default async function GrantsPage({
               {categories.map((cat) => (
                 <Link
                   key={cat}
-                  href={`/grants?category=${cat}${q ? `&q=${q}` : ""}${sort ? `&sort=${sort}` : ""}`}
+                  href={buildGrantsUrl({ cats: toggleCat(selectedCategories, cat), q, sort })}
                   className={`px-3 py-1.5 rounded-lg text-sm font-medium whitespace-nowrap transition-colors ${
-                    category === cat
+                    selectedCategories.has(cat)
                       ? "bg-blue-600 text-white"
                       : "bg-slate-100 text-slate-600 hover:bg-slate-200"
                   }`}
@@ -162,9 +193,9 @@ export default async function GrantsPage({
                   {CATEGORY_LABELS[cat] ?? cat.replace("_", " ")}
                 </Link>
               ))}
-              {(category || q) && (
+              {(selectedCategories.size > 0 || q) && (
                 <Link
-                  href={`/grants${sort ? `?sort=${sort}` : ""}`}
+                  href={buildGrantsUrl({ sort })}
                   className="px-3 py-1.5 rounded-lg text-sm text-blue-600 hover:underline whitespace-nowrap"
                 >
                   Clear
@@ -191,19 +222,35 @@ export default async function GrantsPage({
                     placeholder="Search grants..."
                     className="w-full pl-9 pr-3 py-2 rounded-lg border border-slate-200 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20"
                   />
-                  {category && <input type="hidden" name="category" value={category} />}
+                  {selectedCategories.size > 0 && <input type="hidden" name="category" value={Array.from(selectedCategories).join(",")} />}
                   {sort && <input type="hidden" name="sort" value={sort} />}
                 </div>
               </form>
+
+              {/* Eligible for me */}
+              <div className="mb-5">
+                <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-2">Personalized</p>
+                <Link
+                  href={isEligibleMode ? `/grants${q ? `?q=${q}` : ""}${sort ? `${q ? "&" : "?"}sort=${sort}` : ""}` : `/grants?eligible=1`}
+                  className={`flex items-center gap-2 w-full px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+                    isEligibleMode
+                      ? "bg-blue-600 text-white"
+                      : "bg-slate-100 text-slate-600 hover:bg-slate-200"
+                  }`}
+                >
+                  <Sparkles className="w-3.5 h-3.5 shrink-0" />
+                  Eligible for me
+                </Link>
+              </div>
 
               {/* Category */}
               <div>
                 <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-2">Category</p>
                 <div className="flex flex-col gap-1">
                   <Link
-                    href={`/grants${q ? `?q=${q}` : ""}${sort ? `${q ? "&" : "?"}sort=${sort}` : ""}`}
+                    href={buildGrantsUrl({ q, sort })}
                     className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
-                      !category
+                      selectedCategories.size === 0
                         ? "bg-blue-600 text-white"
                         : "bg-slate-100 text-slate-600 hover:bg-slate-200"
                     }`}
@@ -213,9 +260,9 @@ export default async function GrantsPage({
                   {categories.map((cat) => (
                     <Link
                       key={cat}
-                      href={`/grants?category=${cat}${q ? `&q=${q}` : ""}${sort ? `&sort=${sort}` : ""}`}
+                      href={buildGrantsUrl({ cats: toggleCat(selectedCategories, cat), q, sort })}
                       className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
-                        category === cat
+                        selectedCategories.has(cat)
                           ? "bg-blue-600 text-white"
                           : "bg-slate-100 text-slate-600 hover:bg-slate-200"
                       }`}
@@ -227,10 +274,10 @@ export default async function GrantsPage({
               </div>
 
               {/* Clear filters */}
-              {(category || q) && (
+              {(selectedCategories.size > 0 || q) && (
                 <div className="mt-4 pt-4 border-t border-slate-100">
                   <Link
-                    href={`/grants${sort ? `?sort=${sort}` : ""}`}
+                    href={buildGrantsUrl({ sort })}
                     className="text-sm text-blue-600 hover:underline"
                   >
                     Clear Filters
@@ -242,30 +289,36 @@ export default async function GrantsPage({
 
           {/* Main content */}
           <div className="flex-1 min-w-0">
-            {/* Top row: count + sort */}
-            <div className="flex items-center justify-between gap-4 mb-5">
-              <p className="text-sm text-slate-500">
-                {grants.length} {grants.length === 1 ? "grant" : "grants"}
-              </p>
-              <SortSelect
-                value={sort ?? ""}
-                options={(Object.entries(SORT_LABELS) as [GrantSort, string][]).map(([val, label]) => ({ value: val, label }))}
-              />
-            </div>
-
-            {/* Empty state */}
-            {grants.length === 0 ? (
-              <div className="flex flex-col items-center justify-center py-20 text-center">
-                <EmptyStateIllustration className="w-24 h-20 mb-4" />
-                <p className="text-base font-medium text-slate-900 mb-1">No grants found</p>
-                <p className="text-sm text-slate-500">Try adjusting your search or filters.</p>
-              </div>
+            {isEligibleMode ? (
+              <EligibleGrantsFilter returnPath="/grants?eligible=1" />
             ) : (
-              <ProgramGrid itemLabel="grants">
-                {grants.map((grant) => (
-                  <GrantCard key={grant.id} grant={grant} />
-                ))}
-              </ProgramGrid>
+              <>
+                {/* Top row: count + sort */}
+                <div className="flex items-center justify-between gap-4 mb-5">
+                  <p className="text-sm text-slate-500">
+                    {grants.length} {grants.length === 1 ? "grant" : "grants"}
+                  </p>
+                  <SortSelect
+                    value={sort ?? ""}
+                    options={(Object.entries(SORT_LABELS) as [GrantSort, string][]).map(([val, label]) => ({ value: val, label }))}
+                  />
+                </div>
+
+                {/* Empty state */}
+                {grants.length === 0 ? (
+                  <div className="flex flex-col items-center justify-center py-20 text-center">
+                    <EmptyStateIllustration className="w-24 h-20 mb-4" />
+                    <p className="text-base font-medium text-slate-900 mb-1">No grants found</p>
+                    <p className="text-sm text-slate-500">Try adjusting your search or filters.</p>
+                  </div>
+                ) : (
+                  <ProgramGrid itemLabel="grants">
+                    {grants.map((grant) => (
+                      <GrantCard key={grant.id} grant={grant} />
+                    ))}
+                  </ProgramGrid>
+                )}
+              </>
             )}
           </div>
         </div>

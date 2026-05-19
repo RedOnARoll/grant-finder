@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react"
 import Link from "next/link"
-import { AlertTriangle, CheckCircle, Clock, FileQuestion, TrendingUp } from "lucide-react"
+import { AlertTriangle, CheckCircle, Clock, FileQuestion } from "lucide-react"
 import { getBrowserSupabase } from "@/lib/supabase-browser"
 import type { Grant } from "@/lib/types"
 import { Badge } from "@/components/ui/Badge"
@@ -19,8 +19,39 @@ function isExpired(g: Grant) {
   return new Date(g.deadline).getTime() < Date.now()
 }
 
-function isMissingData(g: Grant) {
-  return g.max_amount == null || !g.description || g.description.length < 20
+function hasUsefulString(value: string | null | undefined) {
+  return Boolean(value?.trim())
+}
+
+function hasHttpUrl(value: string | null | undefined) {
+  const trimmed = value?.trim()
+  return Boolean(trimmed && /^https?:\/\//i.test(trimmed))
+}
+
+function hasUsefulStringArray(value: unknown) {
+  return Array.isArray(value) && value.some((item) => typeof item === "string" && item.trim().length > 0)
+}
+
+function hasEligibilityCriteria(g: Grant) {
+  const criteria = g.eligibility_criteria
+  if (Array.isArray(criteria)) return hasUsefulStringArray(criteria)
+  return Boolean(criteria && typeof criteria === "object" && Object.keys(criteria).length > 0)
+}
+
+function missingDataReasons(g: Grant) {
+  const reasons: string[] = []
+
+  if (!hasUsefulString(g.agency)) reasons.push("Missing agency")
+  if (!hasUsefulString(g.description)) reasons.push("Missing description")
+  else if (g.description.trim().length < 80) reasons.push("Description too short")
+  if (g.max_amount == null) reasons.push(g.type === "benefit" ? "Missing max benefit amount" : "Missing max award amount")
+  if (!hasEligibilityCriteria(g)) reasons.push("Missing eligibility criteria")
+  if (!hasUsefulStringArray(g.required_documents)) reasons.push("Missing required documents")
+  if (!hasHttpUrl(g.application_url)) reasons.push("Missing application URL")
+  if (!hasHttpUrl(g.official_source_url)) reasons.push("Missing official source URL")
+  if (!g.is_recurring && !hasUsefulString(g.deadline)) reasons.push("Missing deadline or recurring/open enrollment status")
+
+  return reasons
 }
 
 interface Stats {
@@ -28,7 +59,7 @@ interface Stats {
   totalBenefits: number
   pendingCriteria: Grant[]
   expiredDeadlines: Grant[]
-  missingData: Grant[]
+  missingData: { program: Grant; reasons: string[] }[]
 }
 
 export default function AdminDashboard() {
@@ -48,7 +79,9 @@ export default function AdminDashboard() {
         totalBenefits: benefits.length,
         pendingCriteria: grants.filter(hasPlaceholderCriteria),
         expiredDeadlines: grants.filter(isExpired),
-        missingData: all.filter(isMissingData),
+        missingData: all
+          .map((program) => ({ program, reasons: missingDataReasons(program) }))
+          .filter((item) => item.reasons.length > 0),
       })
     }
     load()
@@ -88,7 +121,7 @@ export default function AdminDashboard() {
       color: "slate",
       title: "Missing data",
       count: stats.missingData.length,
-      description: "Programs missing max amount or a full description.",
+      description: "Programs missing core fields like agency, documents, criteria, URLs, amount, or deadline status.",
       cta: null,
       href: null,
       items: stats.missingData.slice(0, 5),
@@ -141,8 +174,13 @@ export default function AdminDashboard() {
                 <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100">
                   <div className="flex items-center gap-3">
                     <Icon className="w-4 h-4 text-slate-500 shrink-0" />
-                    <span className="font-semibold text-slate-900 text-sm">{title}</span>
-                    <Badge variant={badgeVariant}>{count}</Badge>
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <span className="font-semibold text-slate-900 text-sm">{title}</span>
+                        <Badge variant={badgeVariant}>{count}</Badge>
+                      </div>
+                      <p className="mt-0.5 text-xs text-slate-500">{description}</p>
+                    </div>
                   </div>
                   {cta && href && (
                     <Link href={href} className="text-xs font-medium text-blue-600 hover:underline">
@@ -153,11 +191,27 @@ export default function AdminDashboard() {
 
                 {/* Item list */}
                 <div className="divide-y divide-slate-100">
-                  {items.map((g) => (
-                    <div key={g.id} className="flex items-center justify-between px-5 py-3">
+                  {items.map((item) => {
+                    const g = "program" in item ? item.program : item
+                    const reasons = "reasons" in item ? item.reasons : []
+
+                    return (
+                    <div key={g.id} className="flex items-center justify-between gap-4 px-5 py-3">
                       <div className="min-w-0">
                         <p className="text-sm font-medium text-slate-900 truncate">{g.name}</p>
                         <p className="text-xs text-slate-500 truncate">{g.agency}</p>
+                        {reasons.length > 0 && (
+                          <div className="mt-2 flex flex-wrap gap-1.5">
+                            {reasons.map((reason) => (
+                              <span
+                                key={reason}
+                                className="rounded-md bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-600"
+                              >
+                                {reason}
+                              </span>
+                            ))}
+                          </div>
+                        )}
                       </div>
                       <div className="flex items-center gap-3 ml-4 shrink-0">
                         {g.deadline && isExpired(g) && (
@@ -174,7 +228,8 @@ export default function AdminDashboard() {
                         </Link>
                       </div>
                     </div>
-                  ))}
+                    )
+                  })}
                   {count > 5 && (
                     <div className="px-5 py-3 text-xs text-slate-400">
                       +{count - 5} more
