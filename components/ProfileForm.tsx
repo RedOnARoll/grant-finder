@@ -310,14 +310,13 @@ export default function ProfileForm() {
 
     try {
       const profileToSave = prepareProfile(nextProfile, completed)
-      const savedProfile = await upsertProfile(supabase, user.id, profileToSave)
+      await upsertProfile(supabase, user.id, profileToSave)
       await supabase.auth.updateUser({
         data: {
           full_name: profileToSave.full_name,
           grantfinder_profile: profileToSave,
         },
       })
-      setProfile(mergeProfile(user, { ...profileToSave, ...savedProfile }))
       setMessage(successMessage)
     } catch (updateError) {
       setError(errorMessage(updateError))
@@ -327,15 +326,23 @@ export default function ProfileForm() {
   }
 
   function saveField<K extends keyof UserProfile>(key: K, value: UserProfile[K]) {
-    const nextProfile = { ...profile, [key]: value }
-    void save(nextProfile)
+    setProfile((current) => {
+      const nextProfile = { ...current, [key]: value }
+      void save(nextProfile)
+      return nextProfile
+    })
   }
 
   function toggleArrayField(key: "funding_interests" | "business_ownership_identities", value: string) {
-    const current = profile[key]
-    const next = current.includes(value) ? current.filter((item) => item !== value) : [...current, value]
-    update(key, next)
-    void save({ ...profile, [key]: next })
+    setMessage(null)
+    setError(null)
+    setProfile((currentProfile) => {
+      const current = currentProfile[key]
+      const next = current.includes(value) ? current.filter((item) => item !== value) : [...current, value]
+      const nextProfile = { ...currentProfile, [key]: next }
+      void save(nextProfile)
+      return nextProfile
+    })
   }
 
   async function submit(event: FormEvent<HTMLFormElement>) {
