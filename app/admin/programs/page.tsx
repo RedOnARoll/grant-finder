@@ -2,10 +2,11 @@
 
 import { useEffect, useMemo, useState } from "react"
 import Link from "next/link"
-import { Search } from "lucide-react"
+import { Plus, Search } from "lucide-react"
 import { getBrowserSupabase } from "@/lib/supabase-browser"
 import type { Grant } from "@/lib/types"
 import { Badge, StatusBadge } from "@/components/ui/Badge"
+import { deleteGrant } from "./[id]/actions"
 
 function formatAmount(amount: number | null) {
   if (amount == null) return "Missing"
@@ -25,6 +26,7 @@ export default function AdminProgramsPage() {
   const [query, setQuery] = useState("")
   const [type, setType] = useState<"all" | "grant" | "benefit">("all")
   const [error, setError] = useState<string | null>(null)
+  const [deletingId, setDeletingId] = useState<string | null>(null)
 
   useEffect(() => {
     let mounted = true
@@ -53,6 +55,20 @@ export default function AdminProgramsPage() {
     }
   }, [supabase])
 
+  async function handleDelete(program: Grant) {
+    if (!window.confirm(`Delete "${program.name}"? This cannot be undone.`)) return
+    setDeletingId(program.id)
+    setError(null)
+    const { data: { session } } = await supabase.auth.getSession()
+    const { error: deleteError } = await deleteGrant(session?.access_token ?? "", program.id)
+    if (deleteError) {
+      setError(deleteError)
+    } else {
+      setPrograms((prev) => prev.filter((p) => p.id !== program.id))
+    }
+    setDeletingId(null)
+  }
+
   const visiblePrograms = programs.filter((program) => {
     const q = query.trim().toLowerCase()
     if (type !== "all" && program.type !== type) return false
@@ -74,7 +90,16 @@ export default function AdminProgramsPage() {
             Edit any grant or benefit record in the Supabase grants table.
           </p>
         </div>
-        <Badge variant="blue">{programs.length} total</Badge>
+        <div className="flex items-center gap-3">
+          <Badge variant="blue">{programs.length} total</Badge>
+          <Link
+            href="/admin/programs/new"
+            className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-blue-600 px-4 text-sm font-medium text-white transition-colors hover:bg-blue-700"
+          >
+            <Plus className="h-4 w-4" />
+            New program
+          </Link>
+        </div>
       </div>
 
       <section className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
@@ -163,6 +188,14 @@ export default function AdminProgramsPage() {
                         >
                           View
                         </Link>
+                        <button
+                          type="button"
+                          onClick={() => handleDelete(program)}
+                          disabled={deletingId === program.id}
+                          className="text-rose-500 hover:text-rose-700 disabled:opacity-40"
+                        >
+                          {deletingId === program.id ? "Deleting…" : "Delete"}
+                        </button>
                       </div>
                     </td>
                   </tr>

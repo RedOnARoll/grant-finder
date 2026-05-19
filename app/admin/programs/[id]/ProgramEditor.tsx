@@ -7,7 +7,7 @@ import type { SupabaseClient } from "@supabase/supabase-js"
 import { getBrowserSupabase } from "@/lib/supabase-browser"
 import type { BenefitSubcategory, Grant, GrantCategory } from "@/lib/types"
 import { Badge } from "@/components/ui/Badge"
-import { updateGrant } from "./actions"
+import { createGrant, deleteGrant, updateGrant } from "./actions"
 
 type EditableProgram = Pick<
   Grant,
@@ -162,21 +162,43 @@ function TextAreaField({
   )
 }
 
+const EMPTY_FORM: EditableProgram = {
+  name: "",
+  agency: "",
+  category: "small_business",
+  subcategory: null,
+  type: "grant",
+  description: "",
+  max_amount: null,
+  is_recurring: false,
+  deadline: null,
+  eligibility_criteria: [],
+  required_documents: [],
+  application_url: "",
+  official_source_url: "",
+  form_numbers: [],
+  processing_time_days: null,
+  slug: "",
+}
+
 export default function ProgramEditor({ id }: { id: string }) {
+  const isNew = id === "new"
   const router = useRouter()
   const supabase = useMemo(() => getBrowserSupabase() as SupabaseClient, [])
   const [program, setProgram] = useState<Grant | null>(null)
-  const [form, setForm] = useState<EditableProgram | null>(null)
+  const [form, setForm] = useState<EditableProgram | null>(isNew ? EMPTY_FORM : null)
   const [criteriaText, setCriteriaText] = useState("")
   const [documentsText, setDocumentsText] = useState("")
   const [formsText, setFormsText] = useState("")
-  const [loading, setLoading] = useState(true)
+  const [loading, setLoading] = useState(!isNew)
   const [saving, setSaving] = useState(false)
+  const [deleting, setDeleting] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [message, setMessage] = useState<string | null>(null)
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({})
 
   useEffect(() => {
+    if (isNew) return
     let mounted = true
 
     async function load() {
@@ -225,7 +247,7 @@ export default function ProgramEditor({ id }: { id: string }) {
     return () => {
       mounted = false
     }
-  }, [id, supabase])
+  }, [id, isNew, supabase])
 
   function update<K extends keyof EditableProgram>(key: K, value: EditableProgram[K]) {
     setForm((current) => current ? { ...current, [key]: value } : current)
@@ -249,6 +271,32 @@ export default function ProgramEditor({ id }: { id: string }) {
     return errors
   }
 
+  function applyProgram(saved: Grant) {
+    setProgram(saved)
+    setForm({
+      name: saved.name,
+      agency: saved.agency,
+      category: saved.category,
+      subcategory: saved.subcategory,
+      type: saved.type,
+      description: saved.description,
+      max_amount: saved.max_amount,
+      is_recurring: saved.is_recurring,
+      deadline: saved.deadline,
+      eligibility_criteria: saved.eligibility_criteria,
+      required_documents: saved.required_documents ?? [],
+      application_url: saved.application_url,
+      official_source_url: saved.official_source_url,
+      form_numbers: saved.form_numbers ?? [],
+      processing_time_days: saved.processing_time_days,
+      slug: saved.slug,
+    })
+    setCriteriaText(stringifyCriteria(saved.eligibility_criteria))
+    setDocumentsText(textList(saved.required_documents ?? []))
+    setFormsText(textList(saved.form_numbers ?? []))
+    setFieldErrors({})
+  }
+
   async function save(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
     if (!form) return
@@ -270,7 +318,7 @@ export default function ProgramEditor({ id }: { id: string }) {
         name: form.name.trim(),
         agency: form.agency.trim(),
         category: form.category,
-        subcategory: form.type === "benefit" ? form.subcategory || null : form.subcategory || null,
+        subcategory: form.subcategory || null,
         type: form.type,
         description: form.description.trim(),
         max_amount: nullableNumber(String(form.max_amount ?? "")),
@@ -286,45 +334,40 @@ export default function ProgramEditor({ id }: { id: string }) {
       }
 
       const { data: { session } } = await supabase.auth.getSession()
-      const { data: savedRaw, error: saveError } = await updateGrant(
-        session?.access_token ?? "",
-        id,
-        payload
-      )
+      const token = session?.access_token ?? ""
 
-      if (saveError) throw new Error(saveError)
-      if (!savedRaw) throw new Error("No data returned from save.")
-
-      const saved = savedRaw
-      setProgram(saved)
-      setForm({
-        name: saved.name,
-        agency: saved.agency,
-        category: saved.category,
-        subcategory: saved.subcategory,
-        type: saved.type,
-        description: saved.description,
-        max_amount: saved.max_amount,
-        is_recurring: saved.is_recurring,
-        deadline: saved.deadline,
-        eligibility_criteria: saved.eligibility_criteria,
-        required_documents: saved.required_documents ?? [],
-        application_url: saved.application_url,
-        official_source_url: saved.official_source_url,
-        form_numbers: saved.form_numbers ?? [],
-        processing_time_days: saved.processing_time_days,
-        slug: saved.slug,
-      })
-      setCriteriaText(stringifyCriteria(saved.eligibility_criteria))
-      setDocumentsText(textList(saved.required_documents ?? []))
-      setFormsText(textList(saved.form_numbers ?? []))
-      setFieldErrors({})
-      setMessage("Program saved.")
-      router.refresh()
+      if (isNew) {
+        const { data: created, error: createError } = await createGrant(token, payload)
+        if (createError) throw new Error(createError)
+        if (!created) throw new Error("No data returned from create.")
+        router.replace(`/admin/programs/${created.id}`)
+      } else {
+        const { data: savedRaw, error: saveError } = await updateGrant(token, id, payload)
+        if (saveError) throw new Error(saveError)
+        if (!savedRaw) throw new Error("No data returned from save.")
+        applyProgram(savedRaw)
+        setMessage("Program saved.")
+        router.refresh()
+      }
     } catch (saveError) {
       setError(saveError instanceof Error ? saveError.message : "Could not save program.")
     } finally {
       setSaving(false)
+    }
+  }
+
+  async function handleDelete() {
+    if (!program) return
+    if (!window.confirm(`Delete "${program.name}"? This cannot be undone.`)) return
+    setDeleting(true)
+    setError(null)
+    const { data: { session } } = await supabase.auth.getSession()
+    const { error: deleteError } = await deleteGrant(session?.access_token ?? "", program.id)
+    if (deleteError) {
+      setError(deleteError)
+      setDeleting(false)
+    } else {
+      router.push("/admin/programs")
     }
   }
 
@@ -355,25 +398,37 @@ export default function ProgramEditor({ id }: { id: string }) {
               Programs
             </Link>
             <span className="text-sm text-slate-400">/</span>
-            <Badge variant={form.type === "grant" ? "amber" : "green"}>{form.type}</Badge>
+            {!isNew && <Badge variant={form.type === "grant" ? "amber" : "green"}>{form.type}</Badge>}
           </div>
-          <h1 className="text-2xl font-bold text-slate-900">Edit Program</h1>
-          <p className="mt-1 text-sm text-slate-500">{program.name}</p>
+          <h1 className="text-2xl font-bold text-slate-900">{isNew ? "New Program" : "Edit Program"}</h1>
+          {!isNew && <p className="mt-1 text-sm text-slate-500">{program?.name}</p>}
         </div>
         <div className="flex flex-wrap gap-2">
-          <Link
-            href={publicPath}
-            target="_blank"
-            className="inline-flex h-10 items-center rounded-lg border border-slate-200 bg-white px-4 text-sm font-medium text-slate-700 transition-colors hover:bg-slate-50"
-          >
-            View public page
-          </Link>
+          {!isNew && form.slug && (
+            <Link
+              href={publicPath}
+              target="_blank"
+              className="inline-flex h-10 items-center rounded-lg border border-slate-200 bg-white px-4 text-sm font-medium text-slate-700 transition-colors hover:bg-slate-50"
+            >
+              View public page
+            </Link>
+          )}
+          {!isNew && program && (
+            <button
+              type="button"
+              onClick={handleDelete}
+              disabled={deleting}
+              className="inline-flex h-10 items-center rounded-lg border border-rose-200 bg-white px-4 text-sm font-medium text-rose-600 transition-colors hover:bg-rose-50 disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              {deleting ? "Deleting..." : "Delete"}
+            </button>
+          )}
           <button
             type="submit"
             disabled={saving}
             className="inline-flex h-10 items-center rounded-lg bg-blue-600 px-5 text-sm font-medium text-white transition-colors hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
           >
-            {saving ? "Saving..." : "Save changes"}
+            {saving ? "Saving..." : isNew ? "Create program" : "Save changes"}
           </button>
         </div>
       </div>
