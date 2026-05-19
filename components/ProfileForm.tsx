@@ -95,14 +95,22 @@ function readProfile(user: User | null): UserProfile {
   }
 }
 
+function removeUndefinedValues(profile?: Partial<UserProfile> | null): Partial<UserProfile> {
+  if (!profile) return {}
+  return Object.fromEntries(
+    Object.entries(profile).filter(([, value]) => value !== undefined),
+  ) as Partial<UserProfile>
+}
+
 function mergeProfile(user: User | null, saved?: Partial<UserProfile> | null): UserProfile {
+  const savedProfile = removeUndefinedValues(saved)
   return {
     ...readProfile(user),
-    ...saved,
-    full_name: saved?.full_name || user?.user_metadata?.full_name || "",
-    email: saved?.email || user?.email || "",
-    funding_interests: saved?.funding_interests ?? [],
-    business_ownership_identities: saved?.business_ownership_identities ?? [],
+    ...savedProfile,
+    full_name: savedProfile.full_name || user?.user_metadata?.full_name || "",
+    email: savedProfile.email || user?.email || "",
+    funding_interests: savedProfile.funding_interests ?? [],
+    business_ownership_identities: savedProfile.business_ownership_identities ?? [],
   }
 }
 
@@ -121,16 +129,18 @@ function stepCompletion(profile: UserProfile, step: ProfileStep) {
 function prepareProfile(profile: UserProfile, completed = false): UserProfile {
   return {
     ...profile,
-    full_name: profile.full_name.trim(),
-    email: profile.email.trim(),
-    zip_code: profile.zip_code.trim(),
-    phone_number: profile.phone_number.trim(),
-    annual_income: profile.annual_income.trim(),
-    annual_revenue: profile.annual_revenue.trim(),
-    employee_count: profile.employee_count.trim(),
-    years_in_operation: profile.years_in_operation.trim(),
-    field_of_study: profile.field_of_study.trim(),
-    business_industry: profile.business_industry.trim(),
+    full_name: (profile.full_name ?? "").trim(),
+    email: (profile.email ?? "").trim(),
+    zip_code: (profile.zip_code ?? "").trim(),
+    phone_number: (profile.phone_number ?? "").trim(),
+    annual_income: (profile.annual_income ?? "").trim(),
+    annual_revenue: (profile.annual_revenue ?? "").trim(),
+    employee_count: (profile.employee_count ?? "").trim(),
+    years_in_operation: (profile.years_in_operation ?? "").trim(),
+    field_of_study: (profile.field_of_study ?? "").trim(),
+    business_industry: (profile.business_industry ?? "").trim(),
+    funding_interests: profile.funding_interests ?? [],
+    business_ownership_identities: profile.business_ownership_identities ?? [],
     profile_completed_at: completed ? new Date().toISOString() : profile.profile_completed_at,
   }
 }

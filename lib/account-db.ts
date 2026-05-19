@@ -89,6 +89,12 @@ function readString(row: Record<string, unknown>, key: string) {
   return key in row ? String(row[key] ?? "") : undefined
 }
 
+function removeUndefinedValues(profile: Partial<UserProfile>) {
+  return Object.fromEntries(
+    Object.entries(profile).filter(([, value]) => value !== undefined),
+  ) as Partial<UserProfile>
+}
+
 function rowToProfile(row: Record<string, unknown> | null): Partial<UserProfile> | null {
   if (!row) return null
 
@@ -170,7 +176,7 @@ export async function getProfile(supabase: SupabaseClient, userId: string) {
 export async function upsertProfile(supabase: SupabaseClient, userId: string, profile: UserProfile) {
   const normalizedProfile = {
     ...PROFILE_DEFAULTS,
-    ...profile,
+    ...removeUndefinedValues(profile),
   }
 
   const expandedPayload = {
