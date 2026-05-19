@@ -1,11 +1,12 @@
 "use server"
 
-import { createClient } from "@supabase/supabase-js"
+import { createClient, type SupabaseClient } from "@supabase/supabase-js"
 import type { Grant } from "@/lib/types"
 
 const ADMIN_EMAIL = "redonaroll09@gmail.com"
 
-function getClients(accessToken: string) {
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function getClients(accessToken: string): { verifyClient: SupabaseClient<any>; adminClient: SupabaseClient<any> } {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL
   const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
   const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
@@ -20,7 +21,8 @@ function getClients(accessToken: string) {
   return { verifyClient, adminClient }
 }
 
-async function verifyAdmin(verifyClient: ReturnType<typeof createClient>) {
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+async function verifyAdmin(verifyClient: SupabaseClient<any>) {
   const { data: { user }, error } = await verifyClient.auth.getUser()
   if (error || !user || user.email !== ADMIN_EMAIL) throw new Error("Unauthorized.")
 }
