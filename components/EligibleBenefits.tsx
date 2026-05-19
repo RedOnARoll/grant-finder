@@ -34,7 +34,13 @@ function subcategoryLabel(value: string | null) {
   return value ? labels[value] ?? value : "Benefit"
 }
 
-export default function EligibleBenefits({ hideSignedOutState = false }: { hideSignedOutState?: boolean }) {
+export default function EligibleBenefits({
+  hideSignedOutState = false,
+  previewLimit,
+}: {
+  hideSignedOutState?: boolean
+  previewLimit?: number
+}) {
   const supabase = useMemo(() => getBrowserSupabase(), [])
   const [user, setUser] = useState<User | null>(null)
   const [profile, setProfile] = useState<Partial<UserProfile> | null>(null)
@@ -143,6 +149,9 @@ export default function EligibleBenefits({ hideSignedOutState = false }: { hideS
       }
     })
 
+  const displayedMatches = previewLimit ? visibleMatches.slice(0, previewLimit) : visibleMatches
+  const hiddenPreviewCount = previewLimit ? Math.max(visibleMatches.length - displayedMatches.length, 0) : 0
+
   const likelyCount = matches.filter((match) => match.confidence === "likely").length
   const possibleCount = matches.length - likelyCount
 
@@ -164,7 +173,7 @@ export default function EligibleBenefits({ hideSignedOutState = false }: { hideS
         {error && <p className="mt-4 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">{error}</p>}
       </section>
 
-      {matches.length > 0 && (
+      {matches.length > 0 && !previewLimit && (
         <section className="rounded-xl border border-zinc-200 bg-white p-4 shadow-sm">
           <div className="grid gap-3 md:grid-cols-[minmax(0,1fr)_220px]">
             <input
@@ -207,7 +216,7 @@ export default function EligibleBenefits({ hideSignedOutState = false }: { hideS
       ) : (
         <section>
           <ProgramGrid itemLabel="benefits">
-          {visibleMatches.map(({ benefit, matchedReasons, possibleDisqualifiers, confidence, score }) => (
+          {displayedMatches.map(({ benefit, matchedReasons, possibleDisqualifiers, confidence, score }) => (
             <article key={benefit.id} className="flex h-full flex-col rounded-xl border border-zinc-200 bg-white p-5 shadow-sm">
               <div className="mb-4 flex flex-wrap items-start justify-between gap-4">
                 <div>
@@ -257,6 +266,16 @@ export default function EligibleBenefits({ hideSignedOutState = false }: { hideS
             </article>
           ))}
           </ProgramGrid>
+          {hiddenPreviewCount > 0 && (
+            <div className="mt-5 flex justify-center">
+              <Link
+                href="/account/eligible"
+                className="inline-flex h-10 items-center rounded-full border border-zinc-300 bg-white px-5 text-sm font-medium text-zinc-700 transition-colors hover:border-zinc-500 hover:text-zinc-900"
+              >
+                View all eligible matches ({hiddenPreviewCount} more)
+              </Link>
+            </div>
+          )}
         </section>
       )}
     </div>

@@ -4,6 +4,7 @@ import { getBenefits } from "@/lib/supabase"
 import type { Grant } from "@/lib/types"
 import SiteNav from "@/components/SiteNav"
 import SaveInterestButton from "@/components/SaveInterestButton"
+import ProgramGrid from "@/components/ProgramGrid"
 import { Badge, StatusBadge } from "@/components/ui/Badge"
 import { EmptyStateIllustration } from "@/components/illustrations/GeoShapes"
 
@@ -288,11 +289,11 @@ export default async function BenefitsPage({
                 </Link>
               </div>
             ) : (
-              <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
+              <ProgramGrid itemLabel="programs">
                 {benefits.map((benefit) => (
                   <BenefitCard key={benefit.id} benefit={benefit} />
                 ))}
-              </div>
+              </ProgramGrid>
             )}
           </div>
         </div>

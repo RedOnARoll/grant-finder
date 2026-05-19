@@ -77,8 +77,8 @@ export function matchEligibleBenefits(profile: Partial<UserProfile>, benefits: G
   const lowIncome = isLowIncome(profile)
   const hasChildren = profile.has_children === "yes"
   const hasDisability = profile.disability_status === "yes"
-  const isVeteran = profile.veteran_status === "veteran" || profile.veteran_status === "active_duty" || profile.veteran_status === "military_family"
-  const isStudent = profile.student_status && profile.student_status !== "not_student"
+  const isVeteran = profile.veteran_status === "yes" || profile.veteran_status === "active_duty" || profile.veteran_status === "surviving_spouse"
+  const isStudent = profile.student_status === "yes"
   const isRural = profile.rural_location === "yes"
   const interests = new Set(profile.funding_interests ?? [])
   const preferredSubcategories = new Set(

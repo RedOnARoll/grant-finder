@@ -5,6 +5,7 @@ import type { Grant } from "@/lib/types"
 import SortSelect from "@/components/SortSelect"
 import SiteNav from "@/components/SiteNav"
 import SaveInterestButton from "@/components/SaveInterestButton"
+import ProgramGrid from "@/components/ProgramGrid"
 import { Badge, StatusBadge } from "@/components/ui/Badge"
 import { EmptyStateIllustration } from "@/components/illustrations/GeoShapes"
 
@@ -260,11 +261,11 @@ export default async function GrantsPage({
                 <p className="text-sm text-slate-500">Try adjusting your search or filters.</p>
               </div>
             ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <ProgramGrid itemLabel="grants">
                 {grants.map((grant) => (
                   <GrantCard key={grant.id} grant={grant} />
                 ))}
-              </div>
+              </ProgramGrid>
             )}
           </div>
         </div>

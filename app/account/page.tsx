@@ -44,7 +44,7 @@ export default function AccountPage() {
               <h2 className="text-lg font-semibold text-slate-900">Likely benefit matches</h2>
               <p className="mt-1 text-sm text-slate-600">Benefits you may qualify for based on your saved profile details.</p>
             </div>
-            <EligibleBenefits hideSignedOutState />
+            <EligibleBenefits hideSignedOutState previewLimit={3} />
           </section>
         </div>
       </main>

@@ -22,6 +22,8 @@ type ProfileStep = {
   fields: (keyof UserProfile)[]
 }
 
+type FieldErrors = Partial<Record<keyof UserProfile, string>>
+
 const STEPS: ProfileStep[] = [
   {
     id: "personal",
@@ -33,7 +35,7 @@ const STEPS: ProfileStep[] = [
     id: "household",
     title: "Household & Financial",
     description: "Income and household details improve benefit and need-based grant matching.",
-    fields: ["household_size", "annual_income", "income_source", "home_ownership", "rural_location"],
+    fields: ["household_size", "has_children", "annual_income", "income_source", "home_ownership", "rural_location"],
   },
   {
     id: "identity",
@@ -83,6 +85,22 @@ const YES_NO = [
   { value: "no", label: "No" },
 ]
 
+const OPTIONAL_STEP_FIELDS = new Set<keyof UserProfile>([
+  "phone_number",
+  "annual_income",
+  "disability_status",
+  "gender",
+  "race_ethnicity",
+  "tribal_affiliation",
+  "field_of_study",
+  "degree_type_pursuing",
+  "annual_revenue",
+  "business_ownership_identities",
+  "email_alerts",
+  "deadline_reminders",
+  "weekly_digest",
+])
+
 function readProfile(user: User | null): UserProfile {
   const saved = user?.user_metadata?.grantfinder_profile as Partial<UserProfile> | undefined
   return {
@@ -120,9 +138,10 @@ function fieldComplete(profile: UserProfile, field: keyof UserProfile) {
 }
 
 function stepCompletion(profile: UserProfile, step: ProfileStep) {
-  const fields = step.id === "business" && profile.business_owner !== "yes"
+  const stepFields = step.id === "business" && profile.business_owner !== "yes"
     ? ["business_owner"] as (keyof UserProfile)[]
     : step.fields
+  const fields = stepFields.filter((field) => !OPTIONAL_STEP_FIELDS.has(field))
   return Math.round((fields.filter((field) => fieldComplete(profile, field)).length / fields.length) * 100)
 }
 
@@ -162,6 +181,37 @@ function FieldLabel({ children, note }: { children: React.ReactNode; note?: stri
   )
 }
 
+function validateField<K extends keyof UserProfile>(key: K, value: UserProfile[K]) {
+  const raw = Array.isArray(value) ? "" : String(value ?? "").trim()
+
+  if (key === "zip_code" && raw && !/^\d{5}$/.test(raw)) {
+    return "Enter a 5-digit ZIP code."
+  }
+
+  if (key === "date_of_birth" && raw) {
+    const date = new Date(raw)
+    const now = new Date()
+    if (Number.isNaN(date.getTime()) || date > now) return "Enter a valid date of birth."
+    const age = now.getFullYear() - date.getFullYear()
+    if (age > 120) return "Enter a realistic date of birth."
+  }
+
+  if (["annual_income", "annual_revenue", "employee_count", "years_in_operation"].includes(key) && raw) {
+    const parsed = Number(raw)
+    if (!Number.isFinite(parsed) || parsed < 0) return "Enter zero or a positive number."
+  }
+
+  return null
+}
+
+function validateProfile(profile: UserProfile) {
+  return Object.fromEntries(
+    Object.entries(profile)
+      .map(([key, value]) => [key, validateField(key as keyof UserProfile, value as UserProfile[keyof UserProfile])])
+      .filter(([, value]) => value)
+  ) as FieldErrors
+}
+
 function TextInput({
   label,
   value,
@@ -170,6 +220,7 @@ function TextInput({
   type = "text",
   placeholder,
   note,
+  error,
 }: {
   label: string
   value: string
@@ -178,6 +229,7 @@ function TextInput({
   type?: string
   placeholder?: string
   note?: string
+  error?: string
 }) {
   return (
     <label className="grid gap-1.5">
@@ -190,6 +242,7 @@ function TextInput({
         placeholder={placeholder}
         className="h-11 rounded-lg border border-zinc-300 px-3 text-sm text-zinc-900 outline-none transition focus:border-zinc-900 focus:ring-2 focus:ring-zinc-900/10"
       />
+      {error && <span className="text-xs font-medium text-rose-600">{error}</span>}
     </label>
   )
 }
@@ -201,6 +254,7 @@ function SelectInput({
   onBlur,
   options,
   note,
+  error,
 }: {
   label: string
   value: string
@@ -208,6 +262,7 @@ function SelectInput({
   onBlur: (value: string) => void
   options: { value: string; label: string }[]
   note?: string
+  error?: string
 }) {
   return (
     <label className="grid gap-1.5">
@@ -225,6 +280,7 @@ function SelectInput({
           </option>
         ))}
       </select>
+      {error && <span className="text-xs font-medium text-rose-600">{error}</span>}
     </label>
   )
 }
@@ -278,6 +334,7 @@ export default function ProfileForm() {
   const [saving, setSaving] = useState(false)
   const [message, setMessage] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const [fieldErrors, setFieldErrors] = useState<FieldErrors>({})
 
   useEffect(() => {
     supabase.auth.getUser().then(async ({ data }) => {
@@ -299,6 +356,7 @@ export default function ProfileForm() {
 
   function update<K extends keyof UserProfile>(key: K, value: UserProfile[K]) {
     setProfile((current) => ({ ...current, [key]: value }))
+    setFieldErrors((current) => ({ ...current, [key]: undefined }))
     setMessage(null)
     setError(null)
   }
@@ -326,6 +384,13 @@ export default function ProfileForm() {
   }
 
   function saveField<K extends keyof UserProfile>(key: K, value: UserProfile[K]) {
+    const validationError = validateField(key, value)
+    if (validationError) {
+      setFieldErrors((current) => ({ ...current, [key]: validationError }))
+      setError("Fix the highlighted field before saving.")
+      return
+    }
+
     setProfile((current) => {
       const nextProfile = { ...current, [key]: value }
       void save(nextProfile)
@@ -353,6 +418,14 @@ export default function ProfileForm() {
       return
     }
 
+    const nextErrors = validateProfile(profile)
+
+    if (Object.keys(nextErrors).length > 0) {
+      setFieldErrors(nextErrors)
+      setError("Fix the highlighted fields before saving.")
+      return
+    }
+
     await save(profile, true, "Profile saved. Your recommendations can now use this information.")
   }
 
@@ -370,6 +443,7 @@ export default function ProfileForm() {
         type={options.type}
         placeholder={options.placeholder}
         note={options.note}
+        error={fieldErrors[key]}
       />
     )
 
@@ -386,6 +460,7 @@ export default function ProfileForm() {
         onBlur={(value) => saveField(key, value)}
         options={options}
         note={note}
+        error={fieldErrors[key]}
       />
     )
 
@@ -407,6 +482,8 @@ export default function ProfileForm() {
           const size = index + 1
           return { value: String(size), label: size === 9 ? "9 or more" : String(size) }
         }))
+      case "has_children":
+        return selectField(field, "Children in household", YES_NO, "Used for childcare, WIC, school meal, and family benefit matching.")
       case "annual_income":
         return textField(field, "Annual household income", { type: "number", placeholder: "45000", note: "Optional sensitive field. Income improves need-based benefit and grant matching." })
       case "income_source":
@@ -643,6 +720,12 @@ export default function ProfileForm() {
                     <button
                       type="button"
                       onClick={() => {
+                        const nextErrors = validateProfile(profile)
+                        if (Object.keys(nextErrors).length > 0) {
+                          setFieldErrors(nextErrors)
+                          setError("Fix the highlighted fields before saving.")
+                          return
+                        }
                         void save()
                         setActiveStep(Math.min(STEPS.length - 1, index + 1))
                       }}
