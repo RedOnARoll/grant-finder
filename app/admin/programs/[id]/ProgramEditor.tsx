@@ -7,6 +7,7 @@ import type { SupabaseClient } from "@supabase/supabase-js"
 import { getBrowserSupabase } from "@/lib/supabase-browser"
 import type { BenefitSubcategory, Grant, GrantCategory } from "@/lib/types"
 import { Badge } from "@/components/ui/Badge"
+import { updateGrant } from "./actions"
 
 type EditableProgram = Pick<
   Grant,
@@ -284,16 +285,17 @@ export default function ProgramEditor({ id }: { id: string }) {
         slug: form.slug.trim(),
       }
 
-      const { data, error: saveError } = await supabase
-        .from("grants")
-        .update({ ...payload, updated_at: new Date().toISOString() })
-        .eq("id", id)
-        .select("*")
-        .single()
+      const { data: { session } } = await supabase.auth.getSession()
+      const { data: savedRaw, error: saveError } = await updateGrant(
+        session?.access_token ?? "",
+        id,
+        payload
+      )
 
-      if (saveError) throw saveError
+      if (saveError) throw new Error(saveError)
+      if (!savedRaw) throw new Error("No data returned from save.")
 
-      const saved = data as Grant
+      const saved = savedRaw
       setProgram(saved)
       setForm({
         name: saved.name,

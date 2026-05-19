@@ -69,8 +69,18 @@ export default function AuthMenu() {
     .map((word: string) => word[0]?.toUpperCase() ?? "")
     .join("")
 
+  const isAdmin = user.email === "redonaroll09@gmail.com"
+
   return (
     <div className="flex items-center gap-3">
+      {isAdmin && (
+        <Link
+          href="/admin"
+          className="text-sm font-medium text-amber-600 hover:text-amber-700 transition-colors"
+        >
+          Admin
+        </Link>
+      )}
       <Link href="/account" className="flex items-center gap-2">
         <span className="w-8 h-8 rounded-full bg-slate-900 text-white text-xs font-semibold flex items-center justify-center shrink-0">
           {initials}
