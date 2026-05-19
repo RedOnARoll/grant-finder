@@ -190,6 +190,7 @@ export default function ProgramEditor({ id }: { id: string }) {
   const [criteriaText, setCriteriaText] = useState("")
   const [documentsText, setDocumentsText] = useState("")
   const [formsText, setFormsText] = useState("")
+  const [deadlineValue, setDeadlineValue] = useState("")
   const [loading, setLoading] = useState(!isNew)
   const [saving, setSaving] = useState(false)
   const [deleting, setDeleting] = useState(false)
@@ -239,6 +240,7 @@ export default function ProgramEditor({ id }: { id: string }) {
       setCriteriaText(stringifyCriteria(nextProgram.eligibility_criteria))
       setDocumentsText(textList(nextProgram.required_documents ?? []))
       setFormsText(textList(nextProgram.form_numbers ?? []))
+      setDeadlineValue(formatDateInput(nextProgram.deadline))
       setLoading(false)
     }
 
@@ -294,6 +296,7 @@ export default function ProgramEditor({ id }: { id: string }) {
     setCriteriaText(stringifyCriteria(saved.eligibility_criteria))
     setDocumentsText(textList(saved.required_documents ?? []))
     setFormsText(textList(saved.form_numbers ?? []))
+    setDeadlineValue(formatDateInput(saved.deadline))
     setFieldErrors({})
   }
 
@@ -323,7 +326,7 @@ export default function ProgramEditor({ id }: { id: string }) {
         description: form.description.trim(),
         max_amount: nullableNumber(String(form.max_amount ?? "")),
         is_recurring: form.is_recurring,
-        deadline: form.is_recurring ? null : form.deadline || null,
+        deadline: deadlineValue || null,
         eligibility_criteria: eligibilityCriteria,
         required_documents: parseTextList(documentsText),
         application_url: form.application_url.trim(),
@@ -509,8 +512,8 @@ export default function ProgramEditor({ id }: { id: string }) {
           </label>
           <TextField
             label="Deadline"
-            value={formatDateInput(form.deadline)}
-            onChange={(value) => update("deadline", value || null)}
+            value={deadlineValue}
+            onChange={setDeadlineValue}
             type="date"
           />
         </div>
