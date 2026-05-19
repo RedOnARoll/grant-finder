@@ -15,7 +15,7 @@ type SavedProgramRow = {
   notes?: string | null
 }
 
-const PROFILE_COLUMNS = [
+const EXPANDED_PROFILE_COLUMNS = [
   "user_id",
   "full_name",
   "email",
@@ -57,47 +57,79 @@ const PROFILE_COLUMNS = [
   "profile_completed_at",
 ].join(",")
 
+const LEGACY_PROFILE_COLUMNS = [
+  "user_id",
+  "full_name",
+  "state",
+  "household_size",
+  "annual_income",
+  "veteran_status",
+  "disability_status",
+  "student_status",
+  "has_children",
+  "business_owner",
+  "business_type",
+  "employee_count",
+  "annual_revenue",
+  "rural_location",
+  "funding_interests",
+  "profile_completed_at",
+].join(",")
+
+function isMissingProfileColumnError(error: unknown) {
+  return Boolean(
+    error
+      && typeof error === "object"
+      && "code" in error
+      && (error as { code?: string }).code === "42703",
+  )
+}
+
+function readString(row: Record<string, unknown>, key: string) {
+  return key in row ? String(row[key] ?? "") : undefined
+}
+
 function rowToProfile(row: Record<string, unknown> | null): Partial<UserProfile> | null {
   if (!row) return null
 
   return {
-    full_name: String(row.full_name ?? ""),
-    email: String(row.email ?? ""),
-    zip_code: String(row.zip_code ?? ""),
-    state: String(row.state ?? ""),
-    date_of_birth: String(row.date_of_birth ?? ""),
-    phone_number: String(row.phone_number ?? ""),
-    household_size: String(row.household_size ?? ""),
-    annual_income: String(row.annual_income ?? ""),
-    income_source: String(row.income_source ?? ""),
-    home_ownership: String(row.home_ownership ?? ""),
-    veteran_status: String(row.veteran_status ?? ""),
-    disability_status: String(row.disability_status ?? ""),
-    gender: String(row.gender ?? ""),
-    race_ethnicity: String(row.race_ethnicity ?? ""),
-    citizenship_status: String(row.citizenship_status ?? ""),
-    tribal_affiliation: String(row.tribal_affiliation ?? ""),
-    student_status: String(row.student_status ?? ""),
-    has_children: String(row.has_children ?? ""),
-    education_level: String(row.education_level ?? ""),
-    field_of_study: String(row.field_of_study ?? ""),
-    degree_type_pursuing: String(row.degree_type_pursuing ?? ""),
-    business_owner: String(row.business_owner ?? ""),
-    business_type: String(row.business_type ?? ""),
-    business_industry: String(row.business_industry ?? ""),
-    employee_count: String(row.employee_count ?? ""),
-    annual_revenue: String(row.annual_revenue ?? ""),
-    years_in_operation: String(row.years_in_operation ?? ""),
-    business_location: String(row.business_location ?? ""),
-    business_ownership_identities: Array.isArray(row.business_ownership_identities) ? row.business_ownership_identities as string[] : [],
-    business_us_owned: String(row.business_us_owned ?? ""),
-    business_rural: String(row.business_rural ?? ""),
-    rural_location: String(row.rural_location ?? ""),
-    funding_interests: Array.isArray(row.funding_interests) ? row.funding_interests as string[] : [],
-    application_stage: String(row.application_stage ?? ""),
-    email_alerts: String(row.email_alerts ?? ""),
-    deadline_reminders: String(row.deadline_reminders ?? ""),
-    weekly_digest: String(row.weekly_digest ?? ""),
+    full_name: readString(row, "full_name"),
+    email: readString(row, "email"),
+    zip_code: readString(row, "zip_code"),
+    state: readString(row, "state"),
+    date_of_birth: readString(row, "date_of_birth"),
+    phone_number: readString(row, "phone_number"),
+    household_size: readString(row, "household_size"),
+    annual_income: readString(row, "annual_income"),
+    income_source: readString(row, "income_source"),
+    home_ownership: readString(row, "home_ownership"),
+    veteran_status: readString(row, "veteran_status"),
+    disability_status: readString(row, "disability_status"),
+    gender: readString(row, "gender"),
+    race_ethnicity: readString(row, "race_ethnicity"),
+    citizenship_status: readString(row, "citizenship_status"),
+    tribal_affiliation: readString(row, "tribal_affiliation"),
+    student_status: readString(row, "student_status"),
+    has_children: readString(row, "has_children"),
+    education_level: readString(row, "education_level"),
+    field_of_study: readString(row, "field_of_study"),
+    degree_type_pursuing: readString(row, "degree_type_pursuing"),
+    business_owner: readString(row, "business_owner"),
+    business_type: readString(row, "business_type"),
+    business_industry: readString(row, "business_industry"),
+    employee_count: readString(row, "employee_count"),
+    annual_revenue: readString(row, "annual_revenue"),
+    years_in_operation: readString(row, "years_in_operation"),
+    business_location: readString(row, "business_location"),
+    business_ownership_identities: Array.isArray(row.business_ownership_identities) ? row.business_ownership_identities as string[] : undefined,
+    business_us_owned: readString(row, "business_us_owned"),
+    business_rural: readString(row, "business_rural"),
+    rural_location: readString(row, "rural_location"),
+    funding_interests: Array.isArray(row.funding_interests) ? row.funding_interests as string[] : undefined,
+    application_stage: readString(row, "application_stage"),
+    email_alerts: readString(row, "email_alerts"),
+    deadline_reminders: readString(row, "deadline_reminders"),
+    weekly_digest: readString(row, "weekly_digest"),
     profile_completed_at: row.profile_completed_at ? String(row.profile_completed_at) : undefined,
   }
 }
@@ -116,9 +148,20 @@ function savedRowToProgram(row: SavedProgramRow): SavedProgram {
 export async function getProfile(supabase: SupabaseClient, userId: string) {
   const { data, error } = await supabase
     .from("profiles")
-    .select(PROFILE_COLUMNS)
+    .select(EXPANDED_PROFILE_COLUMNS)
     .eq("user_id", userId)
     .maybeSingle()
+
+  if (isMissingProfileColumnError(error)) {
+    const legacy = await supabase
+      .from("profiles")
+      .select(LEGACY_PROFILE_COLUMNS)
+      .eq("user_id", userId)
+      .maybeSingle()
+
+    if (legacy.error) throw legacy.error
+    return rowToProfile(legacy.data as unknown as Record<string, unknown> | null)
+  }
 
   if (error) throw error
   return rowToProfile(data as unknown as Record<string, unknown> | null)
@@ -130,52 +173,83 @@ export async function upsertProfile(supabase: SupabaseClient, userId: string, pr
     ...profile,
   }
 
+  const expandedPayload = {
+    user_id: userId,
+    full_name: normalizedProfile.full_name,
+    email: normalizedProfile.email,
+    zip_code: normalizedProfile.zip_code,
+    state: normalizedProfile.state,
+    date_of_birth: normalizedProfile.date_of_birth,
+    phone_number: normalizedProfile.phone_number,
+    household_size: normalizedProfile.household_size,
+    annual_income: normalizedProfile.annual_income,
+    income_source: normalizedProfile.income_source,
+    home_ownership: normalizedProfile.home_ownership,
+    veteran_status: normalizedProfile.veteran_status,
+    disability_status: normalizedProfile.disability_status,
+    gender: normalizedProfile.gender,
+    race_ethnicity: normalizedProfile.race_ethnicity,
+    citizenship_status: normalizedProfile.citizenship_status,
+    tribal_affiliation: normalizedProfile.tribal_affiliation,
+    student_status: normalizedProfile.student_status,
+    has_children: normalizedProfile.has_children,
+    education_level: normalizedProfile.education_level,
+    field_of_study: normalizedProfile.field_of_study,
+    degree_type_pursuing: normalizedProfile.degree_type_pursuing,
+    business_owner: normalizedProfile.business_owner,
+    business_type: normalizedProfile.business_type,
+    business_industry: normalizedProfile.business_industry,
+    employee_count: normalizedProfile.employee_count,
+    annual_revenue: normalizedProfile.annual_revenue,
+    years_in_operation: normalizedProfile.years_in_operation,
+    business_location: normalizedProfile.business_location,
+    business_ownership_identities: normalizedProfile.business_ownership_identities,
+    business_us_owned: normalizedProfile.business_us_owned,
+    business_rural: normalizedProfile.business_rural,
+    rural_location: normalizedProfile.rural_location,
+    funding_interests: normalizedProfile.funding_interests,
+    application_stage: normalizedProfile.application_stage,
+    email_alerts: normalizedProfile.email_alerts,
+    deadline_reminders: normalizedProfile.deadline_reminders,
+    weekly_digest: normalizedProfile.weekly_digest,
+    profile_completed_at: normalizedProfile.profile_completed_at,
+    updated_at: new Date().toISOString(),
+  }
+
   const { data, error } = await supabase
     .from("profiles")
-    .upsert({
-      user_id: userId,
-      full_name: normalizedProfile.full_name,
-      email: normalizedProfile.email,
-      zip_code: normalizedProfile.zip_code,
-      state: normalizedProfile.state,
-      date_of_birth: normalizedProfile.date_of_birth,
-      phone_number: normalizedProfile.phone_number,
-      household_size: normalizedProfile.household_size,
-      annual_income: normalizedProfile.annual_income,
-      income_source: normalizedProfile.income_source,
-      home_ownership: normalizedProfile.home_ownership,
-      veteran_status: normalizedProfile.veteran_status,
-      disability_status: normalizedProfile.disability_status,
-      gender: normalizedProfile.gender,
-      race_ethnicity: normalizedProfile.race_ethnicity,
-      citizenship_status: normalizedProfile.citizenship_status,
-      tribal_affiliation: normalizedProfile.tribal_affiliation,
-      student_status: normalizedProfile.student_status,
-      has_children: normalizedProfile.has_children,
-      education_level: normalizedProfile.education_level,
-      field_of_study: normalizedProfile.field_of_study,
-      degree_type_pursuing: normalizedProfile.degree_type_pursuing,
-      business_owner: normalizedProfile.business_owner,
-      business_type: normalizedProfile.business_type,
-      business_industry: normalizedProfile.business_industry,
-      employee_count: normalizedProfile.employee_count,
-      annual_revenue: normalizedProfile.annual_revenue,
-      years_in_operation: normalizedProfile.years_in_operation,
-      business_location: normalizedProfile.business_location,
-      business_ownership_identities: normalizedProfile.business_ownership_identities,
-      business_us_owned: normalizedProfile.business_us_owned,
-      business_rural: normalizedProfile.business_rural,
-      rural_location: normalizedProfile.rural_location,
-      funding_interests: normalizedProfile.funding_interests,
-      application_stage: normalizedProfile.application_stage,
-      email_alerts: normalizedProfile.email_alerts,
-      deadline_reminders: normalizedProfile.deadline_reminders,
-      weekly_digest: normalizedProfile.weekly_digest,
-      profile_completed_at: normalizedProfile.profile_completed_at,
-      updated_at: new Date().toISOString(),
-    }, { onConflict: "user_id" })
-    .select(PROFILE_COLUMNS)
+    .upsert(expandedPayload, { onConflict: "user_id" })
+    .select(EXPANDED_PROFILE_COLUMNS)
     .single()
+
+  if (isMissingProfileColumnError(error)) {
+    const legacy = await supabase
+      .from("profiles")
+      .upsert({
+        user_id: userId,
+        full_name: normalizedProfile.full_name,
+        state: normalizedProfile.state,
+        household_size: normalizedProfile.household_size,
+        annual_income: normalizedProfile.annual_income,
+        veteran_status: normalizedProfile.veteran_status,
+        disability_status: normalizedProfile.disability_status,
+        student_status: normalizedProfile.student_status,
+        has_children: normalizedProfile.has_children,
+        business_owner: normalizedProfile.business_owner,
+        business_type: normalizedProfile.business_type,
+        employee_count: normalizedProfile.employee_count,
+        annual_revenue: normalizedProfile.annual_revenue,
+        rural_location: normalizedProfile.rural_location,
+        funding_interests: normalizedProfile.funding_interests,
+        profile_completed_at: normalizedProfile.profile_completed_at,
+        updated_at: new Date().toISOString(),
+      }, { onConflict: "user_id" })
+      .select(LEGACY_PROFILE_COLUMNS)
+      .single()
+
+    if (legacy.error) throw legacy.error
+    return rowToProfile(legacy.data as unknown as Record<string, unknown> | null)
+  }
 
   if (error) throw error
   return rowToProfile(data as unknown as Record<string, unknown> | null)

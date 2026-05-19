@@ -293,10 +293,13 @@ export default function ProfileForm() {
     try {
       const profileToSave = prepareProfile(nextProfile, completed)
       const savedProfile = await upsertProfile(supabase, user.id, profileToSave)
-      if (profileToSave.full_name) {
-        await supabase.auth.updateUser({ data: { full_name: profileToSave.full_name } })
-      }
-      setProfile(mergeProfile(user, savedProfile))
+      await supabase.auth.updateUser({
+        data: {
+          full_name: profileToSave.full_name,
+          grantfinder_profile: profileToSave,
+        },
+      })
+      setProfile(mergeProfile(user, { ...profileToSave, ...savedProfile }))
       setMessage(successMessage)
     } catch (updateError) {
       setError(updateError instanceof Error ? updateError.message : "Could not save profile.")
