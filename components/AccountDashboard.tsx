@@ -2,7 +2,6 @@
 
 import { FormEvent, useEffect, useMemo, useState } from "react"
 import Link from "next/link"
-import { useRouter } from "next/navigation"
 import type { User } from "@supabase/supabase-js"
 import { getProfile, getSavedPrograms, migrateAccountMetadata, removeSavedProgram as removeSavedProgramRow, saveProgram, updateProgramStatus } from "@/lib/account-db"
 import { APPLICATION_STATUSES } from "@/lib/dashboard"
@@ -41,11 +40,11 @@ function statusTone(status: ApplicationStatus) {
 }
 
 export default function AccountDashboard() {
-  const router = useRouter()
   const supabase = useMemo(() => getBrowserSupabase(), [])
   const [user, setUser] = useState<User | null>(null)
   const [programs, setPrograms] = useState<Grant[]>([])
   const [dashboard, setDashboard] = useState<DashboardData>({ saved_programs: [] })
+  const [completion, setCompletion] = useState(0)
   const [selectedProgramKey, setSelectedProgramKey] = useState("")
   const [selectedStatus, setSelectedStatus] = useState<ApplicationStatus>("interested")
   const [loading, setLoading] = useState(true)
@@ -81,10 +80,7 @@ export default function AccountDashboard() {
           setError(accountError instanceof Error ? accountError.message : "Could not load account data.")
         }
 
-        if (profileCompletion(userProfile) === 0) {
-          router.replace("/account/profile")
-          return
-        }
+        setCompletion(profileCompletion(userProfile))
 
         setDashboard({ saved_programs: savedPrograms })
       }
@@ -103,7 +99,7 @@ export default function AccountDashboard() {
     return () => {
       mounted = false
     }
-  }, [router, supabase])
+  }, [supabase])
 
   async function refreshSavedPrograms(currentUser = user) {
     if (!currentUser) return
@@ -205,6 +201,30 @@ export default function AccountDashboard() {
 
   return (
     <div className="grid gap-6">
+      {completion < 100 && (
+        <section className="rounded-xl border border-amber-200 bg-amber-50 p-5 shadow-sm">
+          <div className="flex flex-wrap items-center justify-between gap-4">
+            <div className="min-w-0 flex-1">
+              <p className="text-sm font-semibold text-amber-900">
+                Your profile is {completion}% complete
+              </p>
+              <p className="mt-1 text-sm text-amber-800">
+                Complete it to see more matches, better eligibility estimates, and more useful reminders.
+              </p>
+              <div className="mt-3 h-2 overflow-hidden rounded-full bg-white/70">
+                <div className="h-full rounded-full bg-amber-600 transition-all" style={{ width: `${completion}%` }} />
+              </div>
+            </div>
+            <Link
+              href="/account/profile"
+              className="inline-flex h-10 items-center rounded-full bg-amber-900 px-5 text-sm font-medium text-white transition-colors hover:bg-amber-800"
+            >
+              Complete profile
+            </Link>
+          </div>
+        </section>
+      )}
+
       <section className="overflow-hidden rounded-xl border border-zinc-200 bg-white shadow-sm">
         <div className="border-b border-zinc-200 bg-zinc-900 p-6 text-white">
           <div className="flex flex-wrap items-end justify-between gap-6">

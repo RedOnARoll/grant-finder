@@ -1,23 +1,70 @@
 create table if not exists public.profiles (
   user_id uuid primary key references auth.users(id) on delete cascade,
   full_name text default '',
+  email text default '',
+  zip_code text default '',
   state text default '',
+  date_of_birth text default '',
+  phone_number text default '',
   household_size text default '',
   annual_income text default '',
+  income_source text default '',
+  home_ownership text default '',
   veteran_status text default '',
   disability_status text default '',
+  gender text default '',
+  race_ethnicity text default '',
+  citizenship_status text default '',
+  tribal_affiliation text default '',
   student_status text default '',
   has_children text default '',
+  education_level text default '',
+  field_of_study text default '',
+  degree_type_pursuing text default '',
   business_owner text default '',
   business_type text default '',
+  business_industry text default '',
   employee_count text default '',
   annual_revenue text default '',
+  years_in_operation text default '',
+  business_location text default '',
+  business_ownership_identities text[] not null default '{}',
+  business_us_owned text default '',
+  business_rural text default '',
   rural_location text default '',
   funding_interests text[] not null default '{}',
+  application_stage text default '',
+  email_alerts text default '',
+  deadline_reminders text default '',
+  weekly_digest text default '',
   profile_completed_at timestamptz,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
+
+alter table public.profiles add column if not exists email text default '';
+alter table public.profiles add column if not exists zip_code text default '';
+alter table public.profiles add column if not exists date_of_birth text default '';
+alter table public.profiles add column if not exists phone_number text default '';
+alter table public.profiles add column if not exists income_source text default '';
+alter table public.profiles add column if not exists home_ownership text default '';
+alter table public.profiles add column if not exists gender text default '';
+alter table public.profiles add column if not exists race_ethnicity text default '';
+alter table public.profiles add column if not exists citizenship_status text default '';
+alter table public.profiles add column if not exists tribal_affiliation text default '';
+alter table public.profiles add column if not exists education_level text default '';
+alter table public.profiles add column if not exists field_of_study text default '';
+alter table public.profiles add column if not exists degree_type_pursuing text default '';
+alter table public.profiles add column if not exists business_industry text default '';
+alter table public.profiles add column if not exists years_in_operation text default '';
+alter table public.profiles add column if not exists business_location text default '';
+alter table public.profiles add column if not exists business_ownership_identities text[] not null default '{}';
+alter table public.profiles add column if not exists business_us_owned text default '';
+alter table public.profiles add column if not exists business_rural text default '';
+alter table public.profiles add column if not exists application_stage text default '';
+alter table public.profiles add column if not exists email_alerts text default '';
+alter table public.profiles add column if not exists deadline_reminders text default '';
+alter table public.profiles add column if not exists weekly_digest text default '';
 
 create table if not exists public.saved_programs (
   id uuid primary key default gen_random_uuid(),
