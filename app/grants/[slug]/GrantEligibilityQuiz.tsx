@@ -830,6 +830,11 @@ function DollarQ({ q, answer, onAnswer }: { q: DollarQuestion; answer: "yes" | "
 
 // ─── Main component ───────────────────────────────────────────────────────────
 
+function hasPlaceholderCriteria(criteria: EligibilityCriteria | string[]): boolean {
+  if (!Array.isArray(criteria)) return false
+  return criteria.some(c => typeof c === "string" && c.includes("could not be verified as a stable universal rule"))
+}
+
 export default function GrantEligibilityQuiz({ criteria, slug }: { criteria: EligibilityCriteria | string[]; slug: string }) {
   const questions = buildQuestions(criteria)
   const answerableQs = questions.filter(q => q.kind !== "info")
@@ -838,12 +843,31 @@ export default function GrantEligibilityQuiz({ criteria, slug }: { criteria: Eli
   const [selectedStates, setSelectedStates] = useState<Record<string, string>>({})
   const [selectedAreas, setSelectedAreas] = useState<Record<string, number>>({})
 
+  if (hasPlaceholderCriteria(criteria)) {
+    return (
+      <div className="rounded-xl border border-amber-200 bg-amber-50 p-6">
+        <h2 className="text-base font-semibold text-slate-900 mb-2">Eligibility Varies by Opportunity</h2>
+        <p className="text-sm text-slate-700 mb-3">
+          This program releases specific eligibility requirements with each funding opportunity, solicitation, or request for proposals.
+          Requirements can change significantly from cycle to cycle.
+        </p>
+        <p className="text-sm text-slate-600 mb-5">
+          To confirm your eligibility, review the current official announcement on <strong>Grants.gov</strong> or the program&apos;s official website before applying.
+          Do not rely on older criteria unless the current solicitation repeats them.
+        </p>
+        <Link href={`/grants/${slug}/apply`} className="inline-flex items-center h-10 px-5 rounded-lg bg-blue-600 text-white text-sm font-medium hover:bg-blue-700 transition-colors">
+          Review Application Requirements →
+        </Link>
+      </div>
+    )
+  }
+
   if (questions.length === 0) {
     return (
-      <div className="rounded-xl border border-zinc-200 p-6">
-        <h2 className="text-xl font-semibold text-zinc-900 mb-2">Eligibility</h2>
-        <p className="text-sm text-zinc-500 mb-4">No specific eligibility criteria on file. Review the program's official requirements before applying.</p>
-        <Link href={`/grants/${slug}/apply`} className="inline-flex items-center h-11 px-6 rounded-full bg-zinc-900 text-white text-sm font-medium hover:bg-zinc-700 transition-colors">Start Application →</Link>
+      <div className="rounded-xl border border-slate-200 p-6">
+        <h2 className="text-base font-semibold text-slate-900 mb-2">Eligibility</h2>
+        <p className="text-sm text-slate-500 mb-4">No specific eligibility criteria on file. Review the program&apos;s official requirements before applying.</p>
+        <Link href={`/grants/${slug}/apply`} className="inline-flex items-center h-10 px-5 rounded-lg bg-blue-600 text-white text-sm font-medium hover:bg-blue-700 transition-colors">Start Application →</Link>
       </div>
     )
   }
