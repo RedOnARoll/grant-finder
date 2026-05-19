@@ -194,9 +194,9 @@ export default async function BenefitsPage({
                 <span className="text-xs font-semibold text-slate-500 uppercase tracking-wide">
                   Benefit Type
                 </span>
-                {subcategory && (
+                {selectedSubcategories.size > 0 && (
                   <Link
-                    href={`/benefits${q ? `?q=${q}` : ""}${sort ? `${q ? "&" : "?"}sort=${sort}` : ""}`}
+                    href={buildBenefitsUrl({ q, sort })}
                     className="text-xs text-blue-600 hover:text-blue-700"
                   >
                     Clear
@@ -205,9 +205,9 @@ export default async function BenefitsPage({
               </div>
               <div className="flex flex-col gap-1.5">
                 <Link
-                  href={`/benefits${q ? `?q=${q}` : ""}${sort ? `${q ? "&" : "?"}sort=${sort}` : ""}`}
+                  href={buildBenefitsUrl({ q, sort })}
                   className={`text-sm px-3 py-1.5 rounded-lg font-medium transition-colors ${
-                    !subcategory
+                    selectedSubcategories.size === 0
                       ? "bg-blue-600 text-white"
                       : "bg-slate-100 text-slate-600 hover:bg-slate-200"
                   }`}
@@ -239,7 +239,7 @@ export default async function BenefitsPage({
                 {(Object.entries(BENEFIT_SORT_LABELS) as [BenefitSort, string][]).map(([val, label]) => (
                   <Link
                     key={val}
-                    href={`/benefits?sort=${val}${subcategory ? `&subcategory=${subcategory}` : ""}${q ? `&q=${q}` : ""}`}
+                    href={buildBenefitsUrl({ cats: selectedSubcategories, q, sort: val })}
                     className={`text-sm px-3 py-1.5 rounded-lg font-medium transition-colors ${
                       sort === val
                         ? "bg-blue-600 text-white"
@@ -253,7 +253,7 @@ export default async function BenefitsPage({
             </div>
 
             {/* Clear all */}
-            {(subcategory || q || sort) && (
+            {(selectedSubcategories.size > 0 || q || sort) && (
               <Link href="/benefits" className="text-sm text-blue-600 hover:text-blue-700 font-medium">
                 Clear all filters
               </Link>
@@ -296,9 +296,9 @@ export default async function BenefitsPage({
                   Eligible for me
                 </Link>
                 <Link
-                  href={`/benefits${q ? `?q=${q}` : ""}${sort ? `${q ? "&" : "?"}sort=${sort}` : ""}`}
+                  href={buildBenefitsUrl({ q, sort })}
                   className={`shrink-0 text-sm px-3 py-1.5 rounded-lg font-medium transition-colors ${
-                    !subcategory && !isEligibleMode
+                    selectedSubcategories.size === 0 && !isEligibleMode
                       ? "bg-blue-600 text-white"
                       : "bg-slate-100 text-slate-600"
                   }`}

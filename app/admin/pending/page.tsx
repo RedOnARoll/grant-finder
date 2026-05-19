@@ -100,6 +100,12 @@ export default function AdminPendingPage() {
                       >
                         View
                       </Link>
+                      <Link
+                        href={`/admin/programs/${grant.id}`}
+                        className="text-blue-600 hover:underline text-xs font-medium"
+                      >
+                        Edit
+                      </Link>
                       {grant.official_source_url && (
                         <a
                           href={grant.official_source_url}

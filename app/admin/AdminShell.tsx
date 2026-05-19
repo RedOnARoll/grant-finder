@@ -3,7 +3,7 @@
 import { useEffect, useState, type ReactNode } from "react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
-import { LayoutDashboard, Clock, ExternalLink } from "lucide-react"
+import { LayoutDashboard, Clock, Database, ExternalLink } from "lucide-react"
 import { getBrowserSupabase } from "@/lib/supabase-browser"
 import { LogoMark } from "@/components/illustrations/GeoShapes"
 
@@ -11,6 +11,7 @@ const ADMIN_EMAIL = "redonaroll09@gmail.com"
 
 const NAV = [
   { label: "Dashboard",       href: "/admin",         icon: LayoutDashboard },
+  { label: "Programs",        href: "/admin/programs", icon: Database        },
   { label: "Pending Criteria", href: "/admin/pending", icon: Clock           },
 ]
 
@@ -68,7 +69,7 @@ export default function AdminShell({ children }: { children: ReactNode }) {
         <aside className="w-52 bg-white border-r border-slate-200 shrink-0 py-4 px-3">
           <nav className="space-y-0.5">
             {NAV.map(({ label, href, icon: Icon }) => {
-              const active = pathname === href
+              const active = pathname === href || (href !== "/admin" && pathname.startsWith(`${href}/`))
               return (
                 <Link
                   key={href}

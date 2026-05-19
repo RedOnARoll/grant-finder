@@ -226,6 +226,12 @@ export default function AdminDashboard() {
                         >
                           View ↗
                         </Link>
+                        <Link
+                          href={`/admin/programs/${g.id}`}
+                          className="text-xs font-medium text-blue-600 hover:underline"
+                        >
+                          Edit
+                        </Link>
                       </div>
                     </div>
                     )
