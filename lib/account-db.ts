@@ -77,11 +77,14 @@ const LEGACY_PROFILE_COLUMNS = [
 ].join(",")
 
 function isMissingProfileColumnError(error: unknown) {
-  return Boolean(
-    error
-      && typeof error === "object"
-      && "code" in error
-      && (error as { code?: string }).code === "42703",
+  if (!error || typeof error !== "object") return false
+
+  const { code, message } = error as { code?: string; message?: string }
+  return (
+    code === "42703"
+    || code === "PGRST204"
+    || Boolean(message?.toLowerCase().includes("schema cache"))
+    || Boolean(message?.toLowerCase().includes("column") && message?.toLowerCase().includes("does not exist"))
   )
 }
 
@@ -248,7 +251,6 @@ export async function upsertProfile(supabase: SupabaseClient, userId: string, pr
         rural_location: normalizedProfile.rural_location,
         funding_interests: normalizedProfile.funding_interests,
         profile_completed_at: normalizedProfile.profile_completed_at,
-        updated_at: new Date().toISOString(),
       }, { onConflict: "user_id" })
       .select(LEGACY_PROFILE_COLUMNS)
       .single()

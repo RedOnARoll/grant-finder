@@ -145,6 +145,14 @@ function prepareProfile(profile: UserProfile, completed = false): UserProfile {
   }
 }
 
+function errorMessage(error: unknown) {
+  if (error instanceof Error) return error.message
+  if (error && typeof error === "object" && "message" in error) {
+    return String((error as { message?: unknown }).message)
+  }
+  return "Could not save profile."
+}
+
 function FieldLabel({ children, note }: { children: React.ReactNode; note?: string }) {
   return (
     <span className="grid gap-1">
@@ -312,7 +320,7 @@ export default function ProfileForm() {
       setProfile(mergeProfile(user, { ...profileToSave, ...savedProfile }))
       setMessage(successMessage)
     } catch (updateError) {
-      setError(updateError instanceof Error ? updateError.message : "Could not save profile.")
+      setError(errorMessage(updateError))
     } finally {
       setSaving(false)
     }
