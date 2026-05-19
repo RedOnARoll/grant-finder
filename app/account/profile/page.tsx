@@ -2,22 +2,19 @@ import ProfileForm from "@/components/ProfileForm"
 import SiteNav from "@/components/SiteNav"
 
 export const metadata = {
-  title: "Profile - GrantFinder",
+  title: "Profile - GrantWay",
 }
 
 export default function AccountProfilePage() {
   return (
-    <div className="flex min-h-full flex-col">
+    <div className="min-h-screen bg-slate-50 flex flex-col">
       <SiteNav active="account" />
-      <main className="flex-1 bg-zinc-50 px-6 py-12">
-        <div className="mx-auto max-w-4xl">
+      <main className="flex-1">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
           <div className="mb-8">
-            <p className="mb-2 text-sm font-semibold uppercase tracking-wide text-zinc-500">
-              Account setup
-            </p>
-            <h1 className="mb-3 text-3xl font-bold text-zinc-900">Complete your profile</h1>
-            <p className="max-w-2xl text-zinc-500">
-              Add the details GrantFinder needs to personalize benefit and grant matches.
+            <h1 className="text-2xl font-bold text-slate-900">Complete Your Profile</h1>
+            <p className="mt-1 text-slate-600">
+              Add the details GrantWay needs to personalize benefit and grant matches.
             </p>
           </div>
           <ProfileForm />

@@ -1,10 +1,11 @@
 import Link from "next/link"
 import AuthForm from "@/components/AuthForm"
-import SiteNav from "@/components/SiteNav"
+import { LogoMark } from "@/components/illustrations/GeoShapes"
 import { sanitizeNextPath } from "@/lib/auth"
+import { CheckCircle } from "lucide-react"
 
 export const metadata = {
-  title: "Log in or sign up - GrantFinder",
+  title: "Log in or sign up - GrantWay",
 }
 
 export default async function AuthPage({
@@ -17,33 +18,58 @@ export default async function AuthPage({
   const safeNext = sanitizeNextPath(next, initialMode === "signup" ? "/account/profile" : "/account")
 
   return (
-    <div className="flex min-h-full flex-col">
-      <SiteNav active="account" />
-      <main className="flex-1 bg-zinc-50 px-6 py-16">
-        <div className="mx-auto grid max-w-5xl gap-10 md:grid-cols-[1fr_420px] md:items-start">
-          <section className="pt-4">
-            <p className="mb-3 text-sm font-semibold uppercase tracking-wide text-zinc-500">
-              Your GrantFinder account
-            </p>
-            <h1 className="mb-4 text-4xl font-bold tracking-tight text-zinc-900">
+    <div className="min-h-screen bg-slate-50 flex flex-col">
+      {/* Minimal nav */}
+      <header className="border-b border-slate-200 bg-white">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-14 flex items-center justify-between">
+          <Link href="/" className="flex items-center gap-2">
+            <LogoMark className="w-6 h-6" />
+            <span className="text-sm font-semibold text-slate-900">GrantWay</span>
+          </Link>
+          <Link
+            href="/grants"
+            className="text-sm text-slate-600 hover:text-slate-900 transition-colors"
+          >
+            Back to Browse
+          </Link>
+        </div>
+      </header>
+
+      <main className="flex-1 flex items-center justify-center px-4 py-12">
+        <div className="w-full max-w-5xl grid md:grid-cols-[1fr_420px] gap-8 items-center">
+          {/* Left panel — hidden on mobile */}
+          <section className="hidden md:flex bg-slate-900 rounded-xl p-10 flex-col justify-center text-white min-h-[520px]">
+            <div className="flex items-center gap-3 mb-10">
+              <LogoMark className="w-8 h-8" />
+              <span className="text-xl font-bold tracking-tight">GrantWay</span>
+            </div>
+
+            <h1 className="text-3xl font-bold leading-tight mb-4">
               Save your place and come back ready to apply.
             </h1>
-            <p className="max-w-xl text-lg leading-8 text-zinc-600">
-              Create an account to use Google, Microsoft, or email/password sign-in.
-              Once you are signed in, complete your profile so GrantFinder can tailor matches
-              around your state, household, veteran status, business details, and interests.
+            <p className="text-slate-300 text-base leading-relaxed mb-10">
+              Create an account to track grants and benefits, complete your profile, and get personalized matches tailored to your situation.
             </p>
-            <div className="mt-8 flex gap-3 text-sm text-zinc-500">
-              <Link href="/grants" className="font-medium text-zinc-900 hover:underline">
-                Browse grants
-              </Link>
-              <span>/</span>
-              <Link href="/benefits" className="font-medium text-zinc-900 hover:underline">
-                Browse benefits
-              </Link>
-            </div>
+
+            <ul className="grid gap-4">
+              {[
+                "Personalized grant and benefit matches",
+                "Track every application from saved to awarded",
+                "Profile-based eligibility estimates",
+                "Deadline reminders and quick reads",
+              ].map((item) => (
+                <li key={item} className="flex items-start gap-3 text-sm text-slate-300">
+                  <CheckCircle className="w-4 h-4 mt-0.5 text-slate-400 shrink-0" />
+                  {item}
+                </li>
+              ))}
+            </ul>
           </section>
-          <AuthForm initialMode={initialMode} next={safeNext} />
+
+          {/* Right panel — auth card */}
+          <div>
+            <AuthForm initialMode={initialMode} next={safeNext} />
+          </div>
         </div>
       </main>
     </div>

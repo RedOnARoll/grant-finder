@@ -1,10 +1,11 @@
 import Link from "next/link"
+import { Search } from "lucide-react"
 import { getBenefits } from "@/lib/supabase"
 import type { Grant } from "@/lib/types"
-import SortSelect from "@/components/SortSelect"
 import SiteNav from "@/components/SiteNav"
 import SaveInterestButton from "@/components/SaveInterestButton"
-import ProgramGrid from "@/components/ProgramGrid"
+import { Badge, StatusBadge } from "@/components/ui/Badge"
+import { EmptyStateIllustration } from "@/components/illustrations/GeoShapes"
 
 type BenefitSort = "name_asc" | "subcategory_asc" | "amount_desc"
 
@@ -33,52 +34,6 @@ function formatAmount(amount: number | null) {
   return `$${amount}`
 }
 
-function BenefitCard({ benefit }: { benefit: Grant }) {
-  const amount = formatAmount(benefit.max_amount)
-  return (
-    <div className="relative flex h-full flex-col rounded-xl border border-zinc-200 p-5 transition-colors hover:border-zinc-400">
-      <Link href={`/benefits/${benefit.slug}`} className="absolute inset-0 rounded-xl" aria-label={benefit.name} />
-      <div className="flex items-start justify-between gap-4 mb-3">
-        <span className="text-base font-semibold text-zinc-900 leading-snug">
-          {benefit.name}
-        </span>
-        {amount && (
-          <span className="shrink-0 text-sm font-semibold text-zinc-900 bg-zinc-100 px-2 py-0.5 rounded-full">
-            {amount}
-          </span>
-        )}
-      </div>
-      <p className="text-sm text-zinc-500 mb-1">{benefit.agency}</p>
-      <p className="text-sm text-zinc-600 mb-4 line-clamp-3">{benefit.description}</p>
-      <div className="mt-auto flex flex-wrap items-center justify-between gap-3">
-        <div className="flex gap-2 flex-wrap">
-          {benefit.subcategory && (
-            <span className="text-xs px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 capitalize font-medium">
-              {SUBCATEGORY_LABELS[benefit.subcategory] ?? benefit.subcategory.replace("_", " ")}
-            </span>
-          )}
-          {benefit.is_recurring && (
-            <span className="text-xs px-2 py-0.5 rounded-full bg-green-50 text-green-700">
-              Ongoing
-            </span>
-          )}
-        </div>
-        <div className="relative z-10 flex items-center gap-3">
-          <SaveInterestButton slug={benefit.slug} type="benefit" />
-          <a
-            href={benefit.application_url}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-sm font-medium text-zinc-900 hover:underline"
-          >
-            Apply →
-          </a>
-        </div>
-      </div>
-    </div>
-  )
-}
-
 const SUBCATEGORY_LABELS: Record<string, string> = {
   housing:    "Housing Assistance",
   food:       "Food Aid",
@@ -87,6 +42,56 @@ const SUBCATEGORY_LABELS: Record<string, string> = {
   childcare:  "Childcare",
   energy:     "Energy Assistance",
   health:     "Healthcare",
+}
+
+function BenefitCard({ benefit }: { benefit: Grant }) {
+  const amount = formatAmount(benefit.max_amount)
+  const subcategoryLabel = benefit.subcategory
+    ? (SUBCATEGORY_LABELS[benefit.subcategory] ?? benefit.subcategory.replace("_", " "))
+    : null
+
+  return (
+    <div className="relative flex h-full flex-col bg-white rounded-xl border border-slate-200 shadow-sm hover:shadow-md transition-shadow p-5">
+      <Link href={`/benefits/${benefit.slug}`} className="absolute inset-0 rounded-xl" aria-label={benefit.name} />
+
+      {/* Top row: status + save */}
+      <div className="flex items-center justify-between gap-2 mb-3">
+        <StatusBadge deadline={benefit.deadline} isRecurring={benefit.is_recurring ?? false} />
+        <div className="relative z-10">
+          <SaveInterestButton slug={benefit.slug} type="benefit" />
+        </div>
+      </div>
+
+      {/* Agency */}
+      <p className="text-xs text-slate-400 uppercase tracking-wide mb-1">{benefit.agency}</p>
+
+      {/* Name */}
+      <h3 className="text-base font-semibold text-slate-900 leading-snug line-clamp-2 mb-2">
+        {benefit.name}
+      </h3>
+
+      {/* Description */}
+      <p className="text-sm text-slate-600 line-clamp-3 mb-4">{benefit.description}</p>
+
+      {/* Bottom row */}
+      <div className="mt-auto flex flex-wrap items-center justify-between gap-2">
+        <div className="flex flex-wrap items-center gap-2">
+          {amount && (
+            <span className="text-sm font-semibold text-slate-900">{amount}</span>
+          )}
+          {subcategoryLabel && (
+            <Badge variant="green">{subcategoryLabel}</Badge>
+          )}
+        </div>
+        <Link
+          href={`/benefits/${benefit.slug}`}
+          className="relative z-10 text-sm font-medium text-blue-600 hover:text-blue-700"
+        >
+          View Details →
+        </Link>
+      </div>
+    </div>
+  )
 }
 
 export default async function BenefitsPage({
@@ -108,85 +113,192 @@ export default async function BenefitsPage({
   const benefits = sortBenefits(filtered, sort as BenefitSort | undefined)
 
   return (
-    <div className="flex flex-col min-h-full">
+    <div className="flex flex-col min-h-full bg-slate-50">
       <SiteNav active="benefits" />
 
-      <main className="flex-1 max-w-5xl mx-auto w-full px-6 py-10">
+      <main className="flex-1 max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-10">
+        {/* Page header */}
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-zinc-900 mb-2">Browse Benefits</h1>
-          <p className="text-zinc-500">
+          <h1 className="text-3xl font-bold text-slate-900 mb-2">Benefits</h1>
+          <p className="text-slate-600">
             Government assistance programs — housing, food, healthcare, and more.{" "}
-            {allBenefits.length} programs available.
+            <span className="font-medium text-slate-900">{allBenefits.length} programs</span> available.
           </p>
         </div>
 
-        {/* Filters */}
-        <form className="flex gap-3 mb-8 flex-wrap items-center">
-          <input
-            type="text"
-            name="q"
-            defaultValue={q ?? ""}
-            placeholder="Search benefits..."
-            className="h-10 px-4 rounded-lg border border-zinc-300 text-sm text-zinc-900 placeholder:text-zinc-400 focus:outline-none focus:ring-2 focus:ring-zinc-900 min-w-[220px]"
-          />
-          <SortSelect
-            value={sort ?? ""}
-            options={(Object.entries(BENEFIT_SORT_LABELS) as [BenefitSort, string][]).map(([val, label]) => ({ value: val, label }))}
-          />
-          <div className="flex gap-2 flex-wrap">
-            <Link
-              href={`/benefits${sort ? `?sort=${sort}` : ""}`}
-              className={`h-10 px-4 rounded-lg border text-sm font-medium transition-colors flex items-center ${
-                !subcategory
-                  ? "bg-zinc-900 text-white border-zinc-900"
-                  : "border-zinc-300 text-zinc-700 hover:border-zinc-500"
-              }`}
-            >
-              All
-            </Link>
-            {Object.entries(SUBCATEGORY_LABELS).map(([key, label]) => (
-              <Link
-                key={key}
-                href={`/benefits?subcategory=${key}${sort ? `&sort=${sort}` : ""}`}
-                className={`h-10 px-4 rounded-lg border text-sm font-medium transition-colors flex items-center ${
-                  subcategory === key
-                    ? "bg-zinc-900 text-white border-zinc-900"
-                    : "border-zinc-300 text-zinc-700 hover:border-zinc-500"
-                }`}
-              >
-                {label}
-              </Link>
-            ))}
-          </div>
-          <button
-            type="submit"
-            className="h-10 px-4 rounded-lg bg-zinc-900 text-white text-sm font-medium hover:bg-zinc-700 transition-colors"
-          >
-            Search
-          </button>
-        </form>
+        <div className="flex gap-8 items-start">
+          {/* Sidebar */}
+          <aside className="hidden lg:flex flex-col gap-6 w-64 shrink-0">
+            {/* Search */}
+            <form>
+              <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wide mb-2">
+                Search
+              </label>
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
+                <input
+                  type="text"
+                  name="q"
+                  defaultValue={q ?? ""}
+                  placeholder="Search benefits…"
+                  className="w-full h-10 pl-9 pr-4 rounded-lg border border-slate-200 bg-white text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-600"
+                />
+                {subcategory && <input type="hidden" name="subcategory" value={subcategory} />}
+                {sort && <input type="hidden" name="sort" value={sort} />}
+              </div>
+              <button type="submit" className="sr-only">Search</button>
+            </form>
 
-        {/* Results */}
-        {benefits.length === 0 ? (
-          <div className="text-center py-20 text-zinc-500">
-            <p className="text-lg mb-2">No benefits found</p>
-            <p className="text-sm">Try adjusting your search or filters.</p>
+            {/* Benefit Type filter */}
+            <div>
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-xs font-semibold text-slate-500 uppercase tracking-wide">
+                  Benefit Type
+                </span>
+                {subcategory && (
+                  <Link
+                    href={`/benefits${q ? `?q=${q}` : ""}${sort ? `${q ? "&" : "?"}sort=${sort}` : ""}`}
+                    className="text-xs text-blue-600 hover:text-blue-700"
+                  >
+                    Clear
+                  </Link>
+                )}
+              </div>
+              <div className="flex flex-col gap-1.5">
+                <Link
+                  href={`/benefits${q ? `?q=${q}` : ""}${sort ? `${q ? "&" : "?"}sort=${sort}` : ""}`}
+                  className={`text-sm px-3 py-1.5 rounded-lg font-medium transition-colors ${
+                    !subcategory
+                      ? "bg-blue-600 text-white"
+                      : "bg-slate-100 text-slate-600 hover:bg-slate-200"
+                  }`}
+                >
+                  All Types
+                </Link>
+                {Object.entries(SUBCATEGORY_LABELS).map(([key, label]) => (
+                  <Link
+                    key={key}
+                    href={`/benefits?subcategory=${key}${q ? `&q=${q}` : ""}${sort ? `&sort=${sort}` : ""}`}
+                    className={`text-sm px-3 py-1.5 rounded-lg font-medium transition-colors ${
+                      subcategory === key
+                        ? "bg-blue-600 text-white"
+                        : "bg-slate-100 text-slate-600 hover:bg-slate-200"
+                    }`}
+                  >
+                    {label}
+                  </Link>
+                ))}
+              </div>
+            </div>
+
+            {/* Sort */}
+            <div>
+              <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wide mb-2">
+                Sort By
+              </label>
+              <div className="flex flex-col gap-1.5">
+                {(Object.entries(BENEFIT_SORT_LABELS) as [BenefitSort, string][]).map(([val, label]) => (
+                  <Link
+                    key={val}
+                    href={`/benefits?sort=${val}${subcategory ? `&subcategory=${subcategory}` : ""}${q ? `&q=${q}` : ""}`}
+                    className={`text-sm px-3 py-1.5 rounded-lg font-medium transition-colors ${
+                      sort === val
+                        ? "bg-blue-600 text-white"
+                        : "bg-slate-100 text-slate-600 hover:bg-slate-200"
+                    }`}
+                  >
+                    {label}
+                  </Link>
+                ))}
+              </div>
+            </div>
+
+            {/* Clear all */}
+            {(subcategory || q || sort) && (
+              <Link href="/benefits" className="text-sm text-blue-600 hover:text-blue-700 font-medium">
+                Clear all filters
+              </Link>
+            )}
+          </aside>
+
+          {/* Main content */}
+          <div className="flex-1 min-w-0">
+            {/* Mobile: horizontal chip row */}
+            <div className="lg:hidden mb-4">
+              {/* Mobile search */}
+              <form className="mb-3">
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
+                  <input
+                    type="text"
+                    name="q"
+                    defaultValue={q ?? ""}
+                    placeholder="Search benefits…"
+                    className="w-full h-10 pl-9 pr-4 rounded-lg border border-slate-200 bg-white text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-600"
+                  />
+                  {subcategory && <input type="hidden" name="subcategory" value={subcategory} />}
+                  {sort && <input type="hidden" name="sort" value={sort} />}
+                </div>
+                <button type="submit" className="sr-only">Search</button>
+              </form>
+              {/* Mobile subcategory chips */}
+              <div className="flex gap-2 overflow-x-auto pb-1 -mx-4 px-4 scrollbar-none">
+                <Link
+                  href={`/benefits${q ? `?q=${q}` : ""}${sort ? `${q ? "&" : "?"}sort=${sort}` : ""}`}
+                  className={`shrink-0 text-sm px-3 py-1.5 rounded-lg font-medium transition-colors ${
+                    !subcategory
+                      ? "bg-blue-600 text-white"
+                      : "bg-slate-100 text-slate-600"
+                  }`}
+                >
+                  All
+                </Link>
+                {Object.entries(SUBCATEGORY_LABELS).map(([key, label]) => (
+                  <Link
+                    key={key}
+                    href={`/benefits?subcategory=${key}${q ? `&q=${q}` : ""}${sort ? `&sort=${sort}` : ""}`}
+                    className={`shrink-0 text-sm px-3 py-1.5 rounded-lg font-medium transition-colors ${
+                      subcategory === key
+                        ? "bg-blue-600 text-white"
+                        : "bg-slate-100 text-slate-600"
+                    }`}
+                  >
+                    {label}
+                  </Link>
+                ))}
+              </div>
+            </div>
+
+            {/* Results count */}
+            {benefits.length > 0 && (
+              <p className="text-sm text-slate-500 mb-4">
+                Showing <span className="font-medium text-slate-900">{benefits.length}</span>{" "}
+                {benefits.length === 1 ? "program" : "programs"}
+              </p>
+            )}
+
+            {/* Grid or empty state */}
+            {benefits.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-20 text-center">
+                <EmptyStateIllustration />
+                <p className="mt-4 text-base font-medium text-slate-900">No benefits found</p>
+                <p className="text-sm text-slate-500 mt-1">Try adjusting your search or filters.</p>
+                <Link href="/benefits" className="mt-4 text-sm text-blue-600 hover:text-blue-700 font-medium">
+                  Clear filters
+                </Link>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
+                {benefits.map((benefit) => (
+                  <BenefitCard key={benefit.id} benefit={benefit} />
+                ))}
+              </div>
+            )}
           </div>
-        ) : (
-          <>
-            <p className="text-sm text-zinc-500 mb-4">
-              Showing {benefits.length} {benefits.length === 1 ? "program" : "programs"}
-            </p>
-            <ProgramGrid itemLabel="programs">
-              {benefits.map((benefit) => (
-                <BenefitCard key={benefit.id} benefit={benefit} />
-              ))}
-            </ProgramGrid>
-          </>
-        )}
+        </div>
       </main>
 
-      <footer className="border-t border-zinc-200 py-8 px-6 text-center text-sm text-zinc-500">
+      <footer className="border-t border-slate-200 py-8 px-4 text-center text-sm text-slate-400 mt-10">
         Benefit information is for reference only. Verify eligibility with the issuing agency.
       </footer>
     </div>

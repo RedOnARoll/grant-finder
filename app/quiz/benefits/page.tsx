@@ -6,6 +6,7 @@ import type { Grant } from "@/lib/types"
 import SiteNav from "@/components/SiteNav"
 import SaveInterestButton from "@/components/SaveInterestButton"
 import ProgramGrid from "@/components/ProgramGrid"
+import { Badge } from "@/components/ui/Badge"
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -358,7 +359,7 @@ function Checkbox({ label, checked, onChange }: { label: string; checked?: boole
   return (
     <label className="flex items-center gap-3 cursor-pointer">
       <input type="checkbox" className="w-4 h-4 rounded" defaultChecked={checked} onChange={(e) => onChange(e.target.checked)} />
-      <span className="text-sm text-zinc-800">{label}</span>
+      <span className="text-sm text-slate-800">{label}</span>
     </label>
   )
 }
@@ -366,11 +367,11 @@ function Checkbox({ label, checked, onChange }: { label: string; checked?: boole
 function Select({ label, value, options, onChange }: { label: string; value?: string; options: { value: string; label: string }[]; onChange: (v: string) => void }) {
   return (
     <div>
-      <label className="block text-sm text-zinc-800 mb-2">{label}</label>
+      <label className="block text-sm text-slate-800 mb-2">{label}</label>
       <select
         defaultValue={value ?? ""}
         onChange={(e) => onChange(e.target.value)}
-        className="w-full h-10 px-4 rounded-lg border border-zinc-300 text-sm text-zinc-900 focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+        className="w-full h-10 px-4 rounded-lg border border-slate-200 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
       >
         <option value="">Select…</option>
         {options.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
@@ -382,15 +383,15 @@ function Select({ label, value, options, onChange }: { label: string; value?: st
 function NumberInput({ label, value, placeholder, prefix, onChange }: { label: string; value?: number; placeholder?: string; prefix?: string; onChange: (v: number | undefined) => void }) {
   return (
     <div>
-      <label className="block text-sm text-zinc-800 mb-2">{label}</label>
+      <label className="block text-sm text-slate-800 mb-2">{label}</label>
       <div className="relative">
-        {prefix && <span className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500 text-sm">{prefix}</span>}
+        {prefix && <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 text-sm">{prefix}</span>}
         <input
           type="number"
           defaultValue={value}
           placeholder={placeholder}
           onChange={(e) => onChange(e.target.value ? parseInt(e.target.value) : undefined)}
-          className={`w-full h-10 ${prefix ? "pl-7" : "px-4"} pr-4 rounded-lg border border-zinc-300 text-sm text-zinc-900 focus:outline-none focus:ring-2 focus:ring-blue-500`}
+          className={`w-full h-10 ${prefix ? "pl-7" : "px-4"} pr-4 rounded-lg border border-slate-200 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500`}
         />
       </div>
     </div>
@@ -400,7 +401,7 @@ function NumberInput({ label, value, placeholder, prefix, onChange }: { label: s
 function NavButtons({ onBack, onNext, nextLabel = "See Results" }: { onBack: () => void; onNext: () => void; nextLabel?: string }) {
   return (
     <div className="flex gap-3 mt-8">
-      <button onClick={onBack} className="h-10 px-5 rounded-lg border border-zinc-300 text-sm font-medium text-zinc-700 hover:border-zinc-500 transition-colors">Back</button>
+      <button onClick={onBack} className="h-10 px-5 rounded-lg border border-slate-200 text-sm font-medium text-slate-700 hover:border-slate-400 transition-colors">Back</button>
       <button onClick={onNext} className="h-10 px-5 rounded-lg bg-blue-600 text-white text-sm font-medium hover:bg-blue-700 transition-colors">{nextLabel}</button>
     </div>
   )
@@ -411,24 +412,24 @@ function NavButtons({ onBack, onNext, nextLabel = "See Results" }: { onBack: () 
 function StepChoosePath({ onSelect }: { onSelect: (p: Path) => void }) {
   return (
     <div>
-      <h2 className="text-2xl font-semibold text-zinc-900 mb-2">How would you like to search?</h2>
-      <p className="text-zinc-500 mb-8">Choose the option that works best for you.</p>
+      <h2 className="text-2xl font-semibold text-slate-900 mb-2">How would you like to search?</h2>
+      <p className="text-slate-500 mb-8">Choose the option that works best for you.</p>
       <div className="grid gap-4">
         <button
           onClick={() => onSelect("situation")}
-          className="rounded-xl border-2 border-zinc-200 p-6 text-left hover:border-blue-500 transition-colors"
+          className="rounded-xl border border-slate-200 p-6 text-left hover:border-blue-500 transition-colors bg-white shadow-sm hover:shadow-md"
         >
           <div className="text-3xl mb-2">👤</div>
-          <h3 className="font-semibold text-zinc-900 mb-1">By My Situation</h3>
-          <p className="text-sm text-zinc-500">Tell us about your household and circumstances — we'll show everything you may qualify for across all categories.</p>
+          <h3 className="font-semibold text-slate-900 mb-1">By My Situation</h3>
+          <p className="text-sm text-slate-500">Tell us about your household and circumstances — we'll show everything you may qualify for across all categories.</p>
         </button>
         <button
           onClick={() => onSelect("category")}
-          className="rounded-xl border-2 border-zinc-200 p-6 text-left hover:border-blue-500 transition-colors"
+          className="rounded-xl border border-slate-200 p-6 text-left hover:border-blue-500 transition-colors bg-white shadow-sm hover:shadow-md"
         >
           <div className="text-3xl mb-2">🗂️</div>
-          <h3 className="font-semibold text-zinc-900 mb-1">By Category</h3>
-          <p className="text-sm text-zinc-500">Browse a specific type of assistance — housing, food, healthcare, disability, and more.</p>
+          <h3 className="font-semibold text-slate-900 mb-1">By Category</h3>
+          <p className="text-sm text-slate-500">Browse a specific type of assistance — housing, food, healthcare, disability, and more.</p>
         </button>
       </div>
     </div>
@@ -440,8 +441,8 @@ function StepChoosePath({ onSelect }: { onSelect: (p: Path) => void }) {
 function StepSituation({ profile, onChange, onNext, onBack }: { profile: SituationProfile; onChange: (u: Partial<SituationProfile>) => void; onNext: () => void; onBack: () => void }) {
   return (
     <div>
-      <h2 className="text-2xl font-semibold text-zinc-900 mb-2">Tell us about your situation</h2>
-      <p className="text-zinc-500 mb-8">Answer as many as apply. All information is used only to find matching programs.</p>
+      <h2 className="text-2xl font-semibold text-slate-900 mb-2">Tell us about your situation</h2>
+      <p className="text-slate-500 mb-8">Answer as many as apply. All information is used only to find matching programs.</p>
       <div className="space-y-6">
         <Select
           label="Age group"
@@ -484,18 +485,18 @@ function StepSituation({ profile, onChange, onNext, onBack }: { profile: Situati
 function StepChooseCategory({ onSelect }: { onSelect: (s: Subcategory) => void }) {
   return (
     <div>
-      <h2 className="text-2xl font-semibold text-zinc-900 mb-2">What type of assistance are you looking for?</h2>
-      <p className="text-zinc-500 mb-8">Select the category that fits your needs.</p>
+      <h2 className="text-2xl font-semibold text-slate-900 mb-2">What type of assistance are you looking for?</h2>
+      <p className="text-slate-500 mb-8">Select the category that fits your needs.</p>
       <div className="grid grid-cols-2 gap-4">
         {SUBCATEGORIES.map(({ key, label, icon, desc }) => (
           <button
             key={key}
             onClick={() => onSelect(key)}
-            className="rounded-xl border-2 border-zinc-200 p-5 text-left hover:border-blue-500 transition-colors"
+            className="rounded-xl border border-slate-200 p-5 text-left hover:border-blue-500 transition-colors bg-white shadow-sm hover:shadow-md"
           >
             <div className="text-3xl mb-2">{icon}</div>
-            <h3 className="font-semibold text-zinc-900 mb-1">{label}</h3>
-            <p className="text-xs text-zinc-500">{desc}</p>
+            <h3 className="font-semibold text-slate-900 mb-1">{label}</h3>
+            <p className="text-xs text-slate-500">{desc}</p>
           </button>
         ))}
       </div>
@@ -506,8 +507,8 @@ function StepChooseCategory({ onSelect }: { onSelect: (s: Subcategory) => void }
 function StepHousing({ profile, onChange, onNext, onBack }: { profile: CategoryProfile; onChange: (u: Partial<CategoryProfile>) => void; onNext: () => void; onBack: () => void }) {
   return (
     <div>
-      <h2 className="text-2xl font-semibold text-zinc-900 mb-2">Housing assistance</h2>
-      <p className="text-zinc-500 mb-8">Tell us about your housing situation and needs.</p>
+      <h2 className="text-2xl font-semibold text-slate-900 mb-2">Housing assistance</h2>
+      <p className="text-slate-500 mb-8">Tell us about your housing situation and needs.</p>
       <div className="space-y-3">
         <Checkbox label="I am a veteran" checked={profile.housingIsVeteran} onChange={(v) => onChange({ housingIsVeteran: v })} />
         <Checkbox label="I am Native American or Alaska Native" checked={profile.housingIsNativeAmerican} onChange={(v) => onChange({ housingIsNativeAmerican: v })} />
@@ -525,8 +526,8 @@ function StepHousing({ profile, onChange, onNext, onBack }: { profile: CategoryP
 function StepFood({ profile, onChange, onNext, onBack }: { profile: CategoryProfile; onChange: (u: Partial<CategoryProfile>) => void; onNext: () => void; onBack: () => void }) {
   return (
     <div>
-      <h2 className="text-2xl font-semibold text-zinc-900 mb-2">Food assistance</h2>
-      <p className="text-zinc-500 mb-8">Tell us about your household to match you with food programs.</p>
+      <h2 className="text-2xl font-semibold text-slate-900 mb-2">Food assistance</h2>
+      <p className="text-slate-500 mb-8">Tell us about your household to match you with food programs.</p>
       <div className="space-y-3">
         <Checkbox label="I have school-age children (K–12)" checked={profile.foodHasSchoolChildren} onChange={(v) => onChange({ foodHasSchoolChildren: v })} />
         <Checkbox label="I have children under 5 or in a child care program" checked={profile.foodIsPreschoolAge} onChange={(v) => onChange({ foodIsPreschoolAge: v })} />
@@ -544,8 +545,8 @@ function StepFood({ profile, onChange, onNext, onBack }: { profile: CategoryProf
 function StepDisability({ profile, onChange, onNext, onBack }: { profile: CategoryProfile; onChange: (u: Partial<CategoryProfile>) => void; onNext: () => void; onBack: () => void }) {
   return (
     <div>
-      <h2 className="text-2xl font-semibold text-zinc-900 mb-2">Disability support</h2>
-      <p className="text-zinc-500 mb-8">Tell us about your situation to find relevant programs.</p>
+      <h2 className="text-2xl font-semibold text-slate-900 mb-2">Disability support</h2>
+      <p className="text-slate-500 mb-8">Tell us about your situation to find relevant programs.</p>
       <div className="space-y-3">
         <Checkbox label="I currently receive SSDI" checked={profile.disabilityReceivesSsdi} onChange={(v) => onChange({ disabilityReceivesSsdi: v })} />
         <Checkbox label="I currently receive SSI" checked={profile.disabilityReceivesSsi} onChange={(v) => onChange({ disabilityReceivesSsi: v })} />
@@ -562,8 +563,8 @@ function StepDisability({ profile, onChange, onNext, onBack }: { profile: Catego
 function StepEducation({ profile, onChange, onNext, onBack }: { profile: CategoryProfile; onChange: (u: Partial<CategoryProfile>) => void; onNext: () => void; onBack: () => void }) {
   return (
     <div>
-      <h2 className="text-2xl font-semibold text-zinc-900 mb-2">Education programs</h2>
-      <p className="text-zinc-500 mb-8">Tell us about your educational goals and background.</p>
+      <h2 className="text-2xl font-semibold text-slate-900 mb-2">Education programs</h2>
+      <p className="text-slate-500 mb-8">Tell us about your educational goals and background.</p>
       <div className="space-y-3">
         <Checkbox label="I am Native American or Alaska Native" checked={profile.educationIsNativeAmerican} onChange={(v) => onChange({ educationIsNativeAmerican: v })} />
         <Checkbox label="I am pursuing or have a graduate degree" checked={profile.educationIsGraduate} onChange={(v) => onChange({ educationIsGraduate: v })} />
@@ -581,8 +582,8 @@ function StepEducation({ profile, onChange, onNext, onBack }: { profile: Categor
 function StepChildcare({ profile, onChange, onNext, onBack }: { profile: CategoryProfile; onChange: (u: Partial<CategoryProfile>) => void; onNext: () => void; onBack: () => void }) {
   return (
     <div>
-      <h2 className="text-2xl font-semibold text-zinc-900 mb-2">Childcare programs</h2>
-      <p className="text-zinc-500 mb-8">Tell us about your childcare needs and situation.</p>
+      <h2 className="text-2xl font-semibold text-slate-900 mb-2">Childcare programs</h2>
+      <p className="text-slate-500 mb-8">Tell us about your childcare needs and situation.</p>
       <div className="space-y-3">
         <Checkbox label="I am active-duty military or a DoD civilian" checked={profile.childcareIsMilitary} onChange={(v) => onChange({ childcareIsMilitary: v })} />
         <Checkbox label="I am Native American or Alaska Native" checked={profile.childcareIsTribal} onChange={(v) => onChange({ childcareIsTribal: v })} />
@@ -598,8 +599,8 @@ function StepChildcare({ profile, onChange, onNext, onBack }: { profile: Categor
 function StepEnergy({ profile, onChange, onNext, onBack }: { profile: CategoryProfile; onChange: (u: Partial<CategoryProfile>) => void; onNext: () => void; onBack: () => void }) {
   return (
     <div>
-      <h2 className="text-2xl font-semibold text-zinc-900 mb-2">Energy assistance</h2>
-      <p className="text-zinc-500 mb-8">Tell us about your energy and home improvement needs.</p>
+      <h2 className="text-2xl font-semibold text-slate-900 mb-2">Energy assistance</h2>
+      <p className="text-slate-500 mb-8">Tell us about your energy and home improvement needs.</p>
       <div className="space-y-3">
         <Checkbox label="My household has a low income" checked={profile.energyLowIncome} onChange={(v) => onChange({ energyLowIncome: v })} />
         <Checkbox label="I live in a rural area" checked={profile.energyIsRural} onChange={(v) => onChange({ energyIsRural: v })} />
@@ -613,8 +614,8 @@ function StepEnergy({ profile, onChange, onNext, onBack }: { profile: CategoryPr
 function StepHealth({ profile, onChange, onNext, onBack }: { profile: CategoryProfile; onChange: (u: Partial<CategoryProfile>) => void; onNext: () => void; onBack: () => void }) {
   return (
     <div>
-      <h2 className="text-2xl font-semibold text-zinc-900 mb-2">Healthcare programs</h2>
-      <p className="text-zinc-500 mb-8">Tell us about your healthcare situation to find the right programs.</p>
+      <h2 className="text-2xl font-semibold text-slate-900 mb-2">Healthcare programs</h2>
+      <p className="text-slate-500 mb-8">Tell us about your healthcare situation to find the right programs.</p>
       <div className="space-y-3">
         <Checkbox label="I do not have health insurance" checked={profile.healthIsUninsured} onChange={(v) => onChange({ healthIsUninsured: v })} />
         <Checkbox label="I have a low income" checked={profile.healthIsLowIncome} onChange={(v) => onChange({ healthIsLowIncome: v })} />
@@ -670,10 +671,10 @@ function Results({ benefits, onReset }: { benefits: BenefitQuizMatch[]; onReset:
   if (benefits.length === 0) {
     return (
       <div>
-        <h2 className="text-2xl font-semibold text-zinc-900 mb-2">No matches found</h2>
-        <p className="text-zinc-500 mb-6">We couldn't find programs matching your answers. Try adjusting your responses or browse all benefits.</p>
+        <h2 className="text-2xl font-semibold text-slate-900 mb-2">No matches found</h2>
+        <p className="text-slate-500 mb-6">We couldn't find programs matching your answers. Try adjusting your responses or browse all benefits.</p>
         <div className="flex gap-3">
-          <button onClick={onReset} className="h-10 px-5 rounded-lg border border-zinc-300 text-sm font-medium text-zinc-700 hover:border-zinc-500 transition-colors">Start over</button>
+          <button onClick={onReset} className="h-10 px-5 rounded-lg border border-slate-200 text-sm font-medium text-slate-700 hover:border-slate-400 transition-colors">Start over</button>
           <Link href="/benefits" className="h-10 px-5 rounded-lg bg-blue-600 text-white text-sm font-medium hover:bg-blue-700 transition-colors inline-flex items-center">Browse all benefits</Link>
         </div>
       </div>
@@ -698,10 +699,10 @@ function Results({ benefits, onReset }: { benefits: BenefitQuizMatch[]; onReset:
 
   return (
     <div>
-      <h2 className="text-2xl font-semibold text-zinc-900 mb-1">
+      <h2 className="text-2xl font-semibold text-slate-900 mb-1">
         You may be eligible for {benefits.length} program{benefits.length === 1 ? "" : "s"}
       </h2>
-      <p className="text-zinc-500 mb-6">Verify eligibility directly with each program before applying.</p>
+      <p className="text-slate-500 mb-6">Verify eligibility directly with each program before applying.</p>
 
       {/* Search + Sort */}
       <div className="flex gap-3 mb-4 flex-wrap">
@@ -710,12 +711,12 @@ function Results({ benefits, onReset }: { benefits: BenefitQuizMatch[]; onReset:
           placeholder="Search programs…"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          className="flex-1 min-w-[180px] h-10 px-4 rounded-lg border border-zinc-300 text-sm text-zinc-900 placeholder:text-zinc-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
+          className="flex-1 min-w-[180px] h-10 px-4 rounded-lg border border-slate-200 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
         />
         <select
           value={sort}
           onChange={(e) => setSort(e.target.value as BenefitSortKey)}
-          className="h-10 px-3 rounded-lg border border-zinc-300 text-sm text-zinc-700 focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+          className="h-10 px-3 rounded-lg border border-slate-200 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
         >
           <option value="default">Sort by…</option>
           <option value="name_asc">Name: A–Z</option>
@@ -729,7 +730,7 @@ function Results({ benefits, onReset }: { benefits: BenefitQuizMatch[]; onReset:
         <div className="flex gap-2 flex-wrap mb-6">
           <button
             onClick={() => setActiveTab("all")}
-            className={`h-8 px-3 rounded-full text-xs font-medium transition-colors ${activeTab === "all" ? "bg-blue-600 text-white" : "bg-zinc-100 text-zinc-600 hover:bg-zinc-200"}`}
+            className={`h-8 px-3 rounded-lg text-xs font-medium transition-colors ${activeTab === "all" ? "bg-blue-600 text-white" : "bg-slate-100 text-slate-600 hover:bg-slate-200"}`}
           >
             All ({benefits.length})
           </button>
@@ -739,7 +740,7 @@ function Results({ benefits, onReset }: { benefits: BenefitQuizMatch[]; onReset:
               <button
                 key={sub}
                 onClick={() => setActiveTab(sub)}
-                className={`h-8 px-3 rounded-full text-xs font-medium transition-colors ${activeTab === sub ? "bg-blue-600 text-white" : "bg-zinc-100 text-zinc-600 hover:bg-zinc-200"}`}
+                className={`h-8 px-3 rounded-lg text-xs font-medium transition-colors ${activeTab === sub ? "bg-blue-600 text-white" : "bg-slate-100 text-slate-600 hover:bg-slate-200"}`}
               >
                 {SUBCATEGORY_ICONS[sub] ?? ""} {SUBCATEGORY_LABELS[sub] ?? sub} ({count})
               </button>
@@ -750,39 +751,37 @@ function Results({ benefits, onReset }: { benefits: BenefitQuizMatch[]; onReset:
 
       {/* Results list */}
       {filtered.length === 0 ? (
-        <p className="text-sm text-zinc-500 py-6 text-center">No programs match your search.</p>
+        <p className="text-sm text-slate-500 py-6 text-center">No programs match your search.</p>
       ) : (
         <ProgramGrid itemLabel="programs">
           {filtered.map(({ benefit: b, confidence, reasons, possibleDisqualifiers, score }) => (
             <div
               key={b.id}
-              className="flex h-full flex-col rounded-xl border border-zinc-200 p-5 transition-colors hover:border-blue-400"
+              className="flex h-full flex-col bg-white rounded-xl border border-slate-200 shadow-sm p-5 hover:shadow-md transition-shadow"
             >
               <div className="mb-1 flex flex-wrap items-start justify-between gap-2">
-                <Link href={`/benefits/${b.slug}`} className="font-semibold text-zinc-900 text-sm leading-snug hover:underline">
+                <Link href={`/benefits/${b.slug}`} className="font-semibold text-slate-900 text-sm leading-snug hover:underline">
                   {b.name}
                 </Link>
-                <span className={`shrink-0 text-xs px-2 py-0.5 rounded-full font-medium whitespace-nowrap ${
-                  confidence === "likely" ? "bg-green-50 text-green-700" : "bg-amber-50 text-amber-700"
-                }`}>
+                <Badge variant={confidence === "likely" ? "green" : "amber"}>
                   {confidence === "likely" ? "Likely eligible" : "May qualify"}
-                </span>
+                </Badge>
                 {b.subcategory && activeTab === "all" && (
-                  <span className="shrink-0 text-xs px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 font-medium whitespace-nowrap">
+                  <Badge variant="blue">
                     {SUBCATEGORY_ICONS[b.subcategory]} {SUBCATEGORY_LABELS[b.subcategory] ?? b.subcategory}
-                  </span>
+                  </Badge>
                 )}
               </div>
-              <p className="text-xs text-zinc-500 mb-1">{b.agency}</p>
-              <p className="text-xs text-zinc-600 line-clamp-2 mb-3">{b.description}</p>
-              <div className="mb-3 grid gap-2 rounded-lg bg-zinc-50 p-3 text-xs text-zinc-600">
-                <p><span className="font-semibold text-zinc-900">Why this may match:</span> {reasons.join(" · ")}</p>
-                <p><span className="font-semibold text-zinc-900">What may disqualify you:</span> {possibleDisqualifiers.slice(0, 2).join(" · ")}</p>
-                <p className="text-zinc-400">Score {score} is used only to sort quiz matches.</p>
+              <p className="text-xs text-slate-500 mb-1">{b.agency}</p>
+              <p className="text-xs text-slate-600 line-clamp-2 mb-3">{b.description}</p>
+              <div className="mb-3 grid gap-2 rounded-lg bg-slate-50 p-3 text-xs text-slate-600">
+                <p><span className="font-semibold text-slate-900">Why this may match:</span> {reasons.join(" · ")}</p>
+                <p><span className="font-semibold text-slate-900">What may disqualify you:</span> {possibleDisqualifiers.slice(0, 2).join(" · ")}</p>
+                <p className="text-slate-400">Score {score} is used only to sort quiz matches.</p>
               </div>
               <div className="mt-auto flex flex-wrap items-center gap-3">
                 <SaveInterestButton slug={b.slug} type="benefit" />
-                <Link href={`/benefits/${b.slug}`} className="text-sm font-medium text-zinc-900 hover:underline">
+                <Link href={`/benefits/${b.slug}`} className="text-sm font-medium text-blue-600 hover:underline">
                   View details →
                 </Link>
               </div>
@@ -792,7 +791,7 @@ function Results({ benefits, onReset }: { benefits: BenefitQuizMatch[]; onReset:
       )}
 
       <div className="flex gap-3 mt-8">
-        <button onClick={onReset} className="h-10 px-5 rounded-lg border border-zinc-300 text-sm font-medium text-zinc-700 hover:border-zinc-500 transition-colors">Start over</button>
+        <button onClick={onReset} className="h-10 px-5 rounded-lg border border-slate-200 text-sm font-medium text-slate-700 hover:border-slate-400 transition-colors">Start over</button>
         <Link href="/benefits" className="h-10 px-5 rounded-lg bg-blue-600 text-white text-sm font-medium hover:bg-blue-700 transition-colors inline-flex items-center">Browse all benefits →</Link>
       </div>
     </div>
@@ -869,18 +868,18 @@ export default function BenefitsQuizPage() {
   const catQuestionBack = () => setStep("chooseCategory")
 
   return (
-    <div className="flex flex-col min-h-full">
+    <div className="flex flex-col min-h-full bg-slate-50">
       <SiteNav active="quiz" />
 
-      <main className="flex-1 max-w-6xl mx-auto w-full px-6 py-10">
-        <nav className="flex items-center gap-2 text-sm text-zinc-500 mb-8">
-          <Link href="/quiz" className="hover:text-zinc-900 transition-colors">Eligibility Quiz</Link>
+      <main className="flex-1 max-w-4xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-10">
+        <nav className="flex items-center gap-2 text-sm text-slate-400 mb-8">
+          <Link href="/quiz" className="hover:text-slate-900 transition-colors">Eligibility Quiz</Link>
           <span>/</span>
-          <span className="text-zinc-900">Benefits Quiz</span>
+          <span className="text-slate-900">Benefits Quiz</span>
         </nav>
 
         {loading ? (
-          <div className="text-center py-20 text-zinc-500">Loading programs…</div>
+          <div className="text-center py-20 text-slate-500">Loading programs…</div>
         ) : (
           <>
             {step === "choosePath" && <StepChoosePath onSelect={choosePath} />}
@@ -925,7 +924,7 @@ export default function BenefitsQuizPage() {
         )}
       </main>
 
-      <footer className="border-t border-zinc-200 py-8 px-6 text-center text-sm text-zinc-500">
+      <footer className="border-t border-slate-200 py-6 px-6 text-center text-xs text-slate-400">
         Information is for reference only. Verify eligibility directly with each program.
       </footer>
     </div>

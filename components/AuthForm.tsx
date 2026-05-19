@@ -113,13 +113,16 @@ export default function AuthForm({
   }
 
   return (
-    <div className="rounded-xl border border-zinc-200 bg-white p-6 shadow-sm">
-      <div className="mb-6 flex rounded-lg border border-zinc-200 bg-zinc-50 p-1">
+    <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-6">
+      {/* Mode toggle */}
+      <div className="mb-6 flex rounded-lg bg-slate-100 p-1 gap-1">
         <button
           type="button"
           onClick={() => setMode("login")}
-          className={`h-10 flex-1 rounded-md text-sm font-medium transition-colors ${
-            mode === "login" ? "bg-white text-zinc-900 shadow-sm" : "text-zinc-500 hover:text-zinc-900"
+          className={`h-10 flex-1 rounded-lg text-sm font-medium transition-all ${
+            mode === "login"
+              ? "bg-white text-slate-900 shadow-sm"
+              : "text-slate-500 hover:text-slate-700"
           }`}
         >
           Log in
@@ -127,65 +130,72 @@ export default function AuthForm({
         <button
           type="button"
           onClick={() => setMode("signup")}
-          className={`h-10 flex-1 rounded-md text-sm font-medium transition-colors ${
-            mode === "signup" ? "bg-white text-zinc-900 shadow-sm" : "text-zinc-500 hover:text-zinc-900"
+          className={`h-10 flex-1 rounded-lg text-sm font-medium transition-all ${
+            mode === "signup"
+              ? "bg-white text-slate-900 shadow-sm"
+              : "text-slate-500 hover:text-slate-700"
           }`}
         >
           Sign up
         </button>
       </div>
 
+      {/* OAuth buttons */}
       <div className="grid gap-3">
         <button
           type="button"
           onClick={() => continueWithProvider("google")}
           disabled={pending}
-          className="h-11 rounded-lg border border-zinc-300 px-4 text-sm font-medium text-zinc-900 transition-colors hover:bg-zinc-50 disabled:cursor-not-allowed disabled:opacity-60"
+          className="h-11 w-full rounded-lg border border-slate-200 px-4 text-sm font-medium text-slate-900 hover:bg-slate-50 transition-colors disabled:cursor-not-allowed disabled:opacity-60 flex items-center justify-center gap-2"
         >
+          <span className="flex items-center justify-center w-5 h-5 rounded bg-red-500 text-white text-xs font-bold shrink-0">G</span>
           Continue with Google
         </button>
         <button
           type="button"
           onClick={() => continueWithProvider("azure")}
           disabled={pending}
-          className="h-11 rounded-lg border border-zinc-300 px-4 text-sm font-medium text-zinc-900 transition-colors hover:bg-zinc-50 disabled:cursor-not-allowed disabled:opacity-60"
+          className="h-11 w-full rounded-lg border border-slate-200 px-4 text-sm font-medium text-slate-900 hover:bg-slate-50 transition-colors disabled:cursor-not-allowed disabled:opacity-60 flex items-center justify-center gap-2"
         >
+          <span className="flex items-center justify-center w-5 h-5 rounded bg-blue-600 text-white text-xs font-bold shrink-0">M</span>
           Continue with Microsoft
         </button>
       </div>
 
-      <div className="my-6 flex items-center gap-3">
-        <span className="h-px flex-1 bg-zinc-200" />
-        <span className="text-xs font-medium uppercase tracking-wide text-zinc-400">or</span>
-        <span className="h-px flex-1 bg-zinc-200" />
+      {/* Divider */}
+      <div className="my-5 flex items-center gap-3">
+        <span className="h-px flex-1 bg-slate-200" />
+        <span className="text-xs font-medium uppercase tracking-wide text-slate-400">or</span>
+        <span className="h-px flex-1 bg-slate-200" />
       </div>
 
+      {/* Email/password form */}
       <form onSubmit={submitEmailPassword} className="grid gap-4">
         {mode === "signup" && (
-          <label className="grid gap-1.5 text-sm font-medium text-zinc-700">
-            Full name
+          <label className="grid gap-1.5">
+            <span className="text-sm font-medium text-slate-700">Full name</span>
             <input
               type="text"
               value={fullName}
               onChange={(event) => setFullName(event.target.value)}
               autoComplete="name"
-              className="h-11 rounded-lg border border-zinc-300 px-3 text-sm text-zinc-900 outline-none transition focus:border-zinc-900 focus:ring-2 focus:ring-zinc-900/10"
+              className="h-11 rounded-lg border border-slate-200 px-3 text-sm text-slate-900 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition"
             />
           </label>
         )}
-        <label className="grid gap-1.5 text-sm font-medium text-zinc-700">
-          Email
+        <label className="grid gap-1.5">
+          <span className="text-sm font-medium text-slate-700">Email</span>
           <input
             type="email"
             value={email}
             onChange={(event) => setEmail(event.target.value)}
             autoComplete="email"
             required
-            className="h-11 rounded-lg border border-zinc-300 px-3 text-sm text-zinc-900 outline-none transition focus:border-zinc-900 focus:ring-2 focus:ring-zinc-900/10"
+            className="h-11 rounded-lg border border-slate-200 px-3 text-sm text-slate-900 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition"
           />
         </label>
-        <label className="grid gap-1.5 text-sm font-medium text-zinc-700">
-          Password
+        <label className="grid gap-1.5">
+          <span className="text-sm font-medium text-slate-700">Password</span>
           <input
             type="password"
             value={password}
@@ -193,17 +203,17 @@ export default function AuthForm({
             autoComplete={mode === "signup" ? "new-password" : "current-password"}
             minLength={8}
             required
-            className="h-11 rounded-lg border border-zinc-300 px-3 text-sm text-zinc-900 outline-none transition focus:border-zinc-900 focus:ring-2 focus:ring-zinc-900/10"
+            className="h-11 rounded-lg border border-slate-200 px-3 text-sm text-slate-900 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition"
           />
         </label>
 
         {error && (
-          <div className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800">
+          <div className="rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700">
             {error}
           </div>
         )}
         {message && (
-          <div className="rounded-lg border border-green-200 bg-green-50 px-3 py-2 text-sm text-green-800">
+          <div className="rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-700">
             {message}
           </div>
         )}
@@ -211,7 +221,7 @@ export default function AuthForm({
         <button
           type="submit"
           disabled={pending}
-          className="mt-1 h-11 rounded-lg bg-zinc-900 px-4 text-sm font-medium text-white transition-colors hover:bg-zinc-700 disabled:cursor-not-allowed disabled:opacity-60"
+          className="mt-1 h-11 w-full rounded-lg bg-blue-600 px-4 text-sm font-medium text-white hover:bg-blue-700 transition-colors disabled:cursor-not-allowed disabled:opacity-60"
         >
           {pending ? "Please wait..." : mode === "signup" ? "Create account" : "Log in"}
         </button>

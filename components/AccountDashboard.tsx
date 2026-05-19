@@ -35,7 +35,7 @@ function statusTone(status: ApplicationStatus) {
     case "interested": return "bg-amber-50 text-amber-800 border-amber-200"
     case "applying": return "bg-blue-50 text-blue-800 border-blue-200"
     case "applied": return "bg-violet-50 text-violet-800 border-violet-200"
-    case "awarded": return "bg-green-50 text-green-800 border-green-200"
+    case "awarded": return "bg-emerald-50 text-emerald-800 border-emerald-200"
   }
 }
 
@@ -81,7 +81,6 @@ export default function AccountDashboard() {
         }
 
         setCompletion(profileCompletion(userProfile))
-
         setDashboard({ saved_programs: savedPrograms })
       }
 
@@ -159,17 +158,21 @@ export default function AccountDashboard() {
   }
 
   if (loading) {
-    return <div className="rounded-xl border border-zinc-200 bg-white p-6 text-zinc-500 shadow-sm">Loading dashboard...</div>
+    return (
+      <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-6 text-slate-500">
+        Loading dashboard...
+      </div>
+    )
   }
 
   if (!user) {
     return (
-      <div className="rounded-xl border border-zinc-200 bg-white p-8 text-center shadow-sm">
-        <h1 className="mb-3 text-2xl font-bold text-zinc-900">Log in to view your dashboard</h1>
-        <p className="mb-6 text-zinc-500">Save programs and track applications from your GrantFinder account.</p>
+      <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-8 text-center">
+        <h1 className="mb-3 text-2xl font-bold text-slate-900">Log in to view your dashboard</h1>
+        <p className="mb-6 text-slate-600">Save programs and track applications from your GrantWay account.</p>
         <Link
           href="/auth?next=/account"
-          className="inline-flex h-11 items-center justify-center rounded-full bg-zinc-900 px-6 text-sm font-medium text-white transition-colors hover:bg-zinc-700"
+          className="inline-flex h-11 items-center justify-center rounded-lg bg-blue-600 px-6 text-sm font-medium text-white hover:bg-blue-700 transition-colors"
         >
           Log in or sign up
         </Link>
@@ -201,8 +204,9 @@ export default function AccountDashboard() {
 
   return (
     <div className="grid gap-6">
+      {/* Profile completion banner */}
       {completion < 100 && (
-        <section className="rounded-xl border border-amber-200 bg-amber-50 p-5 shadow-sm">
+        <section className="rounded-xl border border-amber-200 bg-amber-50 p-5">
           <div className="flex flex-wrap items-center justify-between gap-4">
             <div className="min-w-0 flex-1">
               <p className="text-sm font-semibold text-amber-900">
@@ -211,13 +215,13 @@ export default function AccountDashboard() {
               <p className="mt-1 text-sm text-amber-800">
                 Complete it to see more matches, better eligibility estimates, and more useful reminders.
               </p>
-              <div className="mt-3 h-2 overflow-hidden rounded-full bg-white/70">
-                <div className="h-full rounded-full bg-amber-600 transition-all" style={{ width: `${completion}%` }} />
+              <div className="mt-3 h-2 overflow-hidden rounded-lg bg-white/70">
+                <div className="h-full rounded-lg bg-amber-600 transition-all" style={{ width: `${completion}%` }} />
               </div>
             </div>
             <Link
               href="/account/profile"
-              className="inline-flex h-10 items-center rounded-full bg-amber-900 px-5 text-sm font-medium text-white transition-colors hover:bg-amber-800"
+              className="inline-flex h-10 items-center rounded-lg bg-amber-900 px-5 text-sm font-medium text-white hover:bg-amber-800 transition-colors"
             >
               Complete profile
             </Link>
@@ -225,22 +229,23 @@ export default function AccountDashboard() {
         </section>
       )}
 
-      <section className="overflow-hidden rounded-xl border border-zinc-200 bg-white shadow-sm">
-        <div className="border-b border-zinc-200 bg-zinc-900 p-6 text-white">
+      {/* Workspace header card */}
+      <section className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
+        <div className="border-b border-slate-200 bg-slate-900 p-6 text-white rounded-t-xl">
           <div className="flex flex-wrap items-end justify-between gap-6">
             <div>
-              <p className="mb-2 text-sm font-medium text-zinc-300">Application workspace</p>
+              <p className="mb-2 text-sm font-medium text-slate-300">Application workspace</p>
               <h2 className="text-2xl font-bold">Track every program from saved to awarded.</h2>
             </div>
             <Link
               href="/grants"
-              className="inline-flex h-10 items-center rounded-full bg-white px-5 text-sm font-medium text-zinc-900 transition-colors hover:bg-zinc-100"
+              className="inline-flex h-10 items-center rounded-lg bg-white px-5 text-sm font-medium text-slate-900 hover:bg-slate-100 transition-colors"
             >
               Find programs
             </Link>
           </div>
         </div>
-        <div className="grid gap-px bg-zinc-200 sm:grid-cols-4">
+        <div className="grid gap-px bg-slate-200 sm:grid-cols-4">
           {[
             ["Saved", savedPrograms.length],
             ["Grants", grants.length],
@@ -248,21 +253,22 @@ export default function AccountDashboard() {
             ["Active", activeApplications.length],
           ].map(([label, value]) => (
             <div key={label} className="bg-white p-5">
-              <p className="text-sm font-medium text-zinc-500">{label}</p>
-              <p className="mt-2 text-3xl font-bold text-zinc-900">{value}</p>
+              <p className="text-sm font-medium text-slate-500">{label}</p>
+              <p className="mt-2 text-3xl font-bold text-slate-900">{value}</p>
             </div>
           ))}
         </div>
       </section>
 
-      <section className="rounded-xl border border-zinc-200 bg-white p-6 shadow-sm">
+      {/* Application tracker */}
+      <section className="bg-white rounded-xl border border-slate-200 shadow-sm p-5">
         <div className="mb-6 flex flex-wrap items-center justify-between gap-4">
           <div>
-            <h2 className="text-lg font-semibold text-zinc-900">Application tracker</h2>
-            <p className="text-sm text-zinc-500">Move saved programs through each stage as you work.</p>
+            <h2 className="text-lg font-semibold text-slate-900">Application tracker</h2>
+            <p className="text-sm text-slate-600">Move saved programs through each stage as you work.</p>
           </div>
           {nextDeadline && (
-            <div className="rounded-lg bg-amber-50 px-4 py-2 text-sm text-amber-900">
+            <div className="rounded-lg bg-amber-50 border border-amber-200 px-4 py-2 text-sm text-amber-900">
               Next deadline: <span className="font-semibold">{formatDate(nextDeadline.program.deadline)}</span>
             </div>
           )}
@@ -272,7 +278,7 @@ export default function AccountDashboard() {
           {countsByStatus.map((status, index) => (
             <div key={status.value} className={`rounded-lg border p-4 ${statusTone(status.value)}`}>
               <div className="mb-4 flex items-center justify-between gap-3">
-                <span className="flex h-7 w-7 items-center justify-center rounded-full bg-white/80 text-xs font-semibold text-zinc-900">
+                <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-white/80 text-xs font-semibold text-slate-900">
                   {index + 1}
                 </span>
                 <span className="text-2xl font-bold">{status.count}</span>
@@ -283,73 +289,78 @@ export default function AccountDashboard() {
         </div>
       </section>
 
+      {/* Saved programs list + sidebar */}
       <div className="grid min-w-0 gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,320px)]">
-        <section className="min-w-0 rounded-xl border border-zinc-200 bg-white shadow-sm">
-          <div className="border-b border-zinc-200 p-6">
-            <h2 className="text-lg font-semibold text-zinc-900">Saved grants and benefits</h2>
-            <p className="mt-1 text-sm text-zinc-500">Track deadlines, award amounts, and application progress.</p>
+        {/* Saved programs list */}
+        <section className="min-w-0 bg-white rounded-xl border border-slate-200 shadow-sm">
+          <div className="border-b border-slate-200 p-5">
+            <h2 className="text-lg font-semibold text-slate-900">Saved grants and benefits</h2>
+            <p className="mt-1 text-sm text-slate-600">Track deadlines, award amounts, and application progress.</p>
           </div>
 
           {savedPrograms.length === 0 ? (
             <div className="p-8 text-center">
-              <h3 className="mb-2 text-lg font-semibold text-zinc-900">No saved programs yet</h3>
-              <p className="mx-auto mb-6 max-w-md text-sm text-zinc-500">
+              <h3 className="mb-2 text-lg font-semibold text-slate-900">No saved programs yet</h3>
+              <p className="mx-auto mb-6 max-w-md text-sm text-slate-600">
                 Use the yellow star on grants and benefits, or add one from the panel.
               </p>
-              <div className="flex justify-center gap-3">
-                <Link href="/grants" className="text-sm font-medium text-zinc-900 hover:underline">
+              <div className="flex justify-center gap-4">
+                <Link href="/grants" className="text-sm font-medium text-blue-600 hover:underline">
                   Browse grants
                 </Link>
-                <Link href="/benefits" className="text-sm font-medium text-zinc-900 hover:underline">
+                <Link href="/benefits" className="text-sm font-medium text-blue-600 hover:underline">
                   Browse benefits
                 </Link>
               </div>
             </div>
           ) : (
-            <div className="divide-y divide-zinc-200">
+            <div className="divide-y divide-slate-200">
               {savedPrograms.map(({ saved, program }) => (
                 <article key={`${saved.type}-${saved.slug}`} className="p-5">
                   <div className="mb-4 flex flex-wrap items-start justify-between gap-4">
                     <div className="min-w-0">
                       <div className="mb-2 flex flex-wrap gap-2">
-                        <span className={`rounded-full px-2.5 py-1 text-xs font-medium ${
-                          program.type === "grant" ? "bg-zinc-100 text-zinc-700" : "bg-blue-50 text-blue-700"
+                        <span className={`rounded-lg px-2.5 py-1 text-xs font-medium ${
+                          program.type === "grant" ? "bg-slate-100 text-slate-700" : "bg-blue-50 text-blue-700"
                         }`}>
                           {program.type === "grant" ? "Grant" : "Benefit"}
                         </span>
-                        <span className={`rounded-full border px-2.5 py-1 text-xs font-medium ${statusTone(saved.status)}`}>
+                        <span className={`rounded-lg border px-2.5 py-1 text-xs font-medium ${statusTone(saved.status)}`}>
                           {statusLabel(saved.status)}
                         </span>
                       </div>
-                      <Link href={`/${program.type === "grant" ? "grants" : "benefits"}/${program.slug}`} className="break-words font-semibold text-zinc-900 hover:underline">
+                      <Link
+                        href={`/${program.type === "grant" ? "grants" : "benefits"}/${program.slug}`}
+                        className="break-words font-semibold text-slate-900 hover:underline"
+                      >
                         {program.name}
                       </Link>
-                      <p className="mt-1 text-sm text-zinc-500">{program.agency}</p>
+                      <p className="mt-1 text-sm text-slate-500">{program.agency}</p>
                     </div>
                     <button
                       type="button"
                       onClick={() => removeSavedProgram(saved.slug, saved.type)}
                       disabled={saving}
-                      className="h-9 rounded-lg border border-zinc-300 px-3 text-sm font-medium text-zinc-500 transition-colors hover:bg-zinc-50 hover:text-zinc-900 disabled:cursor-not-allowed disabled:opacity-60"
+                      className="h-9 rounded-lg border border-slate-200 px-3 text-sm font-medium text-slate-500 hover:bg-slate-50 hover:text-slate-900 transition-colors disabled:cursor-not-allowed disabled:opacity-60"
                     >
                       Remove
                     </button>
                   </div>
 
                   <div className="grid gap-3 sm:grid-cols-[1fr_1fr_180px] sm:items-end">
-                    <div className="rounded-lg bg-zinc-50 p-3 text-sm">
-                      <p className="font-semibold text-zinc-900">{formatAmount(program.max_amount)}</p>
-                      <p className="text-zinc-500">Max amount</p>
+                    <div className="rounded-lg bg-slate-50 p-3 text-sm">
+                      <p className="font-semibold text-slate-900">{formatAmount(program.max_amount)}</p>
+                      <p className="text-slate-500">Max amount</p>
                     </div>
-                    <div className="rounded-lg bg-zinc-50 p-3 text-sm">
-                      <p className="font-semibold text-zinc-900">{formatDate(program.deadline)}</p>
-                      <p className="text-zinc-500">Deadline</p>
+                    <div className="rounded-lg bg-slate-50 p-3 text-sm">
+                      <p className="font-semibold text-slate-900">{formatDate(program.deadline)}</p>
+                      <p className="text-slate-500">Deadline</p>
                     </div>
                     <select
                       value={saved.status}
                       onChange={(event) => updateStatus(saved.slug, saved.type, event.target.value as ApplicationStatus)}
                       disabled={saving}
-                      className="h-10 rounded-lg border border-zinc-300 bg-white px-3 text-sm text-zinc-900 outline-none transition focus:border-zinc-900 focus:ring-2 focus:ring-zinc-900/10"
+                      className="h-10 rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-900 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition disabled:cursor-not-allowed disabled:opacity-60"
                     >
                       {APPLICATION_STATUSES.map((status) => (
                         <option key={status.value} value={status.value}>
@@ -364,16 +375,18 @@ export default function AccountDashboard() {
           )}
         </section>
 
+        {/* Sidebar */}
         <aside className="grid min-w-0 content-start gap-6">
-          <section className="min-w-0 rounded-xl border border-zinc-200 bg-white p-6 shadow-sm">
-            <h2 className="mb-1 text-lg font-semibold text-zinc-900">Add a program</h2>
-            <p className="mb-5 text-sm text-zinc-500">Saved items appear here and in your tracker.</p>
+          {/* Add a program */}
+          <section className="min-w-0 bg-white rounded-xl border border-slate-200 shadow-sm p-5">
+            <h2 className="mb-1 text-lg font-semibold text-slate-900">Add a program</h2>
+            <p className="mb-5 text-sm text-slate-600">Saved items appear here and in your tracker.</p>
             <form onSubmit={addSavedProgram} className="grid gap-3">
               <select
                 value={selectedProgramKey}
                 onChange={(event) => setSelectedProgramKey(event.target.value)}
                 required
-                className="h-11 w-full min-w-0 rounded-lg border border-zinc-300 bg-white px-3 text-sm text-zinc-900 outline-none transition focus:border-zinc-900 focus:ring-2 focus:ring-zinc-900/10"
+                className="h-11 w-full min-w-0 rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-900 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition"
               >
                 <option value="">Choose a program...</option>
                 <optgroup label="Grants">
@@ -394,7 +407,7 @@ export default function AccountDashboard() {
               <select
                 value={selectedStatus}
                 onChange={(event) => setSelectedStatus(event.target.value as ApplicationStatus)}
-                className="h-11 w-full min-w-0 rounded-lg border border-zinc-300 bg-white px-3 text-sm text-zinc-900 outline-none transition focus:border-zinc-900 focus:ring-2 focus:ring-zinc-900/10"
+                className="h-11 w-full min-w-0 rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-900 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition"
               >
                 {APPLICATION_STATUSES.map((status) => (
                   <option key={status.value} value={status.value}>
@@ -405,30 +418,39 @@ export default function AccountDashboard() {
               <button
                 type="submit"
                 disabled={saving}
-                className="h-11 rounded-full bg-zinc-900 px-6 text-sm font-medium text-white transition-colors hover:bg-zinc-700 disabled:cursor-not-allowed disabled:opacity-60"
+                className="h-11 rounded-lg bg-blue-600 px-6 text-sm font-medium text-white hover:bg-blue-700 transition-colors disabled:cursor-not-allowed disabled:opacity-60"
               >
                 Save
               </button>
             </form>
 
-            {error && <p className="mt-4 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">{error}</p>}
-            {message && <p className="mt-4 rounded-lg border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-800">{message}</p>}
+            {error && (
+              <p className="mt-4 rounded-lg border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
+                {error}
+              </p>
+            )}
+            {message && (
+              <p className="mt-4 rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">
+                {message}
+              </p>
+            )}
           </section>
 
-          <section className="min-w-0 rounded-xl border border-zinc-200 bg-white p-6 shadow-sm">
-            <h2 className="text-lg font-semibold text-zinc-900">Quick read</h2>
+          {/* Quick read */}
+          <section className="min-w-0 bg-white rounded-xl border border-slate-200 shadow-sm p-5">
+            <h2 className="text-lg font-semibold text-slate-900">Quick read</h2>
             <div className="mt-4 grid gap-3 text-sm">
               <div className="flex items-center justify-between">
-                <span className="text-zinc-500">Awarded</span>
-                <span className="font-semibold text-zinc-900">{awarded.length}</span>
+                <span className="text-slate-500">Awarded</span>
+                <span className="font-semibold text-slate-900">{awarded.length}</span>
               </div>
               <div className="flex items-center justify-between">
-                <span className="text-zinc-500">In progress</span>
-                <span className="font-semibold text-zinc-900">{activeApplications.length}</span>
+                <span className="text-slate-500">In progress</span>
+                <span className="font-semibold text-slate-900">{activeApplications.length}</span>
               </div>
               <div className="flex items-center justify-between">
-                <span className="text-zinc-500">Remaining catalog</span>
-                <span className="font-semibold text-zinc-900">{selectablePrograms.length}</span>
+                <span className="text-slate-500">Remaining catalog</span>
+                <span className="font-semibold text-slate-900">{selectablePrograms.length}</span>
               </div>
             </div>
           </section>
