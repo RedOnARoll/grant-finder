@@ -6,6 +6,7 @@ import type { Grant, EligibilityCriteria } from "@/lib/types"
 import SiteNav from "@/components/SiteNav"
 import SaveInterestButton from "@/components/SaveInterestButton"
 import ProgramGrid from "@/components/ProgramGrid"
+import { getDocumentGenerationActions } from "@/lib/document-generation"
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -404,27 +405,46 @@ function Results({ matches, category, onReset }: { matches: Grant[]; category: C
       ) : (
         <div className="mb-8">
           <ProgramGrid itemLabel="grants">
-          {sorted.map((g) => (
-            <div key={g.id} className="flex h-full flex-col rounded-xl border border-zinc-200 p-5">
-              <div className="flex items-start justify-between gap-4 mb-2">
-                <h3 className="font-semibold text-zinc-900">{g.name}</h3>
-                <span className="shrink-0 text-sm font-semibold bg-zinc-100 px-2 py-0.5 rounded-full">{formatAmount(g.max_amount)}</span>
+          {sorted.map((g) => {
+            const generationActions = getDocumentGenerationActions(g.required_documents).slice(0, 2)
+
+            return (
+              <div key={g.id} className="flex h-full flex-col rounded-xl border border-zinc-200 p-5">
+                <div className="flex items-start justify-between gap-4 mb-2">
+                  <h3 className="font-semibold text-zinc-900">{g.name}</h3>
+                  <span className="shrink-0 text-sm font-semibold bg-zinc-100 px-2 py-0.5 rounded-full">{formatAmount(g.max_amount)}</span>
+                </div>
+                <p className="text-sm text-zinc-500 mb-1">{g.agency}</p>
+                <p className="text-sm text-zinc-600 mb-3 line-clamp-2">{g.description}</p>
+                {g.required_documents.length > 0 && (
+                  <div className="mb-3 space-y-2">
+                    <p className="text-xs text-zinc-500">
+                      <span className="font-medium">Docs needed: </span>
+                      {g.required_documents.slice(0, 3).join(" · ")}
+                      {g.required_documents.length > 3 && ` · +${g.required_documents.length - 3} more`}
+                    </p>
+                    {generationActions.length > 0 && (
+                      <div className="flex flex-wrap gap-2">
+                        {generationActions.map((action) => (
+                          <Link
+                            key={action.documentType}
+                            href={`/grants/${g.slug}/apply`}
+                            className="rounded-full border border-amber-200 bg-amber-50 px-3 py-1 text-xs font-semibold text-amber-800 transition-colors hover:border-amber-300 hover:bg-amber-100"
+                          >
+                            Create {action.shortLabel}
+                          </Link>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )}
+                <div className="mt-auto flex flex-wrap items-center gap-3">
+                  <SaveInterestButton slug={g.slug} type="grant" />
+                  <Link href={`/grants/${g.slug}`} className="text-sm font-medium text-zinc-900 hover:underline">View details →</Link>
+                </div>
               </div>
-              <p className="text-sm text-zinc-500 mb-1">{g.agency}</p>
-              <p className="text-sm text-zinc-600 mb-3 line-clamp-2">{g.description}</p>
-              {g.required_documents.length > 0 && (
-                <p className="text-xs text-zinc-500 mb-3">
-                  <span className="font-medium">Docs needed: </span>
-                  {g.required_documents.slice(0, 3).join(" · ")}
-                  {g.required_documents.length > 3 && ` · +${g.required_documents.length - 3} more`}
-                </p>
-              )}
-              <div className="mt-auto flex flex-wrap items-center gap-3">
-                <SaveInterestButton slug={g.slug} type="grant" />
-                <Link href={`/grants/${g.slug}`} className="text-sm font-medium text-zinc-900 hover:underline">View details →</Link>
-              </div>
-            </div>
-          ))}
+            )
+          })}
           </ProgramGrid>
         </div>
       )}

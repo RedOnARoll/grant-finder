@@ -60,7 +60,7 @@ export default async function GrantApplyPage({
 
         {/* Document guide */}
         <section className="mb-12">
-          <DocumentGuide documents={grant.required_documents} />
+          <DocumentGuide documents={grant.required_documents} showGenerationActions />
         </section>
 
         {/* Apply Now button */}

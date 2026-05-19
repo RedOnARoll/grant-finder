@@ -1,6 +1,7 @@
 "use client"
 
 import { useState } from "react"
+import { getDocumentGenerationAction } from "@/lib/document-generation"
 
 // ─── Document categories ────────────────────────────────────────────────────
 
@@ -347,7 +348,7 @@ function DocVisual({ category }: { category: DocCategory }) {
           <div className="flex items-center gap-2"><span className="w-20 shrink-0">Address:</span><span className="flex-1 border-b border-zinc-300" /></div>
           <div className="flex items-center gap-2"><span className="w-20 shrink-0">Income:</span><span className="flex-1 border-b border-zinc-300" /></div>
           <div className="flex items-center gap-2"><span className="w-20 shrink-0">Signature:</span><span className="flex-1 border-b border-zinc-300" /></div>
-          <div className="text-blue-500 text-xs mt-1">→ You'll fill this out when you apply</div>
+          <div className="text-blue-500 text-xs mt-1">→ You&apos;ll fill this out when you apply</div>
         </div>
       )
 
@@ -741,7 +742,13 @@ function DocVisual({ category }: { category: DocCategory }) {
 
 // ─── Main component ─────────────────────────────────────────────────────────
 
-export default function DocumentGuide({ documents }: { documents: string[] }) {
+export default function DocumentGuide({
+  documents,
+  showGenerationActions = false,
+}: {
+  documents: string[]
+  showGenerationActions?: boolean
+}) {
   // Strip out the application form itself — that's what we're helping them fill out
   const filtered = documents.filter(doc => categorize(doc) !== "application_form")
 
@@ -781,6 +788,7 @@ export default function DocumentGuide({ documents }: { documents: string[] }) {
         {filtered.map((doc, i) => {
           const cat = categorize(doc)
           const info = CATEGORY_INFO[cat]
+          const generationAction = showGenerationActions ? getDocumentGenerationAction(doc) : null
 
           return (
             <div
@@ -790,7 +798,7 @@ export default function DocumentGuide({ documents }: { documents: string[] }) {
               }`}
             >
               {/* Header row */}
-              <div className="flex items-center gap-4 p-4">
+              <div className="flex flex-wrap items-center gap-3 p-4">
                 <button
                   type="button"
                   onClick={() => setChecked((prev) => prev.map((v, j) => (j === i ? !v : v)))}
@@ -805,9 +813,28 @@ export default function DocumentGuide({ documents }: { documents: string[] }) {
                   )}
                 </button>
 
-                <span className={`flex-1 text-sm font-medium ${checked[i] ? "line-through text-zinc-400" : "text-zinc-900"}`}>
+                <span className={`min-w-0 flex-1 text-sm font-medium ${checked[i] ? "line-through text-zinc-400" : "text-zinc-900"}`}>
                   {doc}
                 </span>
+
+                {generationAction && (
+                  <button
+                    type="button"
+                    data-document-generator={generationAction.documentType}
+                    data-document-name={doc}
+                    onClick={() => {
+                      window.dispatchEvent(new CustomEvent("grant-document-draft-request", {
+                        detail: {
+                          documentName: doc,
+                          documentType: generationAction.documentType,
+                        },
+                      }))
+                    }}
+                    className="shrink-0 rounded-full border border-amber-200 bg-amber-50 px-3 py-1.5 text-xs font-semibold text-amber-800 transition-colors hover:border-amber-300 hover:bg-amber-100"
+                  >
+                    {generationAction.label}
+                  </button>
+                )}
 
                 <button
                   type="button"

@@ -1,6 +1,7 @@
 "use client"
 
 import { useState } from "react"
+import { getDocumentGenerationAction } from "@/lib/document-generation"
 
 export default function DocumentChecklist({ documents }: { documents: string[] }) {
   const [checked, setChecked] = useState<Set<number>>(new Set())
@@ -8,7 +9,11 @@ export default function DocumentChecklist({ documents }: { documents: string[] }
   function toggle(i: number) {
     setChecked((prev) => {
       const next = new Set(prev)
-      next.has(i) ? next.delete(i) : next.add(i)
+      if (next.has(i)) {
+        next.delete(i)
+      } else {
+        next.add(i)
+      }
       return next
     })
   }
@@ -34,46 +39,70 @@ export default function DocumentChecklist({ documents }: { documents: string[] }
       </div>
 
       <ul className="space-y-3">
-        {documents.map((doc, i) => (
-          <li key={i}>
-            <label className="flex items-start gap-3 cursor-pointer group">
-              <div className="mt-0.5 shrink-0">
-                <input
-                  type="checkbox"
-                  className="sr-only"
-                  checked={checked.has(i)}
-                  onChange={() => toggle(i)}
-                />
-                <div
-                  className={`w-5 h-5 rounded border-2 flex items-center justify-center transition-colors ${
-                    checked.has(i)
-                      ? "bg-zinc-900 border-zinc-900"
-                      : "border-zinc-300 group-hover:border-zinc-500"
-                  }`}
-                >
-                  {checked.has(i) && (
-                    <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 12 12">
-                      <path
-                        d="M2 6l3 3 5-5"
-                        stroke="currentColor"
-                        strokeWidth="2"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                      />
-                    </svg>
-                  )}
-                </div>
+        {documents.map((doc, i) => {
+          const generationAction = getDocumentGenerationAction(doc)
+
+          return (
+            <li key={i}>
+              <div className="flex flex-wrap items-start gap-3">
+                <label className="flex min-w-0 flex-1 items-start gap-3 cursor-pointer group">
+                  <div className="mt-0.5 shrink-0">
+                    <input
+                      type="checkbox"
+                      className="sr-only"
+                      checked={checked.has(i)}
+                      onChange={() => toggle(i)}
+                    />
+                    <div
+                      className={`w-5 h-5 rounded border-2 flex items-center justify-center transition-colors ${
+                        checked.has(i)
+                          ? "bg-zinc-900 border-zinc-900"
+                          : "border-zinc-300 group-hover:border-zinc-500"
+                      }`}
+                    >
+                      {checked.has(i) && (
+                        <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 12 12">
+                          <path
+                            d="M2 6l3 3 5-5"
+                            stroke="currentColor"
+                            strokeWidth="2"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                          />
+                        </svg>
+                      )}
+                    </div>
+                  </div>
+                  <span
+                    className={`text-sm leading-5 transition-colors ${
+                      checked.has(i) ? "line-through text-zinc-400" : "text-zinc-700"
+                    }`}
+                  >
+                    {doc}
+                  </span>
+                </label>
+                {generationAction && (
+                  <button
+                    type="button"
+                    data-document-generator={generationAction.documentType}
+                    data-document-name={doc}
+                    onClick={() => {
+                      window.dispatchEvent(new CustomEvent("grant-document-draft-request", {
+                        detail: {
+                          documentName: doc,
+                          documentType: generationAction.documentType,
+                        },
+                      }))
+                    }}
+                    className="shrink-0 rounded-full border border-amber-200 bg-amber-50 px-3 py-1.5 text-xs font-semibold text-amber-800 transition-colors hover:border-amber-300 hover:bg-amber-100"
+                  >
+                    {generationAction.label}
+                  </button>
+                )}
               </div>
-              <span
-                className={`text-sm leading-5 transition-colors ${
-                  checked.has(i) ? "line-through text-zinc-400" : "text-zinc-700"
-                }`}
-              >
-                {doc}
-              </span>
-            </label>
-          </li>
-        ))}
+            </li>
+          )
+        })}
       </ul>
 
       {done === total && total > 0 && (
