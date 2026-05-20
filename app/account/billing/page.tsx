@@ -123,10 +123,10 @@ export default function BillingPage() {
         <div className="mb-8 flex items-center gap-3">
           <Link href="/account" className="text-sm text-slate-500 hover:text-slate-700">Account</Link>
           <span className="text-slate-300">/</span>
-          <span className="text-sm text-slate-900 font-medium">Billing</span>
+          <span className="text-sm text-slate-900 font-medium">Manage Subscription</span>
         </div>
 
-        <h1 className="text-2xl font-bold text-slate-900 mb-8">Billing & Subscription</h1>
+        <h1 className="text-2xl font-bold text-slate-900 mb-8">Manage Subscription</h1>
 
         {message && (
           <div className="bg-emerald-50 border border-emerald-200 rounded-lg px-4 py-3 mb-6 text-sm text-emerald-800">
