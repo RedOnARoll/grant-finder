@@ -22,7 +22,7 @@ export async function GET(req: NextRequest) {
     )
     const { data: profile } = await adminClient
       .from("profiles")
-      .select("is_premium, is_admin, subscription_tier, one_time_credits, stripe_customer_id, stripe_subscription_id, cancel_at_period_end, current_period_end")
+      .select("is_premium, is_admin, subscription_tier, subscription_status, one_time_credits, stripe_customer_id, stripe_subscription_id, cancel_at_period_end, current_period_end")
       .eq("user_id", user.id)
       .maybeSingle()
 
