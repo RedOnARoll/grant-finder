@@ -114,7 +114,7 @@ export default async function GrantDetailPage({
             {/* AI narrative generator — gated for free users */}
             <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-5">
               <h2 className="text-base font-semibold text-slate-900 mb-4">Write My Application</h2>
-              <NarrativeGate grantName={grant.name} />
+              <NarrativeGate grantName={grant.name} grantDescription={grant.description} />
             </div>
           </div>
 
