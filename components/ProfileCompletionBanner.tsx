@@ -27,9 +27,8 @@ export default function ProfileCompletionBanner() {
         .eq("user_id", user.id)
         .maybeSingle()
 
-      if (mounted && data) {
-        const completion = profileCompletion(data as Partial<UserProfile>)
-        setPct(completion)
+      if (mounted) {
+        setPct(profileCompletion(data as Partial<UserProfile> | null))
       }
     }
 
