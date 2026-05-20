@@ -6,6 +6,7 @@ import SiteNav from "@/components/SiteNav"
 import SaveInterestButton from "@/components/SaveInterestButton"
 import { Badge, StatusBadge } from "@/components/ui/Badge"
 import GrantEligibilityQuiz from "./GrantEligibilityQuiz"
+import NarrativeGate from "@/components/NarrativeGate"
 
 export const dynamic = "force-dynamic"
 export const dynamicParams = true
@@ -108,6 +109,12 @@ export default async function GrantDetailPage({
             {/* Eligibility quiz card */}
             <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-5">
               <GrantEligibilityQuiz criteria={grant.eligibility_criteria} slug={grant.slug} />
+            </div>
+
+            {/* AI narrative generator — gated for free users */}
+            <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-5">
+              <h2 className="text-base font-semibold text-slate-900 mb-4">Write My Application</h2>
+              <NarrativeGate grantName={grant.name} />
             </div>
           </div>
 

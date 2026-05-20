@@ -1,6 +1,8 @@
+import { Suspense } from "react"
 import AccountDashboard from "@/components/AccountDashboard"
 import EligibleBenefits from "@/components/EligibleBenefits"
 import SiteNav from "@/components/SiteNav"
+import UpgradeBanner from "@/components/UpgradeBanner"
 import Link from "next/link"
 
 export const metadata = {
@@ -13,6 +15,11 @@ export default function AccountPage() {
       <SiteNav active="account" />
       <main className="flex-1">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+          {/* Upgrade success banner — reads ?upgrade=success query param */}
+          <Suspense fallback={null}>
+            <UpgradeBanner />
+          </Suspense>
+
           {/* Page header */}
           <div className="mb-8 flex flex-wrap items-end justify-between gap-5">
             <div>
