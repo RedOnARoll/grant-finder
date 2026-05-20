@@ -197,12 +197,14 @@ export default function ManageSubscriptionPage() {
 
               {!cancelAtPeriodEnd ? (
                 <div className="flex flex-wrap gap-3">
-                  <Link
-                    href="/pricing"
-                    className="inline-flex items-center gap-2 h-9 rounded-lg bg-blue-600 text-white px-4 text-sm font-medium hover:bg-blue-700 transition-colors"
-                  >
-                    Upgrade plan <ArrowRight className="w-3.5 h-3.5" />
-                  </Link>
+                  {tier !== "premium" && (
+                    <Link
+                      href="/pricing"
+                      className="inline-flex items-center gap-2 h-9 rounded-lg bg-blue-600 text-white px-4 text-sm font-medium hover:bg-blue-700 transition-colors"
+                    >
+                      Upgrade plan <ArrowRight className="w-3.5 h-3.5" />
+                    </Link>
+                  )}
                   <button
                     onClick={handleCancel}
                     disabled={actionLoading}
