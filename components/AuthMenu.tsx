@@ -96,7 +96,7 @@ export default function AuthMenu() {
   const tier = profile?.subscription_tier as string | undefined
 
   const badge = isAdmin
-    ? null
+    ? { label: "Admin", className: "bg-amber-100 text-amber-700" }
     : isPremium
     ? { label: "Premium", className: "bg-blue-100 text-blue-700" }
     : tier === "grant_helper"

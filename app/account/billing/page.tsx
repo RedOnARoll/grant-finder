@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react"
 import Link from "next/link"
-import { CreditCard, Check, ArrowRight, Sparkles } from "lucide-react"
+import { CreditCard, Check, ArrowRight, Sparkles, AlertCircle } from "lucide-react"
 import SiteNav from "@/components/SiteNav"
 import { getBrowserSupabase } from "@/lib/supabase-browser"
 
@@ -12,7 +12,9 @@ type ProfileData = {
   subscription_tier?: string
   subscription_status?: string
   one_time_credits?: number
-  stripe_customer_id?: string
+  stripe_subscription_id?: string
+  cancel_at_period_end?: boolean
+  current_period_end?: string
 } | null
 
 const TIER_LABELS: Record<string, string> = {
@@ -21,18 +23,13 @@ const TIER_LABELS: Record<string, string> = {
   premium: "Premium",
 }
 
-const TIER_COLORS: Record<string, string> = {
-  free: "bg-slate-100 text-slate-600",
-  grant_helper: "bg-amber-100 text-amber-700",
-  premium: "bg-blue-100 text-blue-700",
-}
-
 export default function BillingPage() {
   const supabase = useMemo(() => getBrowserSupabase(), [])
   const [profile, setProfile] = useState<ProfileData>(null)
   const [loading, setLoading] = useState(true)
-  const [portalLoading, setPortalLoading] = useState(false)
-  const [portalError, setPortalError] = useState<string | null>(null)
+  const [actionLoading, setActionLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const [message, setMessage] = useState<string | null>(null)
 
   useEffect(() => {
     let mounted = true
@@ -43,7 +40,7 @@ export default function BillingPage() {
 
       const { data } = await supabase
         .from("profiles")
-        .select("is_premium, is_admin, subscription_tier, subscription_status, one_time_credits, stripe_customer_id")
+        .select("is_premium, is_admin, subscription_tier, subscription_status, one_time_credits, stripe_subscription_id, cancel_at_period_end, current_period_end")
         .eq("user_id", user.id)
         .maybeSingle()
 
@@ -57,30 +54,55 @@ export default function BillingPage() {
     return () => { mounted = false }
   }, [supabase])
 
-  async function openPortal() {
-    setPortalLoading(true)
-    setPortalError(null)
+  async function callApi(endpoint: string) {
+    setActionLoading(true)
+    setError(null)
+    setMessage(null)
     try {
       const { data: { session } } = await supabase.auth.getSession()
       const token = session?.access_token ?? ""
-      const res = await fetch("/api/stripe/portal", {
+      const res = await fetch(endpoint, {
         method: "POST",
         headers: { Authorization: `Bearer ${token}` },
       })
-      const json = await res.json() as { url?: string; error?: string }
-      if (!res.ok || !json.url) throw new Error(json.error ?? "Could not open portal.")
-      window.location.href = json.url
+      const json = await res.json() as { ok?: boolean; error?: string; endsAt?: number }
+      if (!res.ok || !json.ok) throw new Error(json.error ?? "Something went wrong.")
+      return json
     } catch (err) {
-      setPortalError(err instanceof Error ? err.message : "Something went wrong.")
-      setPortalLoading(false)
+      setError(err instanceof Error ? err.message : "Something went wrong.")
+      return null
+    } finally {
+      setActionLoading(false)
+    }
+  }
+
+  async function handleCancel() {
+    if (!confirm("Cancel your subscription? You'll keep access until the end of your billing period.")) return
+    const result = await callApi("/api/stripe/cancel")
+    if (result) {
+      const endsAt = result.endsAt ? new Date(result.endsAt * 1000).toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" }) : null
+      setProfile((p) => p ? { ...p, cancel_at_period_end: true, current_period_end: result.endsAt ? new Date(result.endsAt * 1000).toISOString() : p?.current_period_end } : p)
+      setMessage(endsAt ? `Your subscription will end on ${endsAt}. You keep full access until then.` : "Cancellation scheduled.")
+    }
+  }
+
+  async function handleResume() {
+    const result = await callApi("/api/stripe/resume")
+    if (result) {
+      setProfile((p) => p ? { ...p, cancel_at_period_end: false, current_period_end: undefined } : p)
+      setMessage("Your subscription has been resumed.")
     }
   }
 
   const tier = (profile?.subscription_tier as string | undefined) ?? "free"
-  const isPremium = Boolean(profile?.is_premium) || Boolean(profile?.is_admin)
+  const isPremium = Boolean(profile?.is_premium)
   const isAdmin = Boolean(profile?.is_admin)
   const credits = Number(profile?.one_time_credits ?? 0)
-  const hasStripeAccount = Boolean(profile?.stripe_customer_id)
+  const hasSubscription = Boolean(profile?.stripe_subscription_id)
+  const cancelAtPeriodEnd = Boolean(profile?.cancel_at_period_end)
+  const periodEnd = profile?.current_period_end
+    ? new Date(profile.current_period_end).toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })
+    : null
 
   if (loading) {
     return (
@@ -106,27 +128,32 @@ export default function BillingPage() {
 
         <h1 className="text-2xl font-bold text-slate-900 mb-8">Billing & Subscription</h1>
 
-        {/* Current plan card */}
+        {message && (
+          <div className="bg-emerald-50 border border-emerald-200 rounded-lg px-4 py-3 mb-6 text-sm text-emerald-800">
+            {message}
+          </div>
+        )}
+
+        {/* Current plan */}
         <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-6 mb-6">
           <div className="flex items-start justify-between gap-4">
-            <div>
+            <div className="flex-1">
               <p className="text-xs text-slate-400 uppercase tracking-wide font-medium mb-2">Current Plan</p>
-              <div className="flex items-center gap-2 mb-1">
-                <span className={`text-xs font-semibold px-2.5 py-0.5 rounded-full ${TIER_COLORS[tier] ?? TIER_COLORS.free}`}>
-                  {isAdmin ? "Admin" : (TIER_LABELS[tier] ?? "Free")}
-                </span>
-                {profile?.subscription_status && profile.subscription_status !== "active" && (
-                  <span className="text-xs text-slate-400 capitalize">{profile.subscription_status}</span>
-                )}
-              </div>
+              <p className="text-xl font-bold text-slate-900">
+                {isAdmin ? "Admin" : (TIER_LABELS[tier] ?? "Free")}
+              </p>
+
               {tier === "grant_helper" && (
                 <p className="text-sm text-slate-500 mt-1">{credits} AI generation{credits !== 1 ? "s" : ""} remaining</p>
               )}
-              {isPremium && !isAdmin && (
-                <p className="text-sm text-slate-500 mt-1">Unlimited AI narrative generations</p>
+              {isPremium && !isAdmin && !cancelAtPeriodEnd && (
+                <p className="text-sm text-slate-500 mt-1">Unlimited AI narrative generations · Active</p>
               )}
-              {isAdmin && (
-                <p className="text-sm text-slate-500 mt-1">Full admin access</p>
+              {cancelAtPeriodEnd && periodEnd && (
+                <div className="flex items-center gap-1.5 mt-2 text-sm text-amber-700">
+                  <AlertCircle className="w-4 h-4 shrink-0" />
+                  Cancels on {periodEnd} — you keep full access until then
+                </div>
               )}
               {tier === "free" && !isAdmin && (
                 <p className="text-sm text-slate-500 mt-1">No active subscription</p>
@@ -135,27 +162,44 @@ export default function BillingPage() {
             <CreditCard className="w-6 h-6 text-slate-300 shrink-0 mt-1" />
           </div>
 
-          {hasStripeAccount && !isAdmin && (
-            <div className="mt-5 pt-5 border-t border-slate-100">
-              {portalError && <p className="text-xs text-rose-600 mb-3">{portalError}</p>}
-              <button
-                onClick={openPortal}
-                disabled={portalLoading}
-                className="inline-flex items-center gap-2 h-9 rounded-lg bg-slate-900 text-white px-4 text-sm font-medium hover:bg-slate-700 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
-              >
-                {portalLoading ? (
-                  <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                ) : (
-                  <>Manage subscription <ArrowRight className="w-3.5 h-3.5" /></>
-                )}
-              </button>
-              <p className="text-xs text-slate-400 mt-2">Update payment method, cancel, or change plan via Stripe.</p>
+          {/* Actions for active subscribers */}
+          {hasSubscription && !isAdmin && (
+            <div className="mt-5 pt-5 border-t border-slate-100 space-y-3">
+              {error && (
+                <p className="text-xs text-rose-600">{error}</p>
+              )}
+
+              {!cancelAtPeriodEnd ? (
+                <div className="flex flex-wrap gap-3">
+                  <Link
+                    href="/pricing"
+                    className="inline-flex items-center gap-2 h-9 rounded-lg bg-blue-600 text-white px-4 text-sm font-medium hover:bg-blue-700 transition-colors"
+                  >
+                    Upgrade plan <ArrowRight className="w-3.5 h-3.5" />
+                  </Link>
+                  <button
+                    onClick={handleCancel}
+                    disabled={actionLoading}
+                    className="inline-flex items-center h-9 rounded-lg border border-slate-200 text-slate-600 px-4 text-sm font-medium hover:bg-slate-50 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
+                  >
+                    {actionLoading ? <span className="w-4 h-4 border-2 border-slate-400 border-t-transparent rounded-full animate-spin" /> : "Cancel subscription"}
+                  </button>
+                </div>
+              ) : (
+                <button
+                  onClick={handleResume}
+                  disabled={actionLoading}
+                  className="inline-flex items-center gap-2 h-9 rounded-lg bg-slate-900 text-white px-4 text-sm font-medium hover:bg-slate-700 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
+                >
+                  {actionLoading ? <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" /> : <>Resume subscription <ArrowRight className="w-3.5 h-3.5" /></>}
+                </button>
+              )}
             </div>
           )}
         </div>
 
-        {/* Upgrade prompt for free users */}
-        {!isPremium && !isAdmin && tier !== "premium" && (
+        {/* Upgrade prompt for free/helper users without an active subscription */}
+        {!isPremium && !isAdmin && !hasSubscription && (
           <div className="bg-blue-50 border border-blue-200 rounded-xl p-6">
             <div className="flex items-start gap-3">
               <Sparkles className="w-5 h-5 text-blue-600 shrink-0 mt-0.5" />

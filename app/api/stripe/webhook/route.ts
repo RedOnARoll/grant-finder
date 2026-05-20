@@ -68,6 +68,18 @@ async function handleCheckoutCompleted(
   }
 }
 
+function subFields(subscription: Stripe.Subscription) {
+  const sub = subscription as any
+  return {
+    stripe_subscription_id: subscription.id,
+    subscription_status: subscription.status,
+    cancel_at_period_end: subscription.cancel_at_period_end ?? false,
+    current_period_end: sub.current_period_end
+      ? new Date(sub.current_period_end * 1000).toISOString()
+      : null,
+  }
+}
+
 async function handleSubscriptionCreated(
   supabase: SupabaseClient<any>,
   subscription: Stripe.Subscription
@@ -79,7 +91,7 @@ async function handleSubscriptionCreated(
   if (!userId) return
 
   await supabase.from("profiles").update({
-    subscription_status: "active",
+    ...subFields(subscription),
     is_premium: true,
   }).eq("user_id", userId)
 }
@@ -98,7 +110,7 @@ async function handleSubscriptionUpdated(
   const isCanceled = subscription.status === "canceled" || subscription.status === "unpaid"
 
   await supabase.from("profiles").update({
-    subscription_status: subscription.status,
+    ...subFields(subscription),
     ...(isActive ? { is_premium: true } : {}),
     ...(isCanceled ? { is_premium: false } : {}),
   }).eq("user_id", userId)
@@ -115,9 +127,12 @@ async function handleSubscriptionDeleted(
   if (!userId) return
 
   await supabase.from("profiles").update({
+    ...subFields(subscription),
     is_premium: false,
     subscription_tier: "free",
-    subscription_status: "canceled",
+    stripe_subscription_id: null,
+    cancel_at_period_end: false,
+    current_period_end: null,
   }).eq("user_id", userId)
 }
 
