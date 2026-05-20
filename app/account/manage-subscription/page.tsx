@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react"
 import Link from "next/link"
-import { CreditCard, Check, ArrowRight, Sparkles, AlertCircle } from "lucide-react"
+import { CreditCard, Check, ArrowRight, Sparkles, AlertCircle, Trash2 } from "lucide-react"
 import SiteNav from "@/components/SiteNav"
 import { getBrowserSupabase } from "@/lib/supabase-browser"
 
@@ -29,6 +29,7 @@ export default function ManageSubscriptionPage() {
   const [info, setInfo] = useState<SubInfo | null>(null)
   const [loading, setLoading] = useState(true)
   const [actionLoading, setActionLoading] = useState(false)
+  const [deleteLoading, setDeleteLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [message, setMessage] = useState<string | null>(null)
 
@@ -85,6 +86,28 @@ export default function ManageSubscriptionPage() {
         : info?.periodEnd
       setInfo((s) => s ? { ...s, cancelAtPeriodEnd: true, periodEnd: endsAt ?? s.periodEnd } : s)
       setMessage(endsAt ? `Your subscription will end on ${endsAt}. You keep full access until then.` : "Cancellation scheduled.")
+    }
+  }
+
+  async function handleDelete() {
+    const confirmed = confirm("Delete your account? This permanently removes all your data and cancels any active subscription. This cannot be undone.")
+    if (!confirmed) return
+    setDeleteLoading(true)
+    setError(null)
+    try {
+      const { data: { session } } = await supabase.auth.getSession()
+      const token = session?.access_token ?? ""
+      const res = await fetch("/api/account/delete", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}` },
+      })
+      const json = await res.json() as { ok?: boolean; error?: string }
+      if (!res.ok || !json.ok) throw new Error(json.error ?? "Could not delete account.")
+      await supabase.auth.signOut()
+      window.location.href = "/"
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Something went wrong.")
+      setDeleteLoading(false)
     }
   }
 
@@ -221,6 +244,23 @@ export default function ManageSubscriptionPage() {
             </div>
           </div>
         )}
+        {/* Danger zone */}
+        <div className="border border-rose-200 rounded-xl p-6 mt-6">
+          <h2 className="text-sm font-semibold text-rose-700 mb-1">Danger Zone</h2>
+          <p className="text-sm text-slate-500 mb-4">
+            Permanently delete your account and all associated data. Any active subscription will be cancelled immediately.
+          </p>
+          {error && <p className="text-xs text-rose-600 mb-3">{error}</p>}
+          <button
+            onClick={handleDelete}
+            disabled={deleteLoading}
+            className="inline-flex items-center gap-2 h-9 rounded-lg border border-rose-300 text-rose-600 px-4 text-sm font-medium hover:bg-rose-50 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
+          >
+            {deleteLoading
+              ? <span className="w-4 h-4 border-2 border-rose-400 border-t-transparent rounded-full animate-spin" />
+              : <><Trash2 className="w-3.5 h-3.5" /> Delete account</>}
+          </button>
+        </div>
       </main>
     </div>
   )
