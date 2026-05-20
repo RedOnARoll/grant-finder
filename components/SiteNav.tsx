@@ -4,6 +4,7 @@ import { useState } from "react"
 import Link from "next/link"
 import { Menu, X } from "lucide-react"
 import AuthMenu from "@/components/AuthMenu"
+import ProfileCompletionBanner from "@/components/ProfileCompletionBanner"
 import { LogoMark } from "@/components/illustrations/GeoShapes"
 
 type ActiveSection = "grants" | "benefits" | "quiz" | "account"
@@ -67,6 +68,8 @@ export default function SiteNav({ active }: { active?: ActiveSection }) {
           </div>
         </div>
       </div>
+
+      <ProfileCompletionBanner />
 
       {/* Mobile slide-down panel */}
       {mobileOpen && (
