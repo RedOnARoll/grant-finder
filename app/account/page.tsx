@@ -3,6 +3,7 @@ import AccountDashboard from "@/components/AccountDashboard"
 import EligibleBenefits from "@/components/EligibleBenefits"
 import SiteNav from "@/components/SiteNav"
 import UpgradeBanner from "@/components/UpgradeBanner"
+import DeleteAccountButton from "@/components/DeleteAccountButton"
 import Link from "next/link"
 
 export const metadata = {
@@ -59,6 +60,8 @@ export default function AccountPage() {
             </div>
             <EligibleBenefits hideSignedOutState previewLimit={3} />
           </section>
+
+          <DeleteAccountButton />
         </div>
       </main>
     </div>
