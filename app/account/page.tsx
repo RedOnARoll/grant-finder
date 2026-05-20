@@ -41,6 +41,12 @@ export default function AccountPage() {
               >
                 Profile
               </Link>
+              <Link
+                href="/account/billing"
+                className="inline-flex items-center h-9 rounded-lg border border-slate-200 px-4 text-sm font-medium text-slate-700 hover:bg-white transition-colors"
+              >
+                Billing
+              </Link>
             </div>
           </div>
 

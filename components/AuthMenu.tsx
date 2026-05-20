@@ -5,22 +5,43 @@ import Link from "next/link"
 import type { User } from "@supabase/supabase-js"
 import { getBrowserSupabase } from "@/lib/supabase-browser"
 
+type ProfileData = {
+  is_premium?: boolean
+  is_admin?: boolean
+  subscription_tier?: string
+} | null
+
 export default function AuthMenu() {
   const supabase = useMemo(() => getBrowserSupabase(), [])
   const [user, setUser] = useState<User | null>(null)
+  const [profile, setProfile] = useState<ProfileData>(null)
   const [loaded, setLoaded] = useState(false)
 
   useEffect(() => {
     let mounted = true
 
-    supabase.auth.getUser().then(({ data }) => {
+    async function load() {
+      const { data: { user: currentUser } } = await supabase.auth.getUser()
       if (!mounted) return
-      setUser(data.user)
-      setLoaded(true)
-    })
+      setUser(currentUser)
+
+      if (currentUser) {
+        const { data } = await supabase
+          .from("profiles")
+          .select("is_premium, is_admin, subscription_tier")
+          .eq("user_id", currentUser.id)
+          .maybeSingle()
+        if (mounted) setProfile(data as ProfileData)
+      }
+
+      if (mounted) setLoaded(true)
+    }
+
+    load().catch(() => { if (mounted) setLoaded(true) })
 
     const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
       setUser(session?.user ?? null)
+      if (!session?.user) setProfile(null)
       setLoaded(true)
     })
 
@@ -33,6 +54,7 @@ export default function AuthMenu() {
   async function signOut() {
     await supabase.auth.signOut()
     setUser(null)
+    setProfile(null)
   }
 
   if (!loaded) {
@@ -69,7 +91,17 @@ export default function AuthMenu() {
     .map((word: string) => word[0]?.toUpperCase() ?? "")
     .join("")
 
-  const isAdmin = user.email === "redonaroll09@gmail.com"
+  const isAdmin = Boolean(profile?.is_admin) || user.email === "redonaroll09@gmail.com"
+  const isPremium = Boolean(profile?.is_premium)
+  const tier = profile?.subscription_tier as string | undefined
+
+  const badge = isAdmin
+    ? null
+    : isPremium
+    ? { label: "Premium", className: "bg-blue-100 text-blue-700" }
+    : tier === "grant_helper"
+    ? { label: "Helper", className: "bg-amber-100 text-amber-700" }
+    : null
 
   return (
     <div className="flex items-center gap-3">
@@ -88,6 +120,11 @@ export default function AuthMenu() {
         <span className="text-sm text-slate-700 hover:text-slate-900 max-w-24 truncate">
           {label}
         </span>
+        {badge && (
+          <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${badge.className}`}>
+            {badge.label}
+          </span>
+        )}
       </Link>
       <button
         type="button"
