@@ -6,16 +6,17 @@ import { CreditCard, Check, ArrowRight, Sparkles, AlertCircle } from "lucide-rea
 import SiteNav from "@/components/SiteNav"
 import { getBrowserSupabase } from "@/lib/supabase-browser"
 
-type ProfileData = {
-  is_premium?: boolean
-  is_admin?: boolean
-  subscription_tier?: string
-  subscription_status?: string
-  one_time_credits?: number
-  stripe_subscription_id?: string
-  cancel_at_period_end?: boolean
-  current_period_end?: string
-} | null
+type SubInfo = {
+  tier: string
+  isPremium: boolean
+  isAdmin: boolean
+  credits: number
+  hasSubscription: boolean
+  cancelAtPeriodEnd: boolean
+  periodEnd: string | null
+  subscriptionId: string | null
+  status: string | null
+}
 
 const TIER_LABELS: Record<string, string> = {
   free: "Free",
@@ -23,9 +24,9 @@ const TIER_LABELS: Record<string, string> = {
   premium: "Premium",
 }
 
-export default function BillingPage() {
+export default function ManageSubscriptionPage() {
   const supabase = useMemo(() => getBrowserSupabase(), [])
-  const [profile, setProfile] = useState<ProfileData>(null)
+  const [info, setInfo] = useState<SubInfo | null>(null)
   const [loading, setLoading] = useState(true)
   const [actionLoading, setActionLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -35,19 +36,18 @@ export default function BillingPage() {
     let mounted = true
 
     async function load() {
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) { if (mounted) setLoading(false); return }
+      const { data: { session } } = await supabase.auth.getSession()
+      if (!session) { if (mounted) setLoading(false); return }
 
-      const { data } = await supabase
-        .from("profiles")
-        .select("is_premium, is_admin, subscription_tier, subscription_status, one_time_credits, stripe_subscription_id, cancel_at_period_end, current_period_end")
-        .eq("user_id", user.id)
-        .maybeSingle()
-
-      if (mounted) {
-        setProfile(data as ProfileData)
-        setLoading(false)
+      const res = await fetch("/api/stripe/subscription", {
+        headers: { Authorization: `Bearer ${session.access_token}` },
+      })
+      if (!mounted) return
+      if (res.ok) {
+        const data = await res.json() as SubInfo
+        setInfo(data)
       }
+      setLoading(false)
     }
 
     load().catch(() => { if (mounted) setLoading(false) })
@@ -80,8 +80,10 @@ export default function BillingPage() {
     if (!confirm("Cancel your subscription? You'll keep access until the end of your billing period.")) return
     const result = await callApi("/api/stripe/cancel")
     if (result) {
-      const endsAt = result.endsAt ? new Date(result.endsAt * 1000).toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" }) : null
-      setProfile((p) => p ? { ...p, cancel_at_period_end: true, current_period_end: result.endsAt ? new Date(result.endsAt * 1000).toISOString() : p?.current_period_end } : p)
+      const endsAt = result.endsAt
+        ? new Date(result.endsAt * 1000).toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })
+        : info?.periodEnd
+      setInfo((s) => s ? { ...s, cancelAtPeriodEnd: true, periodEnd: endsAt ?? s.periodEnd } : s)
       setMessage(endsAt ? `Your subscription will end on ${endsAt}. You keep full access until then.` : "Cancellation scheduled.")
     }
   }
@@ -89,20 +91,10 @@ export default function BillingPage() {
   async function handleResume() {
     const result = await callApi("/api/stripe/resume")
     if (result) {
-      setProfile((p) => p ? { ...p, cancel_at_period_end: false, current_period_end: undefined } : p)
+      setInfo((s) => s ? { ...s, cancelAtPeriodEnd: false } : s)
       setMessage("Your subscription has been resumed.")
     }
   }
-
-  const tier = (profile?.subscription_tier as string | undefined) ?? "free"
-  const isPremium = Boolean(profile?.is_premium)
-  const isAdmin = Boolean(profile?.is_admin)
-  const credits = Number(profile?.one_time_credits ?? 0)
-  const hasSubscription = Boolean(profile?.stripe_subscription_id)
-  const cancelAtPeriodEnd = Boolean(profile?.cancel_at_period_end)
-  const periodEnd = profile?.current_period_end
-    ? new Date(profile.current_period_end).toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })
-    : null
 
   if (loading) {
     return (
@@ -114,6 +106,8 @@ export default function BillingPage() {
       </div>
     )
   }
+
+  const { tier = "free", isPremium = false, isAdmin = false, credits = 0, hasSubscription = false, cancelAtPeriodEnd = false, periodEnd = null } = info ?? {}
 
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col">
@@ -162,12 +156,9 @@ export default function BillingPage() {
             <CreditCard className="w-6 h-6 text-slate-300 shrink-0 mt-1" />
           </div>
 
-          {/* Actions for active subscribers */}
           {hasSubscription && !isAdmin && (
             <div className="mt-5 pt-5 border-t border-slate-100 space-y-3">
-              {error && (
-                <p className="text-xs text-rose-600">{error}</p>
-              )}
+              {error && <p className="text-xs text-rose-600">{error}</p>}
 
               {!cancelAtPeriodEnd ? (
                 <div className="flex flex-wrap gap-3">
@@ -182,7 +173,9 @@ export default function BillingPage() {
                     disabled={actionLoading}
                     className="inline-flex items-center h-9 rounded-lg border border-slate-200 text-slate-600 px-4 text-sm font-medium hover:bg-slate-50 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
                   >
-                    {actionLoading ? <span className="w-4 h-4 border-2 border-slate-400 border-t-transparent rounded-full animate-spin" /> : "Cancel subscription"}
+                    {actionLoading
+                      ? <span className="w-4 h-4 border-2 border-slate-400 border-t-transparent rounded-full animate-spin" />
+                      : "Cancel subscription"}
                   </button>
                 </div>
               ) : (
@@ -191,14 +184,16 @@ export default function BillingPage() {
                   disabled={actionLoading}
                   className="inline-flex items-center gap-2 h-9 rounded-lg bg-slate-900 text-white px-4 text-sm font-medium hover:bg-slate-700 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
                 >
-                  {actionLoading ? <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" /> : <>Resume subscription <ArrowRight className="w-3.5 h-3.5" /></>}
+                  {actionLoading
+                    ? <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                    : <>Resume subscription <ArrowRight className="w-3.5 h-3.5" /></>}
                 </button>
               )}
             </div>
           )}
         </div>
 
-        {/* Upgrade prompt for free/helper users without an active subscription */}
+        {/* Upgrade prompt for free users */}
         {!isPremium && !isAdmin && !hasSubscription && (
           <div className="bg-blue-50 border border-blue-200 rounded-xl p-6">
             <div className="flex items-start gap-3">
