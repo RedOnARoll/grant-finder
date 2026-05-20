@@ -36,16 +36,47 @@ export default function ManageSubscriptionPage() {
     let mounted = true
 
     async function load() {
-      const { data: { session } } = await supabase.auth.getSession()
-      if (!session) { if (mounted) setLoading(false); return }
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) { if (mounted) setLoading(false); return }
 
-      const res = await fetch("/api/stripe/subscription", {
-        headers: { Authorization: `Bearer ${session.access_token}` },
-      })
+      // 1. Always read tier/premium status from Supabase profile (fast, reliable)
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("is_premium, is_admin, subscription_tier, one_time_credits, stripe_subscription_id, cancel_at_period_end, current_period_end")
+        .eq("user_id", user.id)
+        .maybeSingle()
+
       if (!mounted) return
-      const data = await res.json() as SubInfo & { error?: string }
-      if (!data.error) setInfo(data)
+
+      const base: SubInfo = {
+        tier: (profile?.subscription_tier as string) ?? "free",
+        isPremium: Boolean(profile?.is_premium),
+        isAdmin: Boolean(profile?.is_admin),
+        credits: Number(profile?.one_time_credits ?? 0),
+        hasSubscription: Boolean(profile?.stripe_subscription_id),
+        cancelAtPeriodEnd: Boolean(profile?.cancel_at_period_end),
+        periodEnd: profile?.current_period_end
+          ? new Date(profile.current_period_end as string).toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })
+          : null,
+        subscriptionId: (profile?.stripe_subscription_id as string) ?? null,
+        status: null,
+      }
+      setInfo(base)
       setLoading(false)
+
+      // 2. Enrich with live Stripe data in the background (fills in hasSubscription if customer ID was missing)
+      try {
+        const { data: { session } } = await supabase.auth.getSession()
+        if (!session || !mounted) return
+        const res = await fetch("/api/stripe/subscription", {
+          headers: { Authorization: `Bearer ${session.access_token}` },
+        })
+        if (!mounted) return
+        const data = await res.json() as SubInfo & { error?: string }
+        if (!data.error) setInfo(data)
+      } catch {
+        // Stripe enrichment failed — profile data already shown, no need to error
+      }
     }
 
     load().catch(() => { if (mounted) setLoading(false) })
