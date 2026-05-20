@@ -26,9 +26,23 @@ export async function GET(req: NextRequest) {
       .eq("user_id", user.id)
       .maybeSingle()
 
-    const customerId = profile?.stripe_customer_id as string | undefined
+    let customerId = profile?.stripe_customer_id as string | undefined
 
-    // No Stripe account yet — return profile as-is
+    // No customer ID saved — try to find by email in Stripe and backfill
+    if (!customerId && user.email) {
+      try {
+        const customers = await stripe.customers.list({ email: user.email, limit: 1 })
+        const customer = customers.data[0]
+        if (customer) {
+          customerId = customer.id
+          await adminClient.from("profiles").update({ stripe_customer_id: customer.id }).eq("user_id", user.id)
+        }
+      } catch {
+        // Stripe unavailable — fall through to profile-only response
+      }
+    }
+
+    // No Stripe account found — return profile as-is
     if (!customerId) {
       return NextResponse.json({
         tier: profile?.subscription_tier ?? "free",
