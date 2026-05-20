@@ -44,7 +44,7 @@ export default function NarrativeGate({ grantName }: { grantName: string }) {
       }
     }
 
-    checkAccess()
+    checkAccess().catch(() => { if (mounted) setAccess("locked") })
     return () => { mounted = false }
   }, [supabase])
 
