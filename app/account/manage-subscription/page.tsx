@@ -40,11 +40,17 @@ export default function ManageSubscriptionPage() {
       if (!user) { if (mounted) setLoading(false); return }
 
       // 1. Always read tier/premium status from Supabase profile (fast, reliable)
-      const { data: profile } = await supabase
+      const { data: rawProfile } = await supabase
         .from("profiles")
         .select("is_premium, is_admin, subscription_tier, one_time_credits, stripe_subscription_id, cancel_at_period_end, current_period_end")
         .eq("user_id", user.id)
         .maybeSingle()
+
+      const profile = rawProfile as {
+        is_premium?: boolean; is_admin?: boolean; subscription_tier?: string
+        one_time_credits?: number; stripe_subscription_id?: string
+        cancel_at_period_end?: boolean; current_period_end?: string
+      } | null
 
       if (!mounted) return
 
