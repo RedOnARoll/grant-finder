@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation"
 import type { User } from "@supabase/supabase-js"
 import { getProfile, migrateAccountMetadata, upsertProfile } from "@/lib/account-db"
 import {
+  BUSINESS_INDUSTRIES,
   BUSINESS_OWNERSHIP_IDENTITIES,
   FUNDING_INTERESTS,
   PROFILE_DEFAULTS,
@@ -578,7 +579,10 @@ export default function ProfileForm() {
           { value: "cooperative", label: "Cooperative" },
         ])
       case "business_industry":
-        return textField(field, "Industry", { placeholder: "Food service, software, farming, arts..." })
+        return selectField(field, "Industry", [
+          { value: "", label: "Select an industry..." },
+          ...BUSINESS_INDUSTRIES.map((i) => ({ value: i, label: i })),
+        ])
       case "employee_count":
         return textField(field, "Number of employees", { type: "number", placeholder: "5" })
       case "annual_revenue":

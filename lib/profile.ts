@@ -143,6 +143,29 @@ export const FUNDING_INTERESTS = [
   "Agricultural funding",
 ] as const
 
+export const BUSINESS_INDUSTRIES = [
+  "Agriculture & Farming",
+  "Arts & Entertainment",
+  "Construction",
+  "Education",
+  "Energy",
+  "Finance & Insurance",
+  "Food & Beverage",
+  "Government & Public Sector",
+  "Healthcare & Medical",
+  "Hospitality & Tourism",
+  "Information Technology",
+  "Legal Services",
+  "Manufacturing",
+  "Media & Communications",
+  "Nonprofit & Social Services",
+  "Real Estate",
+  "Research & Science",
+  "Retail",
+  "Transportation & Logistics",
+  "Other",
+] as const
+
 export const BUSINESS_OWNERSHIP_IDENTITIES = [
   "Woman-owned",
   "Minority-owned",

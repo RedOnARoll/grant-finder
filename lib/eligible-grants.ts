@@ -48,6 +48,16 @@ function scoreStructuredCriteria(
   const citizenship = profile.citizenship_status ?? ""
   const identities = profile.business_ownership_identities ?? []
 
+  // Industry match from structured criteria
+  if (Array.isArray(criteria.industries) && criteria.industries.length > 0) {
+    const userIndustry = (profile.business_industry ?? "").toLowerCase()
+    const matched = criteria.industries.some((ind: string) => ind.toLowerCase() === userIndustry)
+    if (matched) {
+      score += 3
+      addReason(reasons, `Matches your industry (${profile.business_industry})`)
+    }
+  }
+
   if (criteria.requires_us_citizen && citizenship !== "us_citizen") return -999
   if (criteria.requires_us_resident && !["us_citizen", "permanent_resident"].includes(citizenship)) return -999
 
@@ -110,6 +120,16 @@ function scoreStringCriteria(
     score += 1
     addReason(reasons, "US citizenship requirement matched")
   }
+  // Industry match — soft signal, no disqualification
+  const industry = (profile.business_industry ?? "").toLowerCase()
+  if (industry && industry !== "other") {
+    const industryKeywords = industry.split(/[\s&,]+/).filter((w) => w.length > 3)
+    if (industryKeywords.some((kw) => text.includes(kw))) {
+      score += 2
+      addReason(reasons, `Matches your industry (${profile.business_industry})`)
+    }
+  }
+
   if (text.includes("small business") || text.includes("micro-business") || text.includes("micro business")) {
     if (!isBusinessOwner) return -999
     score += 3

@@ -1,6 +1,5 @@
 import { Suspense } from "react"
 import AccountDashboard from "@/components/AccountDashboard"
-import EligibleBenefits from "@/components/EligibleBenefits"
 import SiteNav from "@/components/SiteNav"
 import UpgradeBanner from "@/components/UpgradeBanner"
 import DeleteAccountButton from "@/components/DeleteAccountButton"
@@ -52,14 +51,6 @@ export default function AccountPage() {
           </div>
 
           <AccountDashboard />
-
-          <section className="mt-10">
-            <div className="mb-5">
-              <h2 className="text-lg font-semibold text-slate-900">Likely benefit matches</h2>
-              <p className="mt-1 text-sm text-slate-600">Benefits you may qualify for based on your saved profile details.</p>
-            </div>
-            <EligibleBenefits hideSignedOutState previewLimit={3} />
-          </section>
 
           <DeleteAccountButton />
         </div>

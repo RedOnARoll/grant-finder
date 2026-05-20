@@ -6,6 +6,8 @@ import type { User } from "@supabase/supabase-js"
 import { getProfile, getSavedPrograms, migrateAccountMetadata, removeSavedProgram as removeSavedProgramRow, saveProgram, updateProgramStatus } from "@/lib/account-db"
 import { APPLICATION_STATUSES } from "@/lib/dashboard"
 import type { AccountDashboard as DashboardData, ApplicationStatus } from "@/lib/dashboard"
+import { matchEligibleBenefits, type EligibleBenefitMatch } from "@/lib/eligible-benefits"
+import { matchEligibleGrants, type EligibleGrantMatch } from "@/lib/eligible-grants"
 import { profileCompletion, type UserProfile } from "@/lib/profile"
 import type { Grant } from "@/lib/types"
 import { getBrowserSupabase } from "@/lib/supabase-browser"
@@ -45,6 +47,8 @@ export default function AccountDashboard() {
   const [programs, setPrograms] = useState<Grant[]>([])
   const [dashboard, setDashboard] = useState<DashboardData>({ saved_programs: [] })
   const [completion, setCompletion] = useState(0)
+  const [eligibleBenefits, setEligibleBenefits] = useState<EligibleBenefitMatch[]>([])
+  const [eligibleGrants, setEligibleGrants] = useState<EligibleGrantMatch[]>([])
   const [selectedProgramKey, setSelectedProgramKey] = useState("")
   const [selectedStatus, setSelectedStatus] = useState<ApplicationStatus>("interested")
   const [loading, setLoading] = useState(true)
@@ -82,6 +86,12 @@ export default function AccountDashboard() {
 
         setCompletion(profileCompletion(userProfile))
         setDashboard({ saved_programs: savedPrograms })
+
+        if (userProfile && !programError) {
+          const allPrograms = (programData ?? []) as Grant[]
+          setEligibleBenefits(matchEligibleBenefits(userProfile, allPrograms.filter(p => p.type === "benefit")).slice(0, 6))
+          setEligibleGrants(matchEligibleGrants(userProfile, allPrograms.filter(p => p.type === "grant")).slice(0, 6))
+        }
       }
 
       if (programError) {
@@ -456,6 +466,68 @@ export default function AccountDashboard() {
           </section>
         </aside>
       </div>
+
+      {/* Likely matches — grants and benefits split */}
+      {(eligibleGrants.length > 0 || eligibleBenefits.length > 0) && (
+        <div className="mt-10 space-y-8">
+          <div>
+            <h2 className="text-lg font-semibold text-slate-900">Likely matches</h2>
+            <p className="mt-1 text-sm text-slate-600">Based on your profile. Verify eligibility with each program before applying.</p>
+          </div>
+
+          {eligibleGrants.length > 0 && (
+            <div>
+              <h3 className="text-sm font-semibold text-slate-500 uppercase tracking-wide mb-3">Grants</h3>
+              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                {eligibleGrants.map(({ grant, confidence, matchedReasons }) => (
+                  <Link
+                    key={grant.id}
+                    href={`/grants/${grant.slug}`}
+                    className="bg-white rounded-xl border border-slate-200 shadow-sm p-4 hover:border-blue-300 hover:shadow-md transition group"
+                  >
+                    <div className="flex items-start justify-between gap-2 mb-2">
+                      <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${confidence === "likely" ? "bg-emerald-50 text-emerald-700" : "bg-amber-50 text-amber-700"}`}>
+                        {confidence === "likely" ? "Likely eligible" : "May qualify"}
+                      </span>
+                      <span className="text-xs text-slate-400">{formatAmount(grant.max_amount)}</span>
+                    </div>
+                    <p className="text-sm font-semibold text-slate-900 group-hover:text-blue-600 leading-snug">{grant.name}</p>
+                    <p className="text-xs text-slate-500 mt-0.5 mb-2">{grant.agency}</p>
+                    {matchedReasons[0] && <p className="text-xs text-slate-500 line-clamp-1">✓ {matchedReasons[0]}</p>}
+                  </Link>
+                ))}
+              </div>
+              <Link href="/account/eligible" className="inline-block mt-3 text-sm text-blue-600 hover:underline">View all eligible grants →</Link>
+            </div>
+          )}
+
+          {eligibleBenefits.length > 0 && (
+            <div>
+              <h3 className="text-sm font-semibold text-slate-500 uppercase tracking-wide mb-3">Benefits</h3>
+              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                {eligibleBenefits.map(({ benefit, confidence, matchedReasons }) => (
+                  <Link
+                    key={benefit.id}
+                    href={`/benefits/${benefit.slug}`}
+                    className="bg-white rounded-xl border border-slate-200 shadow-sm p-4 hover:border-blue-300 hover:shadow-md transition group"
+                  >
+                    <div className="flex items-start justify-between gap-2 mb-2">
+                      <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${confidence === "likely" ? "bg-emerald-50 text-emerald-700" : "bg-amber-50 text-amber-700"}`}>
+                        {confidence === "likely" ? "Likely eligible" : "May qualify"}
+                      </span>
+                      <span className="text-xs text-slate-400">{formatAmount(benefit.max_amount)}</span>
+                    </div>
+                    <p className="text-sm font-semibold text-slate-900 group-hover:text-blue-600 leading-snug">{benefit.name}</p>
+                    <p className="text-xs text-slate-500 mt-0.5 mb-2">{benefit.agency}</p>
+                    {matchedReasons[0] && <p className="text-xs text-slate-500 line-clamp-1">✓ {matchedReasons[0]}</p>}
+                  </Link>
+                ))}
+              </div>
+              <Link href="/account/eligible" className="inline-block mt-3 text-sm text-blue-600 hover:underline">View all eligible benefits →</Link>
+            </div>
+          )}
+        </div>
+      )}
     </div>
   )
 }
