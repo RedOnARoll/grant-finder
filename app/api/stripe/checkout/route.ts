@@ -2,7 +2,7 @@ import { NextResponse } from "next/server"
 import { createClient } from "@supabase/supabase-js"
 import { stripe } from "@/lib/stripe"
 
-const BASE_URL = "https://grant-finder-khaki.vercel.app"
+const BASE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "https://grantway.org"
 
 function serviceClient() {
   return createClient(
