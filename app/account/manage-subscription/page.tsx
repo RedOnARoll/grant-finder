@@ -89,6 +89,27 @@ export default function ManageSubscriptionPage() {
     return () => { mounted = false }
   }, [supabase])
 
+  async function handleSync() {
+    setActionLoading(true)
+    setError(null)
+    setMessage(null)
+    try {
+      const { data: { session } } = await supabase.auth.getSession()
+      const res = await fetch("/api/stripe/sync", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${session?.access_token ?? ""}` },
+      })
+      const json = await res.json() as { ok?: boolean; error?: string; isPremium?: boolean; status?: string }
+      if (!res.ok || !json.ok) throw new Error(json.error ?? "Sync failed.")
+      setMessage("Account synced successfully. Refreshing...")
+      setTimeout(() => window.location.reload(), 1000)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Sync failed.")
+    } finally {
+      setActionLoading(false)
+    }
+  }
+
   async function callApi(endpoint: string) {
     setActionLoading(true)
     setError(null)
@@ -229,6 +250,20 @@ export default function ManageSubscriptionPage() {
             </div>
           )}
         </div>
+
+        {/* Sync button — shown when subscription isn't reflected yet */}
+        {!isAdmin && !hasSubscription && (
+          <div className="bg-slate-50 border border-slate-200 rounded-xl p-4 mb-6 flex items-center justify-between gap-4">
+            <p className="text-sm text-slate-600">Already subscribed but not seeing your plan?</p>
+            <button
+              onClick={handleSync}
+              disabled={actionLoading}
+              className="shrink-0 inline-flex items-center h-8 rounded-lg border border-slate-300 bg-white text-slate-700 px-3 text-sm font-medium hover:bg-slate-50 transition-colors disabled:opacity-60"
+            >
+              {actionLoading ? <span className="w-3.5 h-3.5 border-2 border-slate-400 border-t-transparent rounded-full animate-spin" /> : "Sync account"}
+            </button>
+          </div>
+        )}
 
         {/* Upgrade prompt for free users */}
         {!isPremium && !isAdmin && !hasSubscription && (
