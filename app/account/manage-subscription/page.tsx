@@ -43,10 +43,8 @@ export default function ManageSubscriptionPage() {
         headers: { Authorization: `Bearer ${session.access_token}` },
       })
       if (!mounted) return
-      if (res.ok) {
-        const data = await res.json() as SubInfo
-        setInfo(data)
-      }
+      const data = await res.json() as SubInfo & { error?: string }
+      if (!data.error) setInfo(data)
       setLoading(false)
     }
 

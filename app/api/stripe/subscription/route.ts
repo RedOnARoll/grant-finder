@@ -43,14 +43,37 @@ export async function GET(req: NextRequest) {
       })
     }
 
-    // Fetch live subscription from Stripe
-    const subscriptions = await stripe.subscriptions.list({
-      customer: customerId,
-      status: "all",
-      limit: 1,
-    })
+    // Build profile-based response (used as fallback if Stripe is unavailable)
+    function profileResponse(overrides: Record<string, unknown> = {}) {
+      return NextResponse.json({
+        tier: profile?.subscription_tier ?? "free",
+        isPremium: Boolean(profile?.is_premium),
+        isAdmin: Boolean(profile?.is_admin),
+        credits: Number(profile?.one_time_credits ?? 0),
+        hasSubscription: Boolean(profile?.stripe_subscription_id),
+        cancelAtPeriodEnd: Boolean(profile?.cancel_at_period_end),
+        periodEnd: profile?.current_period_end
+          ? new Date(profile.current_period_end as string).toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })
+          : null,
+        subscriptionId: profile?.stripe_subscription_id ?? null,
+        status: profile?.subscription_status ?? null,
+        ...overrides,
+      })
+    }
 
-    const sub = subscriptions.data[0]
+    // Fetch live subscription from Stripe — fall back to profile on any error
+    let sub: import("stripe").Stripe.Subscription | undefined
+    try {
+      const subscriptions = await stripe.subscriptions.list({
+        customer: customerId,
+        status: "all",
+        limit: 1,
+      })
+      sub = subscriptions.data[0]
+    } catch {
+      // Stripe unavailable (missing env vars, network error, etc.) — use profile data
+      return profileResponse()
+    }
 
     // Sync profile if webhook hasn't fired yet
     if (sub && sub.status === "active") {
