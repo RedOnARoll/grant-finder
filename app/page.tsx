@@ -4,7 +4,7 @@ import { getGrants, getBenefits } from "@/lib/supabase"
 import SiteNav from "@/components/SiteNav"
 import { Badge } from "@/components/ui/Badge"
 import { HeroIllustration, QuizIllustration, LogoMark } from "@/components/illustrations/GeoShapes"
-import ZipHeroInput from "@/components/ZipHeroInput"
+import HeroSearch from "@/components/HeroSearch"
 
 export const dynamic = "force-dynamic"
 
@@ -84,9 +84,9 @@ export default async function HomePage() {
                   government assistance programs for housing, food, healthcare, and more.
                 </p>
 
-                {/* ZIP input — primary CTA */}
+                {/* Search — primary CTA */}
                 <div className="mb-5">
-                  <ZipHeroInput />
+                  <HeroSearch />
                 </div>
 
                 {/* Secondary links */}
