@@ -4,6 +4,7 @@ import { getGrants, getBenefits } from "@/lib/supabase"
 import SiteNav from "@/components/SiteNav"
 import { Badge } from "@/components/ui/Badge"
 import { HeroIllustration, QuizIllustration, LogoMark } from "@/components/illustrations/GeoShapes"
+import ZipHeroInput from "@/components/ZipHeroInput"
 
 export const dynamic = "force-dynamic"
 
@@ -146,6 +147,22 @@ export default async function HomePage() {
                 <p className="text-sm text-slate-500 mt-0.5">Average Quiz Time</p>
               </div>
             </div>
+          </div>
+        </section>
+
+        {/* ── ZIP HERO ─────────────────────────────────────────────── */}
+        <section className="bg-blue-600 py-14">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+            <div className="inline-flex items-center gap-2 bg-blue-500 text-blue-100 text-xs font-semibold uppercase tracking-wider px-3 py-1.5 rounded-full mb-5">
+              📍 Location-based matching
+            </div>
+            <h2 className="text-3xl sm:text-4xl font-bold text-white mb-3">
+              Find programs available in your area
+            </h2>
+            <p className="text-blue-200 text-lg mb-8 max-w-xl mx-auto">
+              Enter your ZIP code to instantly see federal, state, and local grants & benefits near you.
+            </p>
+            <ZipHeroInput />
           </div>
         </section>
 
