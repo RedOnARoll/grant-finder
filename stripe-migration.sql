@@ -7,7 +7,15 @@ ALTER TABLE profiles
   ADD COLUMN IF NOT EXISTS subscription_tier   text      DEFAULT 'free',
   ADD COLUMN IF NOT EXISTS subscription_status text,
   ADD COLUMN IF NOT EXISTS one_time_credits    integer   DEFAULT 0,
-  ADD COLUMN IF NOT EXISTS stripe_customer_id  text;
+  ADD COLUMN IF NOT EXISTS stripe_customer_id  text,
+  ADD COLUMN IF NOT EXISTS stripe_subscription_id text,
+  ADD COLUMN IF NOT EXISTS cancel_at_period_end boolean DEFAULT false,
+  ADD COLUMN IF NOT EXISTS current_period_end timestamptz;
+
+-- One-time Grant Helper purchases are credit based, not unlimited premium subscriptions.
+UPDATE profiles
+SET is_premium = false
+WHERE subscription_tier = 'grant_helper';
 
 -- 2. Mark the admin user
 UPDATE profiles

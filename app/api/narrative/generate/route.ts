@@ -50,18 +50,21 @@ export async function POST(req: NextRequest) {
   } | null
 
   const isAdmin = Boolean(profile?.is_admin)
-  const isPremium = Boolean(profile?.is_premium)
   const tier = profile?.subscription_tier
+  const isPremiumSubscription = Boolean(profile?.is_premium) && tier === "premium"
   const credits = Number(profile?.one_time_credits ?? 0)
 
-  const canGenerate = isAdmin || isPremium || (tier === "grant_helper" && credits > 0)
+  const canGenerate = isAdmin || isPremiumSubscription || (tier === "grant_helper" && credits > 0)
   if (!canGenerate) return new Response("Upgrade required", { status: 403 })
 
   // Decrement credits for grant_helper tier
-  if (!isAdmin && !isPremium && tier === "grant_helper") {
+  if (!isAdmin && !isPremiumSubscription && tier === "grant_helper") {
     await supabase
       .from("profiles")
-      .update({ one_time_credits: credits - 1 })
+      .update({
+        one_time_credits: Math.max(0, credits - 1),
+        ...(credits <= 1 ? { subscription_tier: "free" } : {}),
+      })
       .eq("user_id", user.id)
   }
 

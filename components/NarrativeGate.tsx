@@ -91,11 +91,11 @@ export default function NarrativeGate({
       } | null
 
       const isAdmin = Boolean(data?.is_admin)
-      const isPremium = Boolean(data?.is_premium)
       const tier = data?.subscription_tier ?? null
+      const isPremiumSubscription = Boolean(data?.is_premium) && tier === "premium"
       const creditCount = Number(data?.one_time_credits ?? 0)
 
-      if (isAdmin || isPremium) {
+      if (isAdmin || isPremiumSubscription) {
         setAccess("unlocked")
       } else if (tier === "grant_helper" && creditCount > 0) {
         setCredits(creditCount)

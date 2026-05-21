@@ -37,6 +37,15 @@ create table if not exists public.profiles (
   email_alerts text default '',
   deadline_reminders text default '',
   weekly_digest text default '',
+  is_premium boolean default false,
+  is_admin boolean default false,
+  subscription_tier text default 'free',
+  subscription_status text,
+  one_time_credits integer default 0,
+  stripe_customer_id text,
+  stripe_subscription_id text,
+  cancel_at_period_end boolean default false,
+  current_period_end timestamptz,
   profile_completed_at timestamptz,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
@@ -65,6 +74,15 @@ alter table public.profiles add column if not exists application_stage text defa
 alter table public.profiles add column if not exists email_alerts text default '';
 alter table public.profiles add column if not exists deadline_reminders text default '';
 alter table public.profiles add column if not exists weekly_digest text default '';
+alter table public.profiles add column if not exists is_premium boolean default false;
+alter table public.profiles add column if not exists is_admin boolean default false;
+alter table public.profiles add column if not exists subscription_tier text default 'free';
+alter table public.profiles add column if not exists subscription_status text;
+alter table public.profiles add column if not exists one_time_credits integer default 0;
+alter table public.profiles add column if not exists stripe_customer_id text;
+alter table public.profiles add column if not exists stripe_subscription_id text;
+alter table public.profiles add column if not exists cancel_at_period_end boolean default false;
+alter table public.profiles add column if not exists current_period_end timestamptz;
 
 create table if not exists public.saved_programs (
   id uuid primary key default gen_random_uuid(),

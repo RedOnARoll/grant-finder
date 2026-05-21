@@ -28,13 +28,14 @@ export async function checkUserAccess(userId: string): Promise<AccessInfo> {
     const isAdmin = Boolean(data?.is_admin)
     const tier = (data?.subscription_tier as AccessInfo["tier"]) ?? "free"
     const credits = Number(data?.one_time_credits ?? 0)
+    const hasPremiumSubscription = isPremium && tier === "premium"
 
     return {
       isPremium,
       isAdmin,
       tier,
       credits,
-      hasAIAccess: isAdmin || isPremium || credits > 0,
+      hasAIAccess: isAdmin || hasPremiumSubscription || (tier === "grant_helper" && credits > 0),
     }
   } catch {
     return { isPremium: false, isAdmin: false, tier: "free", credits: 0, hasAIAccess: false }
@@ -58,7 +59,7 @@ export async function decrementOneTimeCredit(userId: string): Promise<number> {
     .from("profiles")
     .update({
       one_time_credits: newCredits,
-      ...(newCredits === 0 ? { is_premium: false } : {}),
+      ...(newCredits === 0 ? { is_premium: false, subscription_tier: "free" } : {}),
     })
     .eq("user_id", userId)
 

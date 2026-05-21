@@ -1,11 +1,14 @@
 import { NextResponse } from "next/server"
 import { createClient, type SupabaseClient } from "@supabase/supabase-js"
 import type Stripe from "stripe"
-import { stripe, PRICE_ONE_TIME } from "@/lib/stripe"
+import { stripe } from "@/lib/stripe"
 
 // App Router: no bodyParser config needed — use request.text() for raw body
 
-function serviceClient() {
+type AppSupabaseClient = SupabaseClient
+type SubscriptionWithPeriod = Stripe.Subscription & { current_period_end?: number | null }
+
+function serviceClient(): AppSupabaseClient {
   return createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.SUPABASE_SERVICE_ROLE_KEY!,
@@ -13,7 +16,12 @@ function serviceClient() {
   )
 }
 
-async function findUserByCustomerId(supabase: SupabaseClient<any>, customerId: string) {
+function currentPeriodEnd(subscription: Stripe.Subscription) {
+  const periodEnd = (subscription as SubscriptionWithPeriod).current_period_end
+  return periodEnd ? new Date(periodEnd * 1000).toISOString() : null
+}
+
+async function findUserByCustomerId(supabase: AppSupabaseClient, customerId: string) {
   const { data } = await supabase
     .from("profiles")
     .select("user_id")
@@ -23,7 +31,7 @@ async function findUserByCustomerId(supabase: SupabaseClient<any>, customerId: s
 }
 
 async function logEvent(
-  supabase: SupabaseClient<any>,
+  supabase: AppSupabaseClient,
   eventId: string,
   eventType: string,
   status: "processed" | "error" | "skipped",
@@ -37,7 +45,7 @@ async function logEvent(
 }
 
 async function handleCheckoutCompleted(
-  supabase: SupabaseClient<any>,
+  supabase: AppSupabaseClient,
   session: Stripe.Checkout.Session
 ) {
   const userId = session.metadata?.userId
@@ -52,11 +60,22 @@ async function handleCheckoutCompleted(
   }
 
   if (session.mode === "payment") {
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("one_time_credits")
+      .eq("user_id", userId)
+      .maybeSingle()
+    const credits = Number(profile?.one_time_credits ?? 0)
+
     // One-time Grant Helper purchase
     await supabase.from("profiles").update({
       subscription_tier: "grant_helper",
-      one_time_credits: 3,
-      is_premium: true,
+      subscription_status: null,
+      one_time_credits: credits + 3,
+      is_premium: false,
+      stripe_subscription_id: null,
+      cancel_at_period_end: false,
+      current_period_end: null,
     }).eq("user_id", userId)
   } else {
     // Subscription (monthly or annual)
@@ -69,19 +88,16 @@ async function handleCheckoutCompleted(
 }
 
 function subFields(subscription: Stripe.Subscription) {
-  const sub = subscription as any
   return {
     stripe_subscription_id: subscription.id,
     subscription_status: subscription.status,
     cancel_at_period_end: subscription.cancel_at_period_end ?? false,
-    current_period_end: sub.current_period_end
-      ? new Date(sub.current_period_end * 1000).toISOString()
-      : null,
+    current_period_end: currentPeriodEnd(subscription),
   }
 }
 
 async function handleSubscriptionCreated(
-  supabase: SupabaseClient<any>,
+  supabase: AppSupabaseClient,
   subscription: Stripe.Subscription
 ) {
   const customerId = typeof subscription.customer === "string"
@@ -93,11 +109,12 @@ async function handleSubscriptionCreated(
   await supabase.from("profiles").update({
     ...subFields(subscription),
     is_premium: true,
+    subscription_tier: "premium",
   }).eq("user_id", userId)
 }
 
 async function handleSubscriptionUpdated(
-  supabase: SupabaseClient<any>,
+  supabase: AppSupabaseClient,
   subscription: Stripe.Subscription
 ) {
   const customerId = typeof subscription.customer === "string"
@@ -111,13 +128,13 @@ async function handleSubscriptionUpdated(
 
   await supabase.from("profiles").update({
     ...subFields(subscription),
-    ...(isActive ? { is_premium: true } : {}),
-    ...(isCanceled ? { is_premium: false } : {}),
+    ...(isActive ? { is_premium: true, subscription_tier: "premium" } : {}),
+    ...(isCanceled ? { is_premium: false, subscription_tier: "free" } : {}),
   }).eq("user_id", userId)
 }
 
 async function handleSubscriptionDeleted(
-  supabase: SupabaseClient<any>,
+  supabase: AppSupabaseClient,
   subscription: Stripe.Subscription
 ) {
   const customerId = typeof subscription.customer === "string"
@@ -137,7 +154,7 @@ async function handleSubscriptionDeleted(
 }
 
 async function handleInvoicePaymentSucceeded(
-  supabase: SupabaseClient<any>,
+  supabase: AppSupabaseClient,
   invoice: Stripe.Invoice
 ) {
   const customerId = typeof invoice.customer === "string"
@@ -149,12 +166,13 @@ async function handleInvoicePaymentSucceeded(
 
   await supabase.from("profiles").update({
     is_premium: true,
+    subscription_tier: "premium",
     subscription_status: "active",
   }).eq("user_id", userId)
 }
 
 async function handleInvoicePaymentFailed(
-  supabase: SupabaseClient<any>,
+  supabase: AppSupabaseClient,
   invoice: Stripe.Invoice
 ) {
   const customerId = typeof invoice.customer === "string"
