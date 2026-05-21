@@ -28,13 +28,20 @@ function escapeHtml(value: string) {
 
 export async function POST(request: Request) {
   const resendKey = process.env.RESEND_API_KEY
-  const fromEmail = process.env.RESEND_FROM_EMAIL ?? "GrantWay <onboarding@resend.dev>"
+  const fromEmail = process.env.RESEND_FROM_EMAIL
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
   const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY
 
-  if (!resendKey || !supabaseUrl || !serviceRoleKey) {
+  if (!resendKey || !fromEmail || !supabaseUrl || !serviceRoleKey) {
     return NextResponse.json(
       { error: "Signup email is not configured yet." },
+      { status: 500 }
+    )
+  }
+
+  if (fromEmail.includes("@resend.dev")) {
+    return NextResponse.json(
+      { error: "Signup email must use a verified sender domain." },
       { status: 500 }
     )
   }
