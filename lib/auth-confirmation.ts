@@ -17,6 +17,16 @@ function parsePayload(value: string | null): AuthConfirmationPayload | null {
   }
 }
 
+function isRecent(payload: AuthConfirmationPayload) {
+  return Date.now() - payload.at < 10 * 60 * 1000
+}
+
+export function readLatestAuthConfirmation() {
+  if (typeof window === "undefined") return null
+  const payload = parsePayload(window.localStorage.getItem(AUTH_CONFIRMATION_EVENT))
+  return payload && isRecent(payload) ? payload : null
+}
+
 export function broadcastAuthConfirmation(target = "/") {
   if (typeof window === "undefined") return
 
@@ -35,24 +45,40 @@ export function broadcastAuthConfirmation(target = "/") {
 export function listenForAuthConfirmation(onConfirm: (payload: AuthConfirmationPayload) => void) {
   if (typeof window === "undefined") return () => {}
 
+  let lastHandledAt = Number(window.sessionStorage.getItem(`${AUTH_CONFIRMATION_EVENT}:handled`) ?? 0)
+
+  const confirmOnce = (payload: AuthConfirmationPayload | null) => {
+    if (!payload || !isRecent(payload) || payload.at <= lastHandledAt) return
+    lastHandledAt = payload.at
+    window.sessionStorage.setItem(`${AUTH_CONFIRMATION_EVENT}:handled`, String(payload.at))
+    onConfirm(payload)
+  }
+
   const handleStorage = (event: StorageEvent) => {
     if (event.key !== AUTH_CONFIRMATION_EVENT) return
     const payload = parsePayload(event.newValue)
-    if (payload) onConfirm(payload)
+    confirmOnce(payload)
   }
 
   window.addEventListener("storage", handleStorage)
+  window.addEventListener("focus", () => confirmOnce(readLatestAuthConfirmation()))
+  document.addEventListener("visibilitychange", () => {
+    if (!document.hidden) confirmOnce(readLatestAuthConfirmation())
+  })
+
+  const initialTimer = window.setTimeout(() => confirmOnce(readLatestAuthConfirmation()), 0)
 
   let channel: BroadcastChannel | null = null
   if ("BroadcastChannel" in window) {
     channel = new BroadcastChannel(AUTH_CONFIRMATION_EVENT)
     channel.onmessage = (event: MessageEvent<AuthConfirmationPayload>) => {
-      if (event.data?.target) onConfirm(event.data)
+      if (event.data?.target) confirmOnce(event.data)
     }
   }
 
   return () => {
     window.removeEventListener("storage", handleStorage)
+    window.clearTimeout(initialTimer)
     channel?.close()
   }
 }
