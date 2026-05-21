@@ -350,7 +350,7 @@ export default function NarrativeGate({
           <div className="text-center px-4">
             <h3 className="font-bold text-slate-900 text-lg">Write My Application</h3>
             <p className="text-sm text-slate-500 mt-1 max-w-xs">
-              Let AI draft a professional narrative based on this grant's requirements and your profile.
+              Let AI draft a professional narrative based on this grant&apos;s requirements and your profile.
             </p>
           </div>
           <div className="flex items-center gap-2 text-xs text-slate-500">
