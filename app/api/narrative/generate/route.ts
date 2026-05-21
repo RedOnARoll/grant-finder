@@ -59,13 +59,18 @@ export async function POST(req: NextRequest) {
 
   // Decrement credits for grant_helper tier
   if (!isAdmin && !isPremiumSubscription && tier === "grant_helper") {
-    await supabase
+    const { data: updatedCreditRow, error: creditError } = await supabase
       .from("profiles")
       .update({
         one_time_credits: Math.max(0, credits - 1),
         ...(credits <= 1 ? { subscription_tier: "free" } : {}),
       })
       .eq("user_id", user.id)
+      .gt("one_time_credits", 0)
+      .select("one_time_credits")
+      .maybeSingle()
+
+    if (creditError || !updatedCreditRow) return new Response("Upgrade required", { status: 403 })
   }
 
   let body: { grantName: string; grantDescription?: string; answers: Record<string, string> }

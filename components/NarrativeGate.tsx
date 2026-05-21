@@ -110,6 +110,11 @@ export default function NarrativeGate({
   }, [supabase])
 
   async function handleGenerate() {
+    if (access === "helper" && credits <= 0) {
+      setPaywallOpen(true)
+      return
+    }
+
     const required = QUESTIONS.filter(q => q.required)
     const missing = required.filter(q => !answers[q.key].trim())
     if (missing.length > 0) return
@@ -171,6 +176,11 @@ export default function NarrativeGate({
   }
 
   function handleReset() {
+    if (access === "helper" && credits <= 0) {
+      setPaywallOpen(true)
+      return
+    }
+
     setGenState("idle")
     setNarrative("")
   }
@@ -185,6 +195,7 @@ export default function NarrativeGate({
 
   if (access === "unlocked" || access === "helper") {
     const allRequired = QUESTIONS.filter(q => q.required).every(q => answers[q.key].trim())
+    const helperOutOfCredits = access === "helper" && credits <= 0
 
     return (
       <div className="space-y-4">
@@ -283,7 +294,7 @@ export default function NarrativeGate({
 
             <button
               onClick={handleGenerate}
-              disabled={!allRequired}
+              disabled={!allRequired || helperOutOfCredits}
               className="w-full flex items-center justify-center gap-2 h-10 rounded-lg bg-blue-600 text-white text-sm font-medium hover:bg-blue-700 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
             >
               <Sparkles className="w-4 h-4" />
@@ -294,6 +305,11 @@ export default function NarrativeGate({
             {!allRequired && (
               <p className="text-xs text-slate-400 text-center">
                 Fill in all required fields to generate your narrative.
+              </p>
+            )}
+            {helperOutOfCredits && (
+              <p className="text-xs text-amber-700 text-center">
+                You are out of Grant Helper credits. Upgrade to generate another draft.
               </p>
             )}
           </div>
