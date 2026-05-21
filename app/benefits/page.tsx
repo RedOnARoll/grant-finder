@@ -1,16 +1,10 @@
 import Link from "next/link"
-import { Sparkles } from "lucide-react"
+import { Sparkles, ArrowRight } from "lucide-react"
 import { getBenefits } from "@/lib/supabase"
 import type { Grant } from "@/lib/types"
 import SiteNav from "@/components/SiteNav"
-import SortSelect from "@/components/SortSelect"
-import SaveInterestButton from "@/components/SaveInterestButton"
-import ProgramGrid from "@/components/ProgramGrid"
-import { Badge, StatusBadge } from "@/components/ui/Badge"
-import { EmptyStateIllustration } from "@/components/illustrations/GeoShapes"
-import EligibleBenefits from "@/components/EligibleBenefits"
 import SmartSearchBar from "@/components/SmartSearchBar"
-import ZipFilter from "@/components/ZipFilter"
+import { StatusBadge } from "@/components/ui/Badge"
 
 const AGENCY_STATES: Record<string, string[]> = {
   "New York Foundation for the Arts":    ["NY"],
@@ -31,20 +25,7 @@ function sortBenefits(benefits: Grant[], sort: BenefitSort | undefined): Grant[]
   }
 }
 
-const BENEFIT_SORT_LABELS: Record<BenefitSort, string> = {
-  name_asc:        "Name: A–Z",
-  subcategory_asc: "Category",
-  amount_desc:     "Amount: High → Low",
-}
-
 export const dynamic = "force-dynamic"
-
-function formatAmount(amount: number | null) {
-  if (!amount) return null
-  if (amount >= 1_000_000) return `$${(amount / 1_000_000).toFixed(1)}M`
-  if (amount >= 1_000) return `$${(amount / 1_000).toFixed(0)}K`
-  return `$${amount}`
-}
 
 const SUBCATEGORY_LABELS: Record<string, string> = {
   housing:    "Housing",
@@ -56,56 +37,6 @@ const SUBCATEGORY_LABELS: Record<string, string> = {
   health:     "Healthcare",
 }
 
-function BenefitCard({ benefit }: { benefit: Grant }) {
-  const amount = formatAmount(benefit.max_amount)
-  const subcategoryLabel = benefit.subcategory
-    ? (SUBCATEGORY_LABELS[benefit.subcategory] ?? benefit.subcategory.replace("_", " "))
-    : null
-
-  return (
-    <div className="relative flex h-full flex-col bg-white rounded-xl border border-slate-200 shadow-sm hover:shadow-md transition-shadow p-5">
-      <Link href={`/benefits/${benefit.slug}`} className="absolute inset-0 rounded-xl" aria-label={benefit.name} />
-
-      {/* Top row: status + save */}
-      <div className="flex items-center justify-between gap-2 mb-3">
-        <StatusBadge deadline={benefit.deadline} isRecurring={benefit.is_recurring ?? false} />
-        <div className="relative z-10">
-          <SaveInterestButton slug={benefit.slug} type="benefit" />
-        </div>
-      </div>
-
-      {/* Agency */}
-      <p className="text-xs text-slate-400 uppercase tracking-wide mb-1">{benefit.agency}</p>
-
-      {/* Name */}
-      <h3 className="text-base font-semibold text-slate-900 leading-snug line-clamp-2 mb-2">
-        {benefit.name}
-      </h3>
-
-      {/* Description */}
-      <p className="text-sm text-slate-600 line-clamp-3 mb-4">{benefit.description}</p>
-
-      {/* Bottom row */}
-      <div className="mt-auto flex flex-wrap items-center justify-between gap-2">
-        <div className="flex flex-wrap items-center gap-2">
-          {amount && (
-            <span className="text-sm font-semibold text-slate-900">{amount}</span>
-          )}
-          {subcategoryLabel && (
-            <Badge variant="green">{subcategoryLabel}</Badge>
-          )}
-        </div>
-        <Link
-          href={`/benefits/${benefit.slug}`}
-          className="relative z-10 text-sm font-medium text-blue-600 hover:text-blue-700"
-        >
-          View Details →
-        </Link>
-      </div>
-    </div>
-  )
-}
-
 const SOURCE_LABELS: Record<string, string> = {
   federal: "Federal",
   state:   "State",
@@ -113,7 +44,7 @@ const SOURCE_LABELS: Record<string, string> = {
   private: "Private",
 }
 
-function buildBenefitsUrl(p: { cats?: Set<string>; sources?: Set<string>; state?: string; zip?: string; q?: string; sort?: string; eligible?: string }) {
+function buildBenefitsUrl(p: { cats?: Set<string>; sources?: Set<string>; state?: string; zip?: string; q?: string; sort?: string }) {
   const parts: string[] = []
   if (p.cats?.size) parts.push(`subcategory=${Array.from(p.cats).join(",")}`)
   if (p.sources?.size) parts.push(`source=${Array.from(p.sources).join(",")}`)
@@ -121,7 +52,6 @@ function buildBenefitsUrl(p: { cats?: Set<string>; sources?: Set<string>; state?
   if (p.zip)   parts.push(`zip=${p.zip}`)
   if (p.q) parts.push(`q=${encodeURIComponent(p.q)}`)
   if (p.sort) parts.push(`sort=${p.sort}`)
-  if (p.eligible) parts.push(`eligible=${p.eligible}`)
   return `/benefits${parts.length ? `?${parts.join("&")}` : ""}`
 }
 
@@ -135,22 +65,69 @@ function toggleSubcat(selected: Set<string>, cat: string): Set<string> {
   return next
 }
 
-const chipBase = "shrink-0 px-3 py-1.5 rounded-lg text-sm font-medium whitespace-nowrap transition-colors"
-const chipActive = "bg-blue-600 text-white"
-const chipInactive = "bg-white border border-slate-200 text-slate-600 hover:bg-slate-50"
-const chipSourceActive = "bg-indigo-600 text-white"
+const SITUATIONS = [
+  { key: "housing",   label: "Housing",    Icon: () => <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor"><polygon points="2,11 12,3 22,11"/><rect x="6" y="11" width="12" height="10" rx="1" opacity="0.6"/></svg> },
+  { key: "food",      label: "Food",       Icon: () => <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor"><circle cx="12" cy="13" r="8"/><rect x="11" y="3" width="2" height="6" rx="1" opacity="0.6"/></svg> },
+  { key: "childcare", label: "Childcare",  Icon: () => <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor"><circle cx="12" cy="9" r="4"/><path d="M5 20c0-3.5 3-6 7-6s7 2.5 7 6" opacity="0.6"/></svg> },
+  { key: "health",    label: "Healthcare", Icon: () => <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor"><rect x="10" y="4" width="4" height="16"/><rect x="4" y="10" width="16" height="4"/></svg> },
+  { key: "energy",    label: "Utilities",  Icon: () => <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor"><polygon points="13,2 6,14 12,14 11,22 18,10 12,10"/></svg> },
+  { key: "education", label: "Education",  Icon: () => <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor"><polygon points="2,8 12,3 22,8 12,13"/><polygon points="6,11 6,17 12,20 18,17 18,11 12,14" opacity="0.6"/></svg> },
+  { key: "disability",label: "Disability", Icon: () => <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="5" r="2"/><path d="M12 8v6l3 4M7 9h10"/></svg> },
+]
 
-function Divider() {
-  return <span className="shrink-0 w-px h-5 bg-slate-200 mx-0.5" />
+function BenefitRow({ benefit }: { benefit: Grant }) {
+  const subcategoryLabel = benefit.subcategory
+    ? (SUBCATEGORY_LABELS[benefit.subcategory] ?? benefit.subcategory.replace(/_/g, " "))
+    : null
+  const amount = benefit.max_amount
+    ? (benefit.max_amount >= 1000 ? `$${(benefit.max_amount / 1000).toFixed(0)}K` : `$${benefit.max_amount}`)
+    : null
+
+  return (
+    <article className="bg-white border border-amber-100 rounded-2xl px-6 sm:px-8 py-6 hover:border-emerald-200 transition-colors group relative">
+      <Link href={`/benefits/${benefit.slug}`} className="absolute inset-0 rounded-2xl" aria-label={benefit.name} />
+
+      {/* Top row */}
+      <div className="flex items-start justify-between gap-4 mb-3">
+        <div className="min-w-0">
+          <p className="text-xs text-slate-400 uppercase tracking-wide font-medium mb-1">{benefit.agency}</p>
+          <h2 className="text-xl font-bold text-slate-900 leading-snug">{benefit.name}</h2>
+        </div>
+        {subcategoryLabel && (
+          <span className="shrink-0 px-3 py-1 rounded-full bg-emerald-50 text-emerald-700 text-xs font-semibold whitespace-nowrap">
+            {subcategoryLabel}
+          </span>
+        )}
+      </div>
+
+      {/* Description as main body */}
+      <p className="text-base text-slate-700 leading-relaxed mb-5">
+        {benefit.description}
+      </p>
+
+      {/* Footer row */}
+      <div className="flex items-center justify-between gap-4 flex-wrap pt-4 border-t border-amber-50">
+        <div className="flex items-center gap-4 text-sm text-slate-500">
+          {amount && (
+            <span className="font-semibold text-slate-900 tabular-nums">{amount}</span>
+          )}
+          <StatusBadge deadline={benefit.deadline} isRecurring={benefit.is_recurring ?? false} />
+        </div>
+        <span className="text-sm font-semibold text-emerald-700 inline-flex items-center gap-1 group-hover:gap-2 transition-all">
+          View details &amp; how to apply
+          <ArrowRight className="w-4 h-4" />
+        </span>
+      </div>
+    </article>
+  )
 }
 
 export default async function BenefitsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ subcategory?: string; source?: string; state?: string; zip?: string; q?: string; smart_q?: string; hint?: string; sort?: string; eligible?: string }>
+  searchParams: Promise<{ subcategory?: string; source?: string; state?: string; zip?: string; q?: string; smart_q?: string; hint?: string; sort?: string }>
 }) {
-  const { subcategory, source, state, zip, q, smart_q, hint, sort, eligible } = await searchParams
-  const isEligibleMode = eligible === "1"
+  const { subcategory, source, state, zip, q, smart_q, hint, sort } = await searchParams
   const selectedSubcategories = new Set((subcategory ?? "").split(",").filter(Boolean))
   const selectedSources = new Set((source ?? "").split(",").filter(Boolean))
   const allBenefits = await getBenefits()
@@ -180,123 +157,168 @@ export default async function BenefitsPage({
   const hasActiveFilters = selectedSubcategories.size > 0 || selectedSources.size > 0 || !!state || !!q
 
   return (
-    <div className="flex flex-col min-h-full bg-slate-50">
+    <div className="flex flex-col min-h-full bg-amber-50/30">
       <SiteNav active="benefits" />
 
-      <main className="flex-1 max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-10">
-        {/* Page header */}
-        <div className="mb-6">
-          <h1 className="text-3xl font-bold text-slate-900 mb-2">Benefits</h1>
-          <p className="text-slate-600">
-            Government assistance programs — housing, food, healthcare, and more.{" "}
-            <span className="font-medium text-slate-900">{allBenefits.length} programs</span> available.
-          </p>
-        </div>
-
-        {/* Smart search bar */}
-        <SmartSearchBar type="benefits" initialQuery={q ?? ""} initialHint={hint ?? ""} />
-
-        {/* ── Filter bar ──────────────────────────────────────────────────── */}
-        <div className="mb-6 space-y-2">
-
-          {/* Row 1: quick filters + sort */}
-          <div className="flex items-center gap-2 flex-wrap">
-            <ZipFilter basePath="/benefits" initialState={state} initialZip={zip} compact />
-            <Link
-              href={isEligibleMode
-                ? buildBenefitsUrl({ cats: selectedSubcategories, sources: selectedSources, state, zip, q, sort })
-                : buildBenefitsUrl({ cats: selectedSubcategories, sources: selectedSources, state, zip, q, sort, eligible: "1" })
-              }
-              className={`${chipBase} flex items-center gap-1.5 ${isEligibleMode ? chipActive : chipInactive}`}
-            >
-              <Sparkles className="w-3 h-3" />
-              Eligible for me
-            </Link>
-            <SortSelect
-              value={sort ?? ""}
-              options={(Object.entries(BENEFIT_SORT_LABELS) as [BenefitSort, string][]).map(([val, label]) => ({ value: val, label }))}
-            />
-            {hasActiveFilters && (
-              <Link href={buildBenefitsUrl({ sort })} className="text-sm text-blue-600 hover:underline whitespace-nowrap">
-                Clear all
-              </Link>
-            )}
-          </div>
-
-          {/* Row 2: funding source */}
-          <div className="flex items-center gap-1.5 overflow-x-auto pb-0.5 -mx-4 px-4 sm:mx-0 sm:px-0">
-            <span className="shrink-0 text-xs font-medium text-slate-400 uppercase tracking-wider mr-1">Source</span>
-            {Object.entries(SOURCE_LABELS).map(([key, label]) => (
-              <Link
-                key={key}
-                href={buildBenefitsUrl({ cats: selectedSubcategories, sources: toggleSubcat(selectedSources, key), state, zip, q, sort })}
-                className={`${chipBase} ${selectedSources.has(key) ? chipSourceActive : chipInactive}`}
-              >
-                {label}
-              </Link>
-            ))}
-          </div>
-
-          {/* Row 3: category */}
-          <div className="flex items-center gap-1.5 flex-wrap">
-            <span className="shrink-0 text-xs font-medium text-slate-400 uppercase tracking-wider mr-1">Category</span>
-            <Link
-              href={buildBenefitsUrl({ sources: selectedSources, state, zip, q, sort })}
-              className={`${chipBase} ${selectedSubcategories.size === 0 ? chipActive : chipInactive}`}
-            >
-              All
-            </Link>
-            {Object.entries(SUBCATEGORY_LABELS).map(([key, label]) => (
-              <Link
-                key={key}
-                href={buildBenefitsUrl({ cats: toggleSubcat(selectedSubcategories, key), sources: selectedSources, state, zip, q, sort })}
-                className={`${chipBase} ${selectedSubcategories.has(key) ? chipActive : chipInactive}`}
-              >
-                {label}
-              </Link>
-            ))}
-          </div>
-
-        </div>
-
-        {/* Results */}
-        {isEligibleMode ? (
-          <EligibleBenefits />
-        ) : (
-          <>
-            {/* Count */}
-            {benefits.length > 0 && (
-              <p className="text-sm text-slate-500 mb-5">
-                Showing <span className="font-medium text-slate-900">{benefits.length}</span>{" "}
-                {benefits.length === 1 ? "program" : "programs"}
-                {state && <span className="text-slate-400"> · filtered by state</span>}
+      {/* Header section */}
+      <section className="bg-amber-50 border-b border-amber-100 py-10">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex flex-col lg:flex-row gap-10 items-start">
+            {/* Left — headline + AI search hint */}
+            <div className="flex-1">
+              <p className="text-xs font-semibold uppercase tracking-widest text-emerald-700 mb-3">
+                Government assistance · Free to apply
               </p>
-            )}
+              <h1 className="text-4xl font-bold text-slate-900 leading-tight tracking-tight mb-3">
+                Real help with everyday needs.
+              </h1>
+              <p className="text-lg text-slate-600 leading-relaxed mb-6 max-w-lg">
+                Benefits are ongoing programs you may qualify for based on your income, family size,
+                or situation. Free to apply, funded by your taxes.
+              </p>
+              <Link
+                href="/ai-results?q=help+with+everyday+needs"
+                className="inline-flex items-center gap-2 h-10 px-5 bg-emerald-600 text-white text-sm font-semibold rounded-xl hover:bg-emerald-700 transition-colors"
+              >
+                <Sparkles className="w-4 h-4" />
+                Find what I qualify for
+              </Link>
+            </div>
 
-            {/* Grid or empty state */}
-            {benefits.length === 0 ? (
-              <div className="flex flex-col items-center justify-center py-20 text-center">
-                <EmptyStateIllustration />
-                <p className="mt-4 text-base font-medium text-slate-900">No benefits found</p>
-                <p className="text-sm text-slate-500 mt-1">Try adjusting your search or filters.</p>
-                <Link href="/benefits" className="mt-4 text-sm text-blue-600 hover:text-blue-700 font-medium">
-                  Clear filters
+            {/* Right — quick stats card */}
+            <div className="lg:w-72 shrink-0 bg-white border border-amber-200 rounded-2xl p-5">
+              <div className="grid grid-cols-2 divide-x divide-y divide-amber-100 border border-amber-100 rounded-xl overflow-hidden">
+                {([
+                  [String(allBenefits.length), "Benefits indexed"],
+                  ["$238B", "Distributed last year"],
+                  ["~1 in 5", "Eligible Americans miss out"],
+                  ["Free", "Always free, no ads"],
+                ] as [string, string][]).map(([big, sub]) => (
+                  <div key={sub} className="p-3 bg-white">
+                    <p className="text-lg font-bold text-emerald-900 tabular-nums leading-tight">{big}</p>
+                    <p className="text-xs text-slate-500 mt-0.5 leading-snug">{sub}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <main className="flex-1">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+          <div className="flex gap-8 items-start">
+
+            {/* Left rail — situation chips — sticky */}
+            <aside className="hidden lg:flex flex-col gap-1.5 w-52 shrink-0 sticky top-6">
+              <p className="text-xs font-semibold uppercase tracking-widest text-slate-400 mb-2 px-1">
+                What do you need?
+              </p>
+
+              {/* "All" chip */}
+              <Link
+                href="/benefits"
+                className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-colors ${
+                  selectedSubcategories.size === 0
+                    ? "bg-emerald-50 text-emerald-800 border border-emerald-200"
+                    : "text-slate-600 hover:bg-amber-50"
+                }`}
+              >
+                <span className="w-7 h-7 rounded-lg bg-white border border-amber-200 flex items-center justify-center shrink-0">
+                  <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2">
+                    <circle cx="12" cy="12" r="9"/>
+                  </svg>
+                </span>
+                <span>All benefits</span>
+                <span className="ml-auto text-xs text-slate-400 tabular-nums">{allBenefits.length}</span>
+              </Link>
+
+              {/* Situation chips */}
+              {SITUATIONS.map(s => {
+                const isActive = selectedSubcategories.has(s.key)
+                const count = allBenefits.filter(b => b.subcategory === s.key).length
+                const href = buildBenefitsUrl({ cats: new Set([s.key]), sources: selectedSources, state, zip, q, sort })
+                return (
+                  <Link
+                    key={s.key}
+                    href={href}
+                    className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-colors ${
+                      isActive
+                        ? "bg-emerald-50 text-emerald-800 border border-emerald-200"
+                        : "text-slate-600 hover:bg-amber-50"
+                    }`}
+                  >
+                    <span className={`w-7 h-7 rounded-lg border flex items-center justify-center shrink-0 ${
+                      isActive ? "bg-emerald-100 border-emerald-300 text-emerald-700" : "bg-white border-amber-200 text-slate-500"
+                    }`}>
+                      <s.Icon />
+                    </span>
+                    <span>{s.label}</span>
+                    <span className="ml-auto text-xs text-slate-400 tabular-nums">{count}</span>
+                  </Link>
+                )
+              })}
+
+              {/* Quiz nudge */}
+              <div className="mt-4 p-4 bg-white border border-amber-200 rounded-xl">
+                <p className="text-sm font-semibold text-slate-900 mb-1">Not sure where to start?</p>
+                <p className="text-xs text-slate-500 leading-relaxed mb-2">
+                  Answer a few questions and we&apos;ll show you what you qualify for.
+                </p>
+                <Link href="/quiz" className="text-xs font-semibold text-emerald-700 inline-flex items-center gap-1">
+                  Take the 2-min quiz <ArrowRight className="w-3 h-3" />
                 </Link>
               </div>
-            ) : (
-              <ProgramGrid itemLabel="programs">
-                {benefits.map((benefit) => (
-                  <BenefitCard key={benefit.id} benefit={benefit} />
-                ))}
-              </ProgramGrid>
-            )}
-          </>
-        )}
-      </main>
+            </aside>
 
-      <footer className="border-t border-slate-200 py-8 px-4 text-center text-sm text-slate-400 mt-10">
-        Benefit information is for reference only. Verify eligibility with the issuing agency.
-      </footer>
+            {/* Main list */}
+            <div className="flex-1 min-w-0">
+              {/* Count + source filter */}
+              <div className="flex items-center justify-between mb-5 gap-4 flex-wrap">
+                <p className="text-sm text-slate-600">
+                  <span className="font-semibold text-slate-900">{benefits.length}</span>{" "}
+                  {benefits.length === 1 ? "benefit" : "benefits"} shown
+                </p>
+                {/* Source pills — compact */}
+                <div className="flex items-center gap-1.5 overflow-x-auto">
+                  <span className="text-xs text-slate-400 font-medium uppercase tracking-wider shrink-0 mr-1">Source</span>
+                  {Object.entries(SOURCE_LABELS).map(([key, label]) => (
+                    <Link
+                      key={key}
+                      href={buildBenefitsUrl({ cats: selectedSubcategories, sources: toggleSubcat(selectedSources, key), state, zip, q, sort })}
+                      className={`shrink-0 px-2.5 py-1 rounded-lg text-xs font-medium whitespace-nowrap transition-colors ${
+                        selectedSources.has(key)
+                          ? "bg-emerald-600 text-white"
+                          : "bg-white border border-amber-200 text-slate-600 hover:bg-amber-50"
+                      }`}
+                    >
+                      {label}
+                    </Link>
+                  ))}
+                  {hasActiveFilters && (
+                    <Link href="/benefits" className="text-xs text-blue-600 hover:underline whitespace-nowrap ml-1">
+                      Clear all
+                    </Link>
+                  )}
+                </div>
+              </div>
+
+              {/* Vertical list */}
+              {benefits.length === 0 ? (
+                <div className="py-20 text-center">
+                  <p className="text-slate-500">No benefits found. <Link href="/benefits" className="text-blue-600 hover:underline">Clear filters</Link></p>
+                </div>
+              ) : (
+                <div className="flex flex-col gap-3">
+                  {benefits.map(benefit => (
+                    <BenefitRow key={benefit.id} benefit={benefit} />
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      </main>
     </div>
   )
 }
