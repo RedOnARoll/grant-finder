@@ -60,11 +60,14 @@ export function listenForAuthConfirmation(onConfirm: (payload: AuthConfirmationP
     confirmOnce(payload)
   }
 
-  window.addEventListener("storage", handleStorage)
-  window.addEventListener("focus", () => confirmOnce(readLatestAuthConfirmation()))
-  document.addEventListener("visibilitychange", () => {
+  const handleFocus = () => confirmOnce(readLatestAuthConfirmation())
+  const handleVisibilityChange = () => {
     if (!document.hidden) confirmOnce(readLatestAuthConfirmation())
-  })
+  }
+
+  window.addEventListener("storage", handleStorage)
+  window.addEventListener("focus", handleFocus)
+  document.addEventListener("visibilitychange", handleVisibilityChange)
 
   const initialTimer = window.setTimeout(() => confirmOnce(readLatestAuthConfirmation()), 0)
 
@@ -78,6 +81,8 @@ export function listenForAuthConfirmation(onConfirm: (payload: AuthConfirmationP
 
   return () => {
     window.removeEventListener("storage", handleStorage)
+    window.removeEventListener("focus", handleFocus)
+    document.removeEventListener("visibilitychange", handleVisibilityChange)
     window.clearTimeout(initialTimer)
     channel?.close()
   }
