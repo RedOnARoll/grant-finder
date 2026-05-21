@@ -1,18 +1,20 @@
 "use client"
 
-import { FormEvent, useMemo, useState } from "react"
+import { FormEvent, useEffect, useMemo, useState } from "react"
 import { useRouter } from "next/navigation"
 import { getProfile, migrateAccountMetadata } from "@/lib/account-db"
 import { sanitizeNextPath } from "@/lib/auth"
+import { listenForAuthConfirmation } from "@/lib/auth-confirmation"
 import { profileCompletion, type UserProfile } from "@/lib/profile"
 import { getBrowserSupabase } from "@/lib/supabase-browser"
 
 type AuthMode = "login" | "signup"
 type OAuthProvider = "google" | "azure"
 
-function getRedirectUrl(next: string) {
+function getRedirectUrl(next: string, confirmed = false) {
   const url = new URL("/auth/callback", window.location.origin)
   url.searchParams.set("next", next)
+  if (confirmed) url.searchParams.set("confirmed", "1")
   return url.toString()
 }
 
@@ -35,6 +37,13 @@ export default function AuthForm({
 
   const safeNext = sanitizeNextPath(next)
   const targetAfterAuth = mode === "signup" && safeNext === "/account" ? "/account/profile" : safeNext
+
+  useEffect(() => {
+    return listenForAuthConfirmation(({ target }) => {
+      router.replace(sanitizeNextPath(target, "/"))
+      router.refresh()
+    })
+  }, [router])
 
   async function targetForUser(userId: string | undefined, userProfile?: Partial<UserProfile>) {
     let profile = userProfile
@@ -87,7 +96,7 @@ export default function AuthForm({
             password,
             options: {
               data: { full_name: fullName.trim() },
-              emailRedirectTo: getRedirectUrl(targetAfterAuth),
+              emailRedirectTo: getRedirectUrl("/", true),
             },
           })
         : await supabase.auth.signInWithPassword({
@@ -103,7 +112,7 @@ export default function AuthForm({
     }
 
     if (mode === "signup" && !result.data.session) {
-      setMessage("Check your email to confirm your account, then come back to sign in.")
+      setMessage("Check your email to confirm your account. Once confirmed, this tab will open the main page automatically.")
       return
     }
 

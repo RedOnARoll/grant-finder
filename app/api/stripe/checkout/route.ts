@@ -38,11 +38,17 @@ export async function POST(request: Request) {
       monthly:  process.env.STRIPE_PRICE_ID_MONTHLY!,
       annual:   process.env.STRIPE_PRICE_ID_ANNUAL!,
     }
-    const { tier } = await request.json() as { tier?: string }
+    const { tier, returnTo } = await request.json() as { tier?: string; returnTo?: string }
     if (!tier || !(tier in TIER_MAP)) {
       return NextResponse.json({ error: "Invalid tier" }, { status: 400 })
     }
     const priceId = TIER_MAP[tier as Tier]
+
+    // Validate returnTo: must be a relative path, no open-redirect risk
+    const safeReturnTo =
+      typeof returnTo === "string" && returnTo.startsWith("/") && !returnTo.startsWith("//")
+        ? returnTo
+        : ""
 
     const supabase = serviceClient()
 
@@ -60,7 +66,7 @@ export async function POST(request: Request) {
     const sessionParams: Parameters<typeof stripe.checkout.sessions.create>[0] = {
       mode,
       line_items: [{ price: priceId, quantity: 1 }],
-      success_url: `${BASE_URL}/account?upgrade=success`,
+      success_url: `${BASE_URL}/account?upgrade=success${safeReturnTo ? `&next=${encodeURIComponent(safeReturnTo)}` : ""}`,
       cancel_url: `${BASE_URL}/pricing?cancelled=true`,
       metadata: { userId: user.id },
       allow_promotion_codes: true,

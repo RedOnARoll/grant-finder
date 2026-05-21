@@ -12,12 +12,19 @@ export default function UpgradeBanner() {
   useEffect(() => {
     if (searchParams.get("upgrade") === "success") {
       setVisible(true)
-      // Remove query param from URL without triggering navigation
+
       const url = new URL(window.location.href)
+      const returnPath = url.searchParams.get("next")
       url.searchParams.delete("upgrade")
+      url.searchParams.delete("next")
       window.history.replaceState({}, "", url.toString())
 
-      const timer = setTimeout(() => setVisible(false), 5000)
+      const timer = setTimeout(() => {
+        setVisible(false)
+        if (returnPath && returnPath.startsWith("/") && !returnPath.startsWith("//")) {
+          router.push(returnPath)
+        }
+      }, 3000)
       return () => clearTimeout(timer)
     }
   }, [searchParams, router])

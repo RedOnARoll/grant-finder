@@ -1,5 +1,5 @@
 import Link from "next/link"
-import { Search, Sparkles } from "lucide-react"
+import { Sparkles } from "lucide-react"
 import { getGrants } from "@/lib/supabase"
 import type { Grant } from "@/lib/types"
 import SortSelect from "@/components/SortSelect"
@@ -9,6 +9,7 @@ import ProgramGrid from "@/components/ProgramGrid"
 import { Badge, StatusBadge } from "@/components/ui/Badge"
 import { EmptyStateIllustration } from "@/components/illustrations/GeoShapes"
 import EligibleGrantsFilter from "@/components/EligibleGrantsFilter"
+import SmartSearchBar from "@/components/SmartSearchBar"
 
 export const dynamic = "force-dynamic"
 
@@ -117,19 +118,27 @@ function toggleCat(selected: Set<string>, cat: string): Set<string> {
 export default async function GrantsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ category?: string; q?: string; sort?: string; eligible?: string }>
+  searchParams: Promise<{ category?: string; q?: string; smart_q?: string; hint?: string; sort?: string; eligible?: string }>
 }) {
-  const { category, q, sort, eligible } = await searchParams
+  const { category, q, smart_q, hint, sort, eligible } = await searchParams
   const isEligibleMode = eligible === "1"
   const selectedCategories = new Set((category ?? "").split(",").filter(Boolean))
   const allGrants = await getGrants()
   const categories = Object.keys(CATEGORY_LABELS)
 
+  // Smart search: use expanded keywords from Claude (pipe-separated) or fall back to literal query
+  const searchTerms = smart_q
+    ? smart_q.split("|").map((k) => k.trim()).filter(Boolean)
+    : q
+    ? [q]
+    : []
+
   const filtered = allGrants.filter((g) => {
     if (selectedCategories.size > 0 && !selectedCategories.has(g.category)) return false
-    if (q && !g.name.toLowerCase().includes(q.toLowerCase()) &&
-        !g.description.toLowerCase().includes(q.toLowerCase()) &&
-        !g.agency.toLowerCase().includes(q.toLowerCase())) return false
+    if (searchTerms.length > 0) {
+      const haystack = `${g.name} ${g.description} ${g.agency}`.toLowerCase()
+      if (!searchTerms.some((term) => haystack.includes(term.toLowerCase()))) return false
+    }
     return true
   })
 
@@ -141,20 +150,23 @@ export default async function GrantsPage({
 
       <main className="flex-1 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 w-full">
         {/* Page header */}
-        <div className="flex items-start justify-between gap-4 mb-8">
+        <div className="flex items-start justify-between gap-4 mb-6">
           <div>
             <h1 className="text-2xl font-bold text-slate-900">Grants</h1>
             <p className="text-sm text-slate-600 mt-1">
-              {allGrants.length} grants available — filter or search to narrow results.
+              {allGrants.length} grants available — describe what you need and AI will find the best matches.
             </p>
           </div>
           <Link
             href="/quiz"
-            className="rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm text-slate-700 hover:bg-slate-50 transition-colors whitespace-nowrap"
+            className="hidden sm:block rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm text-slate-700 hover:bg-slate-50 transition-colors whitespace-nowrap"
           >
             Find my match →
           </Link>
         </div>
+
+        {/* Smart search bar — full width at top */}
+        <SmartSearchBar type="grants" initialQuery={q ?? ""} initialHint={hint ?? ""} />
 
         {/* Mobile: horizontal scrollable category chips */}
         <div className="lg:hidden mb-6 overflow-x-auto">
@@ -210,22 +222,6 @@ export default async function GrantsPage({
           <aside className="hidden lg:block w-64 shrink-0">
             <div className="bg-white rounded-xl border border-slate-200 p-4 sticky top-20">
               <h2 className="text-sm font-semibold text-slate-900 mb-4">Filters</h2>
-
-              {/* Search input */}
-              <form className="mb-5">
-                <div className="relative">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-                  <input
-                    type="text"
-                    name="q"
-                    defaultValue={q ?? ""}
-                    placeholder="Search grants..."
-                    className="w-full pl-9 pr-3 py-2 rounded-lg border border-slate-200 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20"
-                  />
-                  {selectedCategories.size > 0 && <input type="hidden" name="category" value={Array.from(selectedCategories).join(",")} />}
-                  {sort && <input type="hidden" name="sort" value={sort} />}
-                </div>
-              </form>
 
               {/* Eligible for me */}
               <div className="mb-5">

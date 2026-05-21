@@ -166,13 +166,15 @@ export default function PaywallModal({
       const { data: { session } } = await getBrowserSupabase().auth.getSession()
       const token = session?.access_token ?? ""
 
+      const returnTo = typeof window !== "undefined" ? window.location.pathname : "/account"
+
       const res = await fetch("/api/stripe/checkout", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify({ tier }),
+        body: JSON.stringify({ tier, returnTo }),
       })
 
       const json = await res.json() as { url?: string; error?: string }

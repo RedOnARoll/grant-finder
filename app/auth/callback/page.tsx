@@ -4,6 +4,7 @@ import { Suspense, useEffect, useMemo, useState } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import { getProfile, migrateAccountMetadata } from "@/lib/account-db"
 import { sanitizeNextPath } from "@/lib/auth"
+import { broadcastAuthConfirmation } from "@/lib/auth-confirmation"
 import { profileCompletion, type UserProfile } from "@/lib/profile"
 import { getBrowserSupabase } from "@/lib/supabase-browser"
 
@@ -12,12 +13,14 @@ function AuthCallback() {
   const searchParams = useSearchParams()
   const supabase = useMemo(() => getBrowserSupabase(), [])
   const [error, setError] = useState<string | null>(null)
+  const [confirmed, setConfirmed] = useState(false)
 
   useEffect(() => {
     async function finishSignIn() {
       const next = searchParams.get("next")
       const safeNext = sanitizeNextPath(next)
       const code = searchParams.get("code")
+      const isEmailConfirmation = searchParams.get("confirmed") === "1"
 
       if (code) {
         const { error: exchangeError } = await supabase.auth.exchangeCodeForSession(code)
@@ -47,6 +50,12 @@ function AuthCallback() {
         ? "/account/profile"
         : safeNext
 
+      if (isEmailConfirmation) {
+        broadcastAuthConfirmation("/")
+        setConfirmed(true)
+        return
+      }
+
       router.replace(target)
       router.refresh()
     }
@@ -58,11 +67,16 @@ function AuthCallback() {
     <main className="flex min-h-screen items-center justify-center bg-zinc-50 px-6">
       <div className="w-full max-w-md rounded-xl border border-zinc-200 bg-white p-6 text-center shadow-sm">
         <h1 className="mb-2 text-xl font-semibold text-zinc-900">
-          {error ? "Sign-in needs another try" : "Finishing sign-in..."}
+          {error ? "Sign-in needs another try" : confirmed ? "Authorization confirmed" : "Finishing sign-in..."}
         </h1>
         <p className="text-sm text-zinc-500">
-          {error ?? "You will be redirected in a moment."}
+          {error ?? (confirmed ? "You are now logged in. You can close this tab." : "You will be redirected in a moment.")}
         </p>
+        {confirmed && (
+          <p className="mt-4 text-xs text-zinc-400">
+            Your original GrantWay tab will open the main page automatically.
+          </p>
+        )}
       </div>
     </main>
   )

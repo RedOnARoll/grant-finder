@@ -2,7 +2,10 @@
 
 import { useEffect, useMemo, useState } from "react"
 import Link from "next/link"
+import { usePathname, useRouter } from "next/navigation"
 import type { User } from "@supabase/supabase-js"
+import { sanitizeNextPath } from "@/lib/auth"
+import { listenForAuthConfirmation } from "@/lib/auth-confirmation"
 import { getBrowserSupabase } from "@/lib/supabase-browser"
 
 type ProfileData = {
@@ -13,6 +16,8 @@ type ProfileData = {
 
 export default function AuthMenu() {
   const supabase = useMemo(() => getBrowserSupabase(), [])
+  const pathname = usePathname()
+  const router = useRouter()
   const [user, setUser] = useState<User | null>(null)
   const [profile, setProfile] = useState<ProfileData>(null)
   const [loaded, setLoaded] = useState(false)
@@ -45,11 +50,17 @@ export default function AuthMenu() {
       setLoaded(true)
     })
 
+    const stopAuthConfirmationListener = listenForAuthConfirmation(({ target }) => {
+      router.replace(sanitizeNextPath(target, "/"))
+      router.refresh()
+    })
+
     return () => {
       mounted = false
       listener.subscription.unsubscribe()
+      stopAuthConfirmationListener()
     }
-  }, [supabase])
+  }, [router, supabase])
 
   async function signOut() {
     await supabase.auth.signOut()
@@ -62,16 +73,17 @@ export default function AuthMenu() {
   }
 
   if (!user) {
+    const next = pathname && pathname !== "/auth" ? `?next=${encodeURIComponent(pathname)}` : ""
     return (
       <div className="flex items-center gap-2">
         <Link
-          href="/auth"
+          href={`/auth${next}`}
           className="rounded-lg border border-slate-200 px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-50 transition-colors"
         >
           Sign In
         </Link>
         <Link
-          href="/auth"
+          href={`/auth${next}`}
           className="rounded-lg bg-blue-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-blue-700 transition-colors"
         >
           Get Started

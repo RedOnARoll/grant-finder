@@ -1,5 +1,5 @@
 import Link from "next/link"
-import { Search, Sparkles } from "lucide-react"
+import { Sparkles } from "lucide-react"
 import { getBenefits } from "@/lib/supabase"
 import type { Grant } from "@/lib/types"
 import SiteNav from "@/components/SiteNav"
@@ -8,6 +8,7 @@ import ProgramGrid from "@/components/ProgramGrid"
 import { Badge, StatusBadge } from "@/components/ui/Badge"
 import { EmptyStateIllustration } from "@/components/illustrations/GeoShapes"
 import EligibleBenefits from "@/components/EligibleBenefits"
+import SmartSearchBar from "@/components/SmartSearchBar"
 
 type BenefitSort = "name_asc" | "subcategory_asc" | "amount_desc"
 
@@ -118,18 +119,26 @@ function toggleSubcat(selected: Set<string>, cat: string): Set<string> {
 export default async function BenefitsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ subcategory?: string; q?: string; sort?: string; eligible?: string }>
+  searchParams: Promise<{ subcategory?: string; q?: string; smart_q?: string; hint?: string; sort?: string; eligible?: string }>
 }) {
-  const { subcategory, q, sort, eligible } = await searchParams
+  const { subcategory, q, smart_q, hint, sort, eligible } = await searchParams
   const isEligibleMode = eligible === "1"
   const selectedSubcategories = new Set((subcategory ?? "").split(",").filter(Boolean))
   const allBenefits = await getBenefits()
 
+  // Smart search: use expanded keywords from Claude (pipe-separated) or fall back to literal query
+  const searchTerms = smart_q
+    ? smart_q.split("|").map((k) => k.trim()).filter(Boolean)
+    : q
+    ? [q]
+    : []
+
   const filtered = allBenefits.filter((b) => {
     if (selectedSubcategories.size > 0 && !selectedSubcategories.has(b.subcategory ?? "")) return false
-    if (q && !b.name.toLowerCase().includes(q.toLowerCase()) &&
-        !b.description.toLowerCase().includes(q.toLowerCase()) &&
-        !b.agency.toLowerCase().includes(q.toLowerCase())) return false
+    if (searchTerms.length > 0) {
+      const haystack = `${b.name} ${b.description} ${b.agency} ${b.subcategory ?? ""}`.toLowerCase()
+      if (!searchTerms.some((term) => haystack.includes(term.toLowerCase()))) return false
+    }
     return true
   })
 
@@ -141,7 +150,7 @@ export default async function BenefitsPage({
 
       <main className="flex-1 max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-10">
         {/* Page header */}
-        <div className="mb-8">
+        <div className="mb-6">
           <h1 className="text-3xl font-bold text-slate-900 mb-2">Benefits</h1>
           <p className="text-slate-600">
             Government assistance programs — housing, food, healthcare, and more.{" "}
@@ -149,29 +158,12 @@ export default async function BenefitsPage({
           </p>
         </div>
 
+        {/* Smart search bar — full width at top */}
+        <SmartSearchBar type="benefits" initialQuery={q ?? ""} initialHint={hint ?? ""} />
+
         <div className="flex gap-8 items-start">
           {/* Sidebar */}
           <aside className="hidden lg:flex flex-col gap-6 w-64 shrink-0">
-            {/* Search */}
-            <form>
-              <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wide mb-2">
-                Search
-              </label>
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
-                <input
-                  type="text"
-                  name="q"
-                  defaultValue={q ?? ""}
-                  placeholder="Search benefits…"
-                  className="w-full h-10 pl-9 pr-4 rounded-lg border border-slate-200 bg-white text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-600"
-                />
-                {selectedSubcategories.size > 0 && <input type="hidden" name="subcategory" value={Array.from(selectedSubcategories).join(",")} />}
-                {sort && <input type="hidden" name="sort" value={sort} />}
-              </div>
-              <button type="submit" className="sr-only">Search</button>
-            </form>
-
             {/* Eligible for me */}
             <div className="mb-2">
               <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-2">Personalized</p>
@@ -268,22 +260,6 @@ export default async function BenefitsPage({
             <>
             {/* Mobile: horizontal chip row */}
             <div className="lg:hidden mb-4">
-              {/* Mobile search */}
-              <form className="mb-3">
-                <div className="relative">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
-                  <input
-                    type="text"
-                    name="q"
-                    defaultValue={q ?? ""}
-                    placeholder="Search benefits…"
-                    className="w-full h-10 pl-9 pr-4 rounded-lg border border-slate-200 bg-white text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-600"
-                  />
-                  {selectedSubcategories.size > 0 && <input type="hidden" name="subcategory" value={Array.from(selectedSubcategories).join(",")} />}
-                  {sort && <input type="hidden" name="sort" value={sort} />}
-                </div>
-                <button type="submit" className="sr-only">Search</button>
-              </form>
               {/* Mobile subcategory chips */}
               <div className="flex gap-2 overflow-x-auto pb-1 -mx-4 px-4 scrollbar-none">
                 <Link
