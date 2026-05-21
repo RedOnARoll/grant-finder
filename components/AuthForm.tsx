@@ -54,7 +54,10 @@ export default function AuthForm({
       }, 250)
     }
 
-    const stopListening = listenForAuthConfirmation(({ target }) => openConfirmedTarget(target))
+    const stopListening = listenForAuthConfirmation(
+      ({ target }) => openConfirmedTarget(target),
+      { replayLatest: true }
+    )
 
     const poll = window.setInterval(() => {
       const payload = readLatestAuthConfirmation()
