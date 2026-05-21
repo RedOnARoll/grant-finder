@@ -46,8 +46,8 @@ export default function ZipHeroInput() {
   }
 
   return (
-    <form onSubmit={handleSubmit} className="w-full max-w-lg mx-auto">
-      <div className="flex gap-3">
+    <form onSubmit={handleSubmit} className="w-full max-w-lg">
+      <div className="flex flex-col sm:flex-row gap-3">
         <div className="relative flex-1">
           <MapPin className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400 pointer-events-none" />
           <input
@@ -61,14 +61,14 @@ export default function ZipHeroInput() {
             className={`w-full h-14 pl-12 pr-4 rounded-xl border-2 text-lg text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-0 transition-all bg-white ${
               error
                 ? "border-rose-400 focus:border-rose-500"
-                : "border-slate-200 focus:border-blue-500"
+                : "border-transparent focus:border-blue-400"
             }`}
           />
         </div>
         <button
           type="submit"
           disabled={loading || zip.length !== 5}
-          className="h-14 px-6 rounded-xl bg-blue-600 text-white font-semibold text-base hover:bg-blue-700 active:bg-blue-800 transition-colors disabled:opacity-50 flex items-center gap-2 whitespace-nowrap shrink-0"
+          className="h-14 px-6 rounded-xl bg-blue-500 text-white font-semibold text-base hover:bg-blue-400 active:bg-blue-600 transition-colors disabled:opacity-40 flex items-center justify-center gap-2 whitespace-nowrap shrink-0"
         >
           {loading ? (
             <Loader2 className="w-5 h-5 animate-spin" />
@@ -81,7 +81,7 @@ export default function ZipHeroInput() {
         </button>
       </div>
       {error && (
-        <p className="mt-2 text-sm text-rose-500 pl-1">{error}</p>
+        <p className="mt-2 text-sm text-rose-300 pl-1">{error}</p>
       )}
     </form>
   )

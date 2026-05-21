@@ -68,7 +68,7 @@ export default async function HomePage() {
 
         {/* ── HERO ─────────────────────────────────────────────────── */}
         <section className="bg-slate-900">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20 lg:py-28">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 lg:py-24">
             <div className="flex flex-col lg:flex-row items-center gap-12">
 
               {/* Left — text */}
@@ -76,28 +76,27 @@ export default async function HomePage() {
                 <div className="mb-5">
                   <Badge variant="amber">Free Grant &amp; Benefits Matching</Badge>
                 </div>
-                <h1 className="text-4xl sm:text-5xl font-bold text-white leading-tight mb-5">
+                <h1 className="text-4xl sm:text-5xl font-bold text-white leading-tight mb-4">
                   Find grants and benefits<br className="hidden sm:block" /> you qualify for
                 </h1>
-                <p className="text-lg text-slate-300 mb-8 max-w-xl">
+                <p className="text-lg text-slate-300 mb-6 max-w-xl">
                   Browse competitive grants for businesses and researchers, or explore
                   government assistance programs for housing, food, healthcare, and more.
                 </p>
 
-                {/* CTA buttons */}
-                <div className="flex flex-wrap gap-3 mb-8">
+                {/* ZIP input — primary CTA */}
+                <div className="mb-5">
+                  <ZipHeroInput />
+                </div>
+
+                {/* Secondary links */}
+                <div className="flex flex-wrap gap-3 mb-6">
                   <Link
                     href="/programs"
-                    className="inline-flex items-center gap-2 bg-blue-600 text-white text-sm font-medium rounded-lg px-5 py-2.5 hover:bg-blue-700 transition-colors"
+                    className="inline-flex items-center gap-2 border border-slate-600 text-white text-sm font-medium rounded-lg px-5 py-2.5 hover:border-white transition-colors"
                   >
                     Browse All Programs
                     <ArrowRight className="w-4 h-4" />
-                  </Link>
-                  <Link
-                    href="/grants"
-                    className="inline-flex items-center gap-2 border border-slate-600 text-white text-sm font-medium rounded-lg px-5 py-2.5 hover:border-white transition-colors"
-                  >
-                    Grants Only
                   </Link>
                   <Link
                     href="/quiz"
@@ -147,22 +146,6 @@ export default async function HomePage() {
                 <p className="text-sm text-slate-500 mt-0.5">Average Quiz Time</p>
               </div>
             </div>
-          </div>
-        </section>
-
-        {/* ── ZIP HERO ─────────────────────────────────────────────── */}
-        <section className="bg-blue-600 py-14">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-            <div className="inline-flex items-center gap-2 bg-blue-500 text-blue-100 text-xs font-semibold uppercase tracking-wider px-3 py-1.5 rounded-full mb-5">
-              📍 Location-based matching
-            </div>
-            <h2 className="text-3xl sm:text-4xl font-bold text-white mb-3">
-              Find programs available in your area
-            </h2>
-            <p className="text-blue-200 text-lg mb-8 max-w-xl mx-auto">
-              Enter your ZIP code to instantly see federal, state, and local grants & benefits near you.
-            </p>
-            <ZipHeroInput />
           </div>
         </section>
 
