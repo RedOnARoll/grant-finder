@@ -134,6 +134,15 @@ function toggleCat(selected: Set<string>, cat: string): Set<string> {
   return next
 }
 
+const chipBase = "shrink-0 px-3 py-1.5 rounded-lg text-sm font-medium whitespace-nowrap transition-colors"
+const chipActive = "bg-blue-600 text-white"
+const chipInactive = "bg-white border border-slate-200 text-slate-600 hover:bg-slate-50"
+const chipSourceActive = "bg-indigo-600 text-white"
+
+function Divider() {
+  return <span className="shrink-0 w-px h-5 bg-slate-200 mx-0.5" />
+}
+
 export default async function GrantsPage({
   searchParams,
 }: {
@@ -169,6 +178,7 @@ export default async function GrantsPage({
   })
 
   const grants = sortGrants(filtered, sort as GrantSort | undefined)
+  const hasActiveFilters = selectedCategories.size > 0 || selectedSources.size > 0 || !!state || !!q
 
   return (
     <div className="flex flex-col min-h-full bg-slate-50">
@@ -191,43 +201,49 @@ export default async function GrantsPage({
           </Link>
         </div>
 
-        {/* Smart search bar — full width at top */}
+        {/* Smart search bar */}
         <SmartSearchBar type="grants" initialQuery={q ?? ""} initialHint={hint ?? ""} />
 
-        {/* Mobile: horizontal scrollable filter chips */}
-        <div className="lg:hidden mb-6 overflow-x-auto">
-          <div className="flex gap-2 pb-1 min-w-max">
+        {/* ── Horizontal filter bar ────────────────────────────────────────── */}
+        <div className="mb-6 overflow-x-auto -mx-4 sm:mx-0">
+          <div className="flex items-center gap-1.5 px-4 sm:px-0 pb-1 min-w-max">
+
+            {/* ZIP (compact) */}
+            <ZipFilter basePath="/grants" initialState={state} initialZip={zip} compact />
+
+            <Divider />
+
+            {/* Eligible for me */}
             <Link
-              href={isEligibleMode ? `/grants${q ? `?q=${q}` : ""}` : `/grants?eligible=1`}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium whitespace-nowrap transition-colors ${
-                isEligibleMode ? "bg-blue-600 text-white" : "bg-slate-100 text-slate-600 hover:bg-slate-200"
-              }`}
+              href={isEligibleMode
+                ? buildGrantsUrl({ cats: selectedCategories, sources: selectedSources, state, zip, q, sort })
+                : buildGrantsUrl({ cats: selectedCategories, sources: selectedSources, state, zip, q, sort, eligible: "1" })
+              }
+              className={`${chipBase} flex items-center gap-1.5 ${isEligibleMode ? chipActive : chipInactive}`}
             >
               <Sparkles className="w-3 h-3" />
               Eligible for me
             </Link>
-            {/* Source chips */}
+
+            <Divider />
+
+            {/* Funding Source chips */}
             {Object.entries(SOURCE_LABELS).map(([key, label]) => (
               <Link
                 key={key}
                 href={buildGrantsUrl({ cats: selectedCategories, sources: toggleCat(selectedSources, key), state, zip, q, sort })}
-                className={`px-3 py-1.5 rounded-lg text-sm font-medium whitespace-nowrap transition-colors ${
-                  selectedSources.has(key)
-                    ? "bg-indigo-600 text-white"
-                    : "bg-slate-100 text-slate-600 hover:bg-slate-200"
-                }`}
+                className={`${chipBase} ${selectedSources.has(key) ? chipSourceActive : chipInactive}`}
               >
                 {label}
               </Link>
             ))}
+
+            <Divider />
+
             {/* Category chips */}
             <Link
               href={buildGrantsUrl({ sources: selectedSources, state, zip, q, sort })}
-              className={`px-3 py-1.5 rounded-lg text-sm font-medium whitespace-nowrap transition-colors ${
-                selectedCategories.size === 0
-                  ? "bg-blue-600 text-white"
-                  : "bg-slate-100 text-slate-600 hover:bg-slate-200"
-              }`}
+              className={`${chipBase} ${selectedCategories.size === 0 ? chipActive : chipInactive}`}
             >
               All
             </Link>
@@ -235,150 +251,60 @@ export default async function GrantsPage({
               <Link
                 key={cat}
                 href={buildGrantsUrl({ cats: toggleCat(selectedCategories, cat), sources: selectedSources, state, zip, q, sort })}
-                className={`px-3 py-1.5 rounded-lg text-sm font-medium whitespace-nowrap transition-colors ${
-                  selectedCategories.has(cat)
-                    ? "bg-blue-600 text-white"
-                    : "bg-slate-100 text-slate-600 hover:bg-slate-200"
-                }`}
+                className={`${chipBase} ${selectedCategories.has(cat) ? chipActive : chipInactive}`}
               >
                 {CATEGORY_LABELS[cat] ?? cat.replace("_", " ")}
               </Link>
             ))}
-            {(selectedCategories.size > 0 || selectedSources.size > 0 || q) && (
+
+            <Divider />
+
+            {/* Sort */}
+            <SortSelect
+              value={sort ?? ""}
+              options={(Object.entries(SORT_LABELS) as [GrantSort, string][]).map(([val, label]) => ({ value: val, label }))}
+            />
+
+            {/* Clear all */}
+            {hasActiveFilters && (
               <Link
-                href={buildGrantsUrl({ state, zip, sort })}
-                className="px-3 py-1.5 rounded-lg text-sm text-blue-600 hover:underline whitespace-nowrap"
+                href={buildGrantsUrl({ sort })}
+                className="shrink-0 px-3 py-1.5 text-sm text-blue-600 hover:underline whitespace-nowrap"
               >
-                Clear
+                Clear all
               </Link>
             )}
           </div>
         </div>
 
-        <div className="flex gap-8">
-          {/* Sidebar — desktop only */}
-          <aside className="hidden lg:block w-64 shrink-0">
-            <div className="bg-white rounded-xl border border-slate-200 p-4 sticky top-20 space-y-5">
-              <h2 className="text-sm font-semibold text-slate-900">Filters</h2>
+        {/* Results */}
+        {isEligibleMode ? (
+          <EligibleGrantsFilter returnPath="/grants?eligible=1" />
+        ) : (
+          <>
+            {/* Count */}
+            <p className="text-sm text-slate-500 mb-5">
+              <span className="font-medium text-slate-900">{grants.length}</span>{" "}
+              {grants.length === 1 ? "grant" : "grants"}
+              {state && <span className="text-slate-400"> · filtered by state</span>}
+            </p>
 
-              {/* ZIP / Location */}
-              <ZipFilter basePath="/grants" initialState={state} initialZip={zip} />
-
-              {/* Eligible for me */}
-              <div className="mb-5">
-                <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-2">Personalized</p>
-                <Link
-                  href={isEligibleMode ? `/grants${q ? `?q=${q}` : ""}${sort ? `${q ? "&" : "?"}sort=${sort}` : ""}` : `/grants?eligible=1`}
-                  className={`flex items-center gap-2 w-full px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
-                    isEligibleMode
-                      ? "bg-blue-600 text-white"
-                      : "bg-slate-100 text-slate-600 hover:bg-slate-200"
-                  }`}
-                >
-                  <Sparkles className="w-3.5 h-3.5 shrink-0" />
-                  Eligible for me
-                </Link>
+            {/* Empty state */}
+            {grants.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-20 text-center">
+                <EmptyStateIllustration className="w-24 h-20 mb-4" />
+                <p className="text-base font-medium text-slate-900 mb-1">No grants found</p>
+                <p className="text-sm text-slate-500">Try adjusting your search or filters.</p>
               </div>
-
-              {/* Funding Source */}
-              <div className="mb-5">
-                <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-2">Funding Source</p>
-                <div className="flex flex-col gap-1">
-                  {Object.entries(SOURCE_LABELS).map(([key, label]) => (
-                    <Link
-                      key={key}
-                      href={buildGrantsUrl({ cats: selectedCategories, sources: toggleCat(selectedSources, key), state, zip, q, sort })}
-                      className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
-                        selectedSources.has(key)
-                          ? "bg-blue-600 text-white"
-                          : "bg-slate-100 text-slate-600 hover:bg-slate-200"
-                      }`}
-                    >
-                      {label}
-                    </Link>
-                  ))}
-                </div>
-              </div>
-
-              {/* Category */}
-              <div>
-                <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-2">Category</p>
-                <div className="flex flex-col gap-1">
-                  <Link
-                    href={buildGrantsUrl({ sources: selectedSources, state, zip, q, sort })}
-                    className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
-                      selectedCategories.size === 0
-                        ? "bg-blue-600 text-white"
-                        : "bg-slate-100 text-slate-600 hover:bg-slate-200"
-                    }`}
-                  >
-                    All
-                  </Link>
-                  {categories.map((cat) => (
-                    <Link
-                      key={cat}
-                      href={buildGrantsUrl({ cats: toggleCat(selectedCategories, cat), sources: selectedSources, state, zip, q, sort })}
-                      className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
-                        selectedCategories.has(cat)
-                          ? "bg-blue-600 text-white"
-                          : "bg-slate-100 text-slate-600 hover:bg-slate-200"
-                      }`}
-                    >
-                      {CATEGORY_LABELS[cat] ?? cat.replace("_", " ")}
-                    </Link>
-                  ))}
-                </div>
-              </div>
-
-              {/* Clear filters */}
-              {(selectedCategories.size > 0 || selectedSources.size > 0 || q) && (
-                <div className="mt-4 pt-4 border-t border-slate-100">
-                  <Link
-                    href={buildGrantsUrl({ state, zip, sort })}
-                    className="text-sm text-blue-600 hover:underline"
-                  >
-                    Clear Filters
-                  </Link>
-                </div>
-              )}
-            </div>
-          </aside>
-
-          {/* Main content */}
-          <div className="flex-1 min-w-0">
-            {isEligibleMode ? (
-              <EligibleGrantsFilter returnPath="/grants?eligible=1" />
             ) : (
-              <>
-                {/* Top row: count + sort */}
-                <div className="flex items-center justify-between gap-4 mb-5">
-                  <p className="text-sm text-slate-500">
-                    {grants.length} {grants.length === 1 ? "grant" : "grants"}
-                  </p>
-                  <SortSelect
-                    value={sort ?? ""}
-                    options={(Object.entries(SORT_LABELS) as [GrantSort, string][]).map(([val, label]) => ({ value: val, label }))}
-                  />
-                </div>
-
-                {/* Empty state */}
-                {grants.length === 0 ? (
-                  <div className="flex flex-col items-center justify-center py-20 text-center">
-                    <EmptyStateIllustration className="w-24 h-20 mb-4" />
-                    <p className="text-base font-medium text-slate-900 mb-1">No grants found</p>
-                    <p className="text-sm text-slate-500">Try adjusting your search or filters.</p>
-                  </div>
-                ) : (
-                  <ProgramGrid itemLabel="grants">
-                    {grants.map((grant) => (
-                      <GrantCard key={grant.id} grant={grant} />
-                    ))}
-                  </ProgramGrid>
-                )}
-              </>
+              <ProgramGrid itemLabel="grants">
+                {grants.map((grant) => (
+                  <GrantCard key={grant.id} grant={grant} />
+                ))}
+              </ProgramGrid>
             )}
-          </div>
-        </div>
+          </>
+        )}
       </main>
 
       <footer className="border-t border-slate-200 py-6 text-center text-xs text-slate-400">

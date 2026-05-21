@@ -26,9 +26,11 @@ type Props = {
   initialState?: string
   /** ZIP already active (from ?zip= URL param) */
   initialZip?: string
+  /** Compact inline mode for filter bars — hides label, constrains width */
+  compact?: boolean
 }
 
-export default function ZipFilter({ basePath, initialState = "", initialZip = "" }: Props) {
+export default function ZipFilter({ basePath, initialState = "", initialZip = "", compact = false }: Props) {
   const router = useRouter()
   const searchParams = useSearchParams()
   const inputRef = useRef<HTMLInputElement>(null)
@@ -89,6 +91,54 @@ export default function ZipFilter({ basePath, initialState = "", initialZip = ""
     inputRef.current?.focus()
   }
 
+  // ── Compact inline mode (for horizontal filter bars) ─────────────────────
+  if (compact) {
+    if (initialState) {
+      return (
+        <button
+          type="button"
+          onClick={handleClear}
+          className="flex items-center gap-1.5 h-8 px-3 rounded-lg bg-blue-100 border border-blue-300 text-blue-800 text-sm font-medium hover:bg-blue-200 transition-colors whitespace-nowrap"
+          aria-label="Clear location filter"
+        >
+          <MapPin className="w-3.5 h-3.5 text-blue-500 shrink-0" />
+          {initialState}
+          {initialZip && <span className="text-blue-500 font-normal">({initialZip})</span>}
+          <X className="w-3 h-3 text-blue-400 ml-0.5" />
+        </button>
+      )
+    }
+
+    return (
+      <form onSubmit={handleSubmit} className="flex items-center gap-1">
+        <div className="relative flex items-center">
+          <MapPin className="absolute left-2.5 w-3.5 h-3.5 text-slate-400 pointer-events-none" />
+          <input
+            ref={inputRef}
+            type="text"
+            inputMode="numeric"
+            maxLength={5}
+            value={zip}
+            onChange={(e) => { setZip(e.target.value.replace(/\D/g, "")); setError("") }}
+            placeholder="ZIP code"
+            title={error || undefined}
+            className={`h-8 w-28 pl-8 pr-2 rounded-lg border text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all ${
+              error ? "border-rose-400 bg-rose-50" : "border-slate-200 bg-white"
+            }`}
+          />
+        </div>
+        <button
+          type="submit"
+          disabled={loading || zip.length !== 5}
+          className="h-8 px-2.5 rounded-lg bg-blue-600 text-white text-xs font-medium disabled:opacity-40 hover:bg-blue-700 transition-colors flex items-center"
+        >
+          {loading ? <Loader2 className="w-3 h-3 animate-spin" /> : "Go"}
+        </button>
+      </form>
+    )
+  }
+
+  // ── Full (sidebar) mode ───────────────────────────────────────────────────
   return (
     <div>
       <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-2">

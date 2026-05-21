@@ -3,6 +3,7 @@ import { Sparkles } from "lucide-react"
 import { getBenefits } from "@/lib/supabase"
 import type { Grant } from "@/lib/types"
 import SiteNav from "@/components/SiteNav"
+import SortSelect from "@/components/SortSelect"
 import SaveInterestButton from "@/components/SaveInterestButton"
 import ProgramGrid from "@/components/ProgramGrid"
 import { Badge, StatusBadge } from "@/components/ui/Badge"
@@ -46,12 +47,12 @@ function formatAmount(amount: number | null) {
 }
 
 const SUBCATEGORY_LABELS: Record<string, string> = {
-  housing:    "Housing Assistance",
+  housing:    "Housing",
   food:       "Food Aid",
-  disability: "Disability Support",
+  disability: "Disability",
   education:  "Education",
   childcare:  "Childcare",
-  energy:     "Energy Assistance",
+  energy:     "Energy",
   health:     "Healthcare",
 }
 
@@ -134,6 +135,15 @@ function toggleSubcat(selected: Set<string>, cat: string): Set<string> {
   return next
 }
 
+const chipBase = "shrink-0 px-3 py-1.5 rounded-lg text-sm font-medium whitespace-nowrap transition-colors"
+const chipActive = "bg-blue-600 text-white"
+const chipInactive = "bg-white border border-slate-200 text-slate-600 hover:bg-slate-50"
+const chipSourceActive = "bg-indigo-600 text-white"
+
+function Divider() {
+  return <span className="shrink-0 w-px h-5 bg-slate-200 mx-0.5" />
+}
+
 export default async function BenefitsPage({
   searchParams,
 }: {
@@ -167,6 +177,7 @@ export default async function BenefitsPage({
   })
 
   const benefits = sortBenefits(filtered, sort as BenefitSort | undefined)
+  const hasActiveFilters = selectedSubcategories.size > 0 || selectedSources.size > 0 || !!state || !!q
 
   return (
     <div className="flex flex-col min-h-full bg-slate-50">
@@ -182,198 +193,93 @@ export default async function BenefitsPage({
           </p>
         </div>
 
-        {/* Smart search bar — full width at top */}
+        {/* Smart search bar */}
         <SmartSearchBar type="benefits" initialQuery={q ?? ""} initialHint={hint ?? ""} />
 
-        <div className="flex gap-8 items-start">
-          {/* Sidebar */}
-          <aside className="hidden lg:flex flex-col gap-6 w-64 shrink-0">
-            {/* ZIP / Location */}
-            <div className="bg-white rounded-xl border border-slate-200 p-4">
-              <ZipFilter basePath="/benefits" initialState={state} initialZip={zip} />
-            </div>
+        {/* ── Horizontal filter bar ────────────────────────────────────────── */}
+        <div className="mb-6 overflow-x-auto -mx-4 sm:mx-0">
+          <div className="flex items-center gap-1.5 px-4 sm:px-0 pb-1 min-w-max">
+
+            {/* ZIP (compact) */}
+            <ZipFilter basePath="/benefits" initialState={state} initialZip={zip} compact />
+
+            <Divider />
 
             {/* Eligible for me */}
-            <div className="mb-2">
-              <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-2">Personalized</p>
+            <Link
+              href={isEligibleMode
+                ? buildBenefitsUrl({ cats: selectedSubcategories, sources: selectedSources, state, zip, q, sort })
+                : buildBenefitsUrl({ cats: selectedSubcategories, sources: selectedSources, state, zip, q, sort, eligible: "1" })
+              }
+              className={`${chipBase} flex items-center gap-1.5 ${isEligibleMode ? chipActive : chipInactive}`}
+            >
+              <Sparkles className="w-3 h-3" />
+              Eligible for me
+            </Link>
+
+            <Divider />
+
+            {/* Funding Source chips */}
+            {Object.entries(SOURCE_LABELS).map(([key, label]) => (
               <Link
-                href={isEligibleMode ? `/benefits${q ? `?q=${q}` : ""}${sort ? `${q ? "&" : "?"}sort=${sort}` : ""}` : `/benefits?eligible=1`}
-                className={`flex items-center gap-2 w-full px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
-                  isEligibleMode
-                    ? "bg-blue-600 text-white"
-                    : "bg-slate-100 text-slate-600 hover:bg-slate-200"
-                }`}
+                key={key}
+                href={buildBenefitsUrl({ cats: selectedSubcategories, sources: toggleSubcat(selectedSources, key), state, zip, q, sort })}
+                className={`${chipBase} ${selectedSources.has(key) ? chipSourceActive : chipInactive}`}
               >
-                <Sparkles className="w-3.5 h-3.5 shrink-0" />
-                Eligible for me
+                {label}
               </Link>
-            </div>
+            ))}
 
-            {/* Funding Source filter */}
-            <div>
-              <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-2">Funding Source</p>
-              <div className="flex flex-col gap-1.5">
-                {Object.entries(SOURCE_LABELS).map(([key, label]) => (
-                  <Link
-                    key={key}
-                    href={buildBenefitsUrl({ cats: selectedSubcategories, sources: toggleSubcat(selectedSources, key), state, zip, q, sort })}
-                    className={`text-sm px-3 py-1.5 rounded-lg font-medium transition-colors ${
-                      selectedSources.has(key)
-                        ? "bg-blue-600 text-white"
-                        : "bg-slate-100 text-slate-600 hover:bg-slate-200"
-                    }`}
-                  >
-                    {label}
-                  </Link>
-                ))}
-              </div>
-            </div>
+            <Divider />
 
-            {/* Benefit Type filter */}
-            <div>
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-xs font-semibold text-slate-500 uppercase tracking-wide">
-                  Benefit Type
-                </span>
-                {selectedSubcategories.size > 0 && (
-                  <Link
-                    href={buildBenefitsUrl({ sources: selectedSources, state, zip, q, sort })}
-                    className="text-xs text-blue-600 hover:text-blue-700"
-                  >
-                    Clear
-                  </Link>
-                )}
-              </div>
-              <div className="flex flex-col gap-1.5">
-                <Link
-                  href={buildBenefitsUrl({ sources: selectedSources, state, zip, q, sort })}
-                  className={`text-sm px-3 py-1.5 rounded-lg font-medium transition-colors ${
-                    selectedSubcategories.size === 0
-                      ? "bg-blue-600 text-white"
-                      : "bg-slate-100 text-slate-600 hover:bg-slate-200"
-                  }`}
-                >
-                  All Types
-                </Link>
-                {Object.entries(SUBCATEGORY_LABELS).map(([key, label]) => (
-                  <Link
-                    key={key}
-                    href={buildBenefitsUrl({ cats: toggleSubcat(selectedSubcategories, key), sources: selectedSources, state, zip, q, sort })}
-                    className={`text-sm px-3 py-1.5 rounded-lg font-medium transition-colors ${
-                      selectedSubcategories.has(key)
-                        ? "bg-blue-600 text-white"
-                        : "bg-slate-100 text-slate-600 hover:bg-slate-200"
-                    }`}
-                  >
-                    {label}
-                  </Link>
-                ))}
-              </div>
-            </div>
+            {/* Subcategory chips */}
+            <Link
+              href={buildBenefitsUrl({ sources: selectedSources, state, zip, q, sort })}
+              className={`${chipBase} ${selectedSubcategories.size === 0 ? chipActive : chipInactive}`}
+            >
+              All
+            </Link>
+            {Object.entries(SUBCATEGORY_LABELS).map(([key, label]) => (
+              <Link
+                key={key}
+                href={buildBenefitsUrl({ cats: toggleSubcat(selectedSubcategories, key), sources: selectedSources, state, zip, q, sort })}
+                className={`${chipBase} ${selectedSubcategories.has(key) ? chipActive : chipInactive}`}
+              >
+                {label}
+              </Link>
+            ))}
+
+            <Divider />
 
             {/* Sort */}
-            <div>
-              <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wide mb-2">
-                Sort By
-              </label>
-              <div className="flex flex-col gap-1.5">
-                {(Object.entries(BENEFIT_SORT_LABELS) as [BenefitSort, string][]).map(([val, label]) => (
-                  <Link
-                    key={val}
-                    href={buildBenefitsUrl({ cats: selectedSubcategories, sources: selectedSources, state, zip, q, sort: val })}
-                    className={`text-sm px-3 py-1.5 rounded-lg font-medium transition-colors ${
-                      sort === val
-                        ? "bg-blue-600 text-white"
-                        : "bg-slate-100 text-slate-600 hover:bg-slate-200"
-                    }`}
-                  >
-                    {label}
-                  </Link>
-                ))}
-              </div>
-            </div>
+            <SortSelect
+              value={sort ?? ""}
+              options={(Object.entries(BENEFIT_SORT_LABELS) as [BenefitSort, string][]).map(([val, label]) => ({ value: val, label }))}
+            />
 
             {/* Clear all */}
-            {(selectedSubcategories.size > 0 || selectedSources.size > 0 || q || sort) && (
-              <Link href="/benefits" className="text-sm text-blue-600 hover:text-blue-700 font-medium">
-                Clear all filters
+            {hasActiveFilters && (
+              <Link
+                href={buildBenefitsUrl({ sort })}
+                className="shrink-0 px-3 py-1.5 text-sm text-blue-600 hover:underline whitespace-nowrap"
+              >
+                Clear all
               </Link>
             )}
-          </aside>
+          </div>
+        </div>
 
-          {/* Main content */}
-          <div className="flex-1 min-w-0">
-            {isEligibleMode ? (
-              <EligibleBenefits />
-            ) : (
-            <>
-            {/* Mobile: horizontal chip row */}
-            <div className="lg:hidden mb-4">
-              {/* Mobile filter chips */}
-              <div className="flex gap-2 overflow-x-auto pb-1 -mx-4 px-4 scrollbar-none">
-                <Link
-                  href={isEligibleMode ? `/benefits${q ? `?q=${q}` : ""}` : `/benefits?eligible=1`}
-                  className={`shrink-0 flex items-center gap-1.5 text-sm px-3 py-1.5 rounded-lg font-medium transition-colors ${
-                    isEligibleMode ? "bg-blue-600 text-white" : "bg-slate-100 text-slate-600"
-                  }`}
-                >
-                  <Sparkles className="w-3 h-3" />
-                  Eligible for me
-                </Link>
-                {/* Source chips */}
-                {Object.entries(SOURCE_LABELS).map(([key, label]) => (
-                  <Link
-                    key={key}
-                    href={buildBenefitsUrl({ cats: selectedSubcategories, sources: toggleSubcat(selectedSources, key), state, zip, q, sort })}
-                    className={`shrink-0 text-sm px-3 py-1.5 rounded-lg font-medium transition-colors ${
-                      selectedSources.has(key)
-                        ? "bg-indigo-600 text-white"
-                        : "bg-slate-100 text-slate-600"
-                    }`}
-                  >
-                    {label}
-                  </Link>
-                ))}
-                {/* Subcategory chips */}
-                <Link
-                  href={buildBenefitsUrl({ sources: selectedSources, state, zip, q, sort })}
-                  className={`shrink-0 text-sm px-3 py-1.5 rounded-lg font-medium transition-colors ${
-                    selectedSubcategories.size === 0 && !isEligibleMode
-                      ? "bg-blue-600 text-white"
-                      : "bg-slate-100 text-slate-600"
-                  }`}
-                >
-                  All
-                </Link>
-                {Object.entries(SUBCATEGORY_LABELS).map(([key, label]) => (
-                  <Link
-                    key={key}
-                    href={buildBenefitsUrl({ cats: toggleSubcat(selectedSubcategories, key), sources: selectedSources, state, zip, q, sort })}
-                    className={`shrink-0 text-sm px-3 py-1.5 rounded-lg font-medium transition-colors ${
-                      selectedSubcategories.has(key)
-                        ? "bg-blue-600 text-white"
-                        : "bg-slate-100 text-slate-600"
-                    }`}
-                  >
-                    {label}
-                  </Link>
-                ))}
-                {(selectedSubcategories.size > 0 || selectedSources.size > 0) && (
-                  <Link
-                    href={buildBenefitsUrl({ q, sort })}
-                    className="shrink-0 text-sm px-3 py-1.5 rounded-lg text-blue-600 hover:underline"
-                  >
-                    Clear
-                  </Link>
-                )}
-              </div>
-            </div>
-
-            {/* Results count */}
+        {/* Results */}
+        {isEligibleMode ? (
+          <EligibleBenefits />
+        ) : (
+          <>
+            {/* Count */}
             {benefits.length > 0 && (
-              <p className="text-sm text-slate-500 mb-4">
+              <p className="text-sm text-slate-500 mb-5">
                 Showing <span className="font-medium text-slate-900">{benefits.length}</span>{" "}
                 {benefits.length === 1 ? "program" : "programs"}
+                {state && <span className="text-slate-400"> · filtered by state</span>}
               </p>
             )}
 
@@ -394,10 +300,8 @@ export default async function BenefitsPage({
                 ))}
               </ProgramGrid>
             )}
-            </>
-            )}
-          </div>
-        </div>
+          </>
+        )}
       </main>
 
       <footer className="border-t border-slate-200 py-8 px-4 text-center text-sm text-slate-400 mt-10">

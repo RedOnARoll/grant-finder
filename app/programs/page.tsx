@@ -1,15 +1,14 @@
 import Link from "next/link"
-import { Sparkles, Tag } from "lucide-react"
 import { getAllPrograms } from "@/lib/supabase"
 import type { Grant } from "@/lib/types"
 import SiteNav from "@/components/SiteNav"
+import SortSelect from "@/components/SortSelect"
 import SaveInterestButton from "@/components/SaveInterestButton"
 import ProgramGrid from "@/components/ProgramGrid"
 import { Badge, StatusBadge } from "@/components/ui/Badge"
 import { EmptyStateIllustration } from "@/components/illustrations/GeoShapes"
 import SmartSearchBar from "@/components/SmartSearchBar"
 import ZipFilter from "@/components/ZipFilter"
-import SortSelect from "@/components/SortSelect"
 
 export const dynamic = "force-dynamic"
 
@@ -154,6 +153,15 @@ function ProgramCard({ program }: { program: Grant }) {
   )
 }
 
+const chipBase = "shrink-0 px-3 py-1.5 rounded-lg text-sm font-medium whitespace-nowrap transition-colors"
+const chipActive = "bg-blue-600 text-white"
+const chipInactive = "bg-white border border-slate-200 text-slate-600 hover:bg-slate-50"
+const chipSourceActive = "bg-indigo-600 text-white"
+
+function Divider() {
+  return <span className="shrink-0 w-px h-5 bg-slate-200 mx-0.5" />
+}
+
 export default async function ProgramsPage({
   searchParams,
 }: {
@@ -212,6 +220,7 @@ export default async function ProgramsPage({
   const programs = sortPrograms(filtered, sort as ProgramSort | undefined)
   const grantCount   = allPrograms.filter((p) => p.type === "grant").length
   const benefitCount = allPrograms.filter((p) => p.type === "benefit").length
+  const hasActiveFilters = !!type || selectedTopics.size > 0 || selectedSources.size > 0 || !!state || !!q
 
   return (
     <div className="flex flex-col min-h-full bg-slate-50">
@@ -230,158 +239,108 @@ export default async function ProgramsPage({
         {/* Smart search bar */}
         <SmartSearchBar type="programs" initialQuery={q ?? ""} initialHint={hint ?? ""} />
 
-        {/* Mobile filter chips */}
-        <div className="lg:hidden mb-6 overflow-x-auto">
-          <div className="flex gap-2 pb-1 min-w-max">
-            {/* Type chips */}
+        {/* ── Horizontal filter bar ────────────────────────────────────────── */}
+        <div className="mb-6 overflow-x-auto -mx-4 sm:mx-0">
+          <div className="flex items-center gap-1.5 px-4 sm:px-0 pb-1 min-w-max">
+
+            {/* ZIP (compact) */}
+            <ZipFilter basePath="/programs" initialState={state} initialZip={zip} compact />
+
+            <Divider />
+
+            {/* Program type chips */}
+            <Link
+              href={buildUrl({ topics: selectedTopics, sources: selectedSources, state, zip, q, sort })}
+              className={`${chipBase} ${!type ? chipActive : chipInactive}`}
+            >
+              All
+            </Link>
             {(["grant", "benefit"] as const).map((t) => (
               <Link
                 key={t}
                 href={buildUrl({ type: type === t ? undefined : t, topics: selectedTopics, sources: selectedSources, state, zip, q, sort })}
-                className={`shrink-0 px-3 py-1.5 rounded-lg text-sm font-medium whitespace-nowrap transition-colors ${
-                  type === t ? "bg-blue-600 text-white" : "bg-slate-100 text-slate-600 hover:bg-slate-200"
-                }`}
+                className={`${chipBase} ${type === t ? chipActive : chipInactive}`}
               >
                 {t === "grant" ? "Grants" : "Benefits"}
               </Link>
             ))}
-            {/* Source chips */}
+
+            <Divider />
+
+            {/* Funding Source chips */}
             {Object.entries(SOURCE_LABELS).map(([key, label]) => (
               <Link
                 key={key}
                 href={buildUrl({ type, topics: selectedTopics, sources: toggle(selectedSources, key), state, zip, q, sort })}
-                className={`shrink-0 px-3 py-1.5 rounded-lg text-sm font-medium whitespace-nowrap transition-colors ${
-                  selectedSources.has(key) ? "bg-indigo-600 text-white" : "bg-slate-100 text-slate-600 hover:bg-slate-200"
-                }`}
+                className={`${chipBase} ${selectedSources.has(key) ? chipSourceActive : chipInactive}`}
               >
                 {label}
               </Link>
             ))}
-            {(type || selectedTopics.size > 0 || selectedSources.size > 0 || state) && (
-              <Link href="/programs" className="shrink-0 px-3 py-1.5 rounded-lg text-sm text-blue-600 hover:underline whitespace-nowrap">
-                Clear
+
+            <Divider />
+
+            {/* Topic chips */}
+            <Link
+              href={buildUrl({ type, sources: selectedSources, state, zip, q, sort })}
+              className={`${chipBase} ${selectedTopics.size === 0 ? chipActive : chipInactive}`}
+            >
+              All Topics
+            </Link>
+            {Object.entries(TOPIC_LABELS).map(([key, label]) => (
+              <Link
+                key={key}
+                href={buildUrl({ type, topics: toggle(selectedTopics, key), sources: selectedSources, state, zip, q, sort })}
+                className={`${chipBase} ${selectedTopics.has(key) ? chipActive : chipInactive}`}
+              >
+                {label}
+              </Link>
+            ))}
+
+            <Divider />
+
+            {/* Sort */}
+            <SortSelect
+              value={sort ?? ""}
+              options={(Object.entries(SORT_LABELS) as [ProgramSort, string][]).map(([val, label]) => ({ value: val, label }))}
+            />
+
+            {/* Clear all */}
+            {hasActiveFilters && (
+              <Link
+                href={buildUrl({ sort })}
+                className="shrink-0 px-3 py-1.5 text-sm text-blue-600 hover:underline whitespace-nowrap"
+              >
+                Clear all
               </Link>
             )}
           </div>
         </div>
 
-        <div className="flex gap-8">
-          {/* Sidebar */}
-          <aside className="hidden lg:block w-64 shrink-0">
-            <div className="bg-white rounded-xl border border-slate-200 p-4 sticky top-20 space-y-5">
-              <h2 className="text-sm font-semibold text-slate-900">Filters</h2>
+        {/* Count */}
+        <p className="text-sm text-slate-500 mb-5">
+          <span className="font-medium text-slate-900">{programs.length}</span>{" "}
+          {programs.length === 1 ? "program" : "programs"}
+          {state && <span className="text-slate-400"> · filtered by state</span>}
+        </p>
 
-              {/* ZIP / Location */}
-              <ZipFilter basePath="/programs" initialState={state} initialZip={zip} />
-
-              {/* Program type */}
-              <div>
-                <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-2">Program Type</p>
-                <div className="flex flex-col gap-1">
-                  {[
-                    { key: undefined, label: "All Programs" },
-                    { key: "grant",   label: `Grants` },
-                    { key: "benefit", label: `Benefits` },
-                  ].map(({ key, label }) => (
-                    <Link
-                      key={label}
-                      href={buildUrl({ type: key, topics: selectedTopics, sources: selectedSources, state, zip, q, sort })}
-                      className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
-                        type === key
-                          ? "bg-blue-600 text-white"
-                          : "bg-slate-100 text-slate-600 hover:bg-slate-200"
-                      }`}
-                    >
-                      {label}
-                    </Link>
-                  ))}
-                </div>
-              </div>
-
-              {/* Funding Source */}
-              <div>
-                <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-2">Funding Source</p>
-                <div className="flex flex-col gap-1">
-                  {Object.entries(SOURCE_LABELS).map(([key, label]) => (
-                    <Link
-                      key={key}
-                      href={buildUrl({ type, topics: selectedTopics, sources: toggle(selectedSources, key), state, zip, q, sort })}
-                      className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
-                        selectedSources.has(key)
-                          ? "bg-blue-600 text-white"
-                          : "bg-slate-100 text-slate-600 hover:bg-slate-200"
-                      }`}
-                    >
-                      {label}
-                    </Link>
-                  ))}
-                </div>
-              </div>
-
-              {/* Topic */}
-              <div>
-                <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-2">Topic</p>
-                <div className="flex flex-col gap-1">
-                  {Object.entries(TOPIC_LABELS).map(([key, label]) => (
-                    <Link
-                      key={key}
-                      href={buildUrl({ type, topics: toggle(selectedTopics, key), sources: selectedSources, state, zip, q, sort })}
-                      className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
-                        selectedTopics.has(key)
-                          ? "bg-blue-600 text-white"
-                          : "bg-slate-100 text-slate-600 hover:bg-slate-200"
-                      }`}
-                    >
-                      {label}
-                    </Link>
-                  ))}
-                </div>
-              </div>
-
-              {/* Clear */}
-              {(type || selectedTopics.size > 0 || selectedSources.size > 0 || state || q) && (
-                <div className="pt-3 border-t border-slate-100">
-                  <Link href="/programs" className="text-sm text-blue-600 hover:underline">
-                    Clear all filters
-                  </Link>
-                </div>
-              )}
-            </div>
-          </aside>
-
-          {/* Main content */}
-          <div className="flex-1 min-w-0">
-            {/* Count + sort */}
-            <div className="flex items-center justify-between gap-4 mb-5">
-              <p className="text-sm text-slate-500">
-                <span className="font-medium text-slate-900">{programs.length}</span>{" "}
-                {programs.length === 1 ? "program" : "programs"}
-                {state && <span className="text-slate-400"> · filtered by state</span>}
-              </p>
-              <SortSelect
-                value={sort ?? ""}
-                options={(Object.entries(SORT_LABELS) as [ProgramSort, string][]).map(([val, label]) => ({ value: val, label }))}
-              />
-            </div>
-
-            {programs.length === 0 ? (
-              <div className="flex flex-col items-center justify-center py-20 text-center">
-                <EmptyStateIllustration className="w-24 h-20 mb-4" />
-                <p className="text-base font-medium text-slate-900 mb-1">No programs found</p>
-                <p className="text-sm text-slate-500 mb-4">Try a different search or adjust your filters.</p>
-                <Link href="/programs" className="text-sm text-blue-600 hover:underline">
-                  Clear filters
-                </Link>
-              </div>
-            ) : (
-              <ProgramGrid itemLabel="programs">
-                {programs.map((p) => (
-                  <ProgramCard key={p.id} program={p} />
-                ))}
-              </ProgramGrid>
-            )}
+        {/* Results */}
+        {programs.length === 0 ? (
+          <div className="flex flex-col items-center justify-center py-20 text-center">
+            <EmptyStateIllustration className="w-24 h-20 mb-4" />
+            <p className="text-base font-medium text-slate-900 mb-1">No programs found</p>
+            <p className="text-sm text-slate-500 mb-4">Try a different search or adjust your filters.</p>
+            <Link href="/programs" className="text-sm text-blue-600 hover:underline">
+              Clear filters
+            </Link>
           </div>
-        </div>
+        ) : (
+          <ProgramGrid itemLabel="programs">
+            {programs.map((p) => (
+              <ProgramCard key={p.id} program={p} />
+            ))}
+          </ProgramGrid>
+        )}
       </main>
 
       <footer className="border-t border-slate-200 py-6 text-center text-xs text-slate-400 mt-10">
