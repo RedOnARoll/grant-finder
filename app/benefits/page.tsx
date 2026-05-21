@@ -238,7 +238,7 @@ export default async function BenefitsPage({
           </div>
 
           {/* Row 3: category */}
-          <div className="flex items-center gap-1.5 overflow-x-auto pb-0.5 -mx-4 px-4 sm:mx-0 sm:px-0">
+          <div className="flex items-center gap-1.5 flex-wrap">
             <span className="shrink-0 text-xs font-medium text-slate-400 uppercase tracking-wider mr-1">Category</span>
             <Link
               href={buildBenefitsUrl({ sources: selectedSources, state, zip, q, sort })}

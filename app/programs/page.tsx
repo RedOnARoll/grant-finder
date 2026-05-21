@@ -286,7 +286,7 @@ export default async function ProgramsPage({
           </div>
 
           {/* Row 3: topic */}
-          <div className="flex items-center gap-1.5 overflow-x-auto pb-0.5 -mx-4 px-4 sm:mx-0 sm:px-0">
+          <div className="flex items-center gap-1.5 flex-wrap">
             <span className="shrink-0 text-xs font-medium text-slate-400 uppercase tracking-wider mr-1">Topic</span>
             <Link
               href={buildUrl({ type, sources: selectedSources, state, zip, q, sort })}
