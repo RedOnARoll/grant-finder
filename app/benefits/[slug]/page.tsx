@@ -7,6 +7,7 @@ import EligibilityQuiz from "./EligibilityQuiz"
 import SiteNav from "@/components/SiteNav"
 import SaveInterestButton from "@/components/SaveInterestButton"
 import { Badge, StatusBadge } from "@/components/ui/Badge"
+import ApplyButton from "@/components/ApplyButton"
 
 export const dynamic = "force-dynamic"
 export const dynamicParams = true
@@ -212,12 +213,18 @@ export default async function BenefitDetailPage({
             </div>
 
             {/* Apply CTA */}
-            <Link
-              href={`/benefits/${benefit.slug}/apply`}
+            <ApplyButton
+              slug={benefit.slug}
+              type="benefit"
+              name={benefit.name}
+              agency={benefit.agency}
+              applicationUrl={benefit.application_url}
+              officialSourceUrl={benefit.official_source_url}
+              requiredDocuments={benefit.required_documents}
               className="flex items-center justify-center w-full h-11 rounded-xl bg-blue-600 text-white text-sm font-semibold hover:bg-blue-700 transition-colors"
             >
               Learn How to Apply
-            </Link>
+            </ApplyButton>
 
             <p className="text-xs text-slate-400 text-center leading-relaxed px-1">
               You may qualify for this benefit. Review all eligibility requirements before applying.
@@ -230,12 +237,18 @@ export default async function BenefitDetailPage({
           <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-4">
             <SaveInterestButton slug={benefit.slug} type="benefit" />
           </div>
-          <Link
-            href={`/benefits/${benefit.slug}/apply`}
+          <ApplyButton
+            slug={benefit.slug}
+            type="benefit"
+            name={benefit.name}
+            agency={benefit.agency}
+            applicationUrl={benefit.application_url}
+            officialSourceUrl={benefit.official_source_url}
+            requiredDocuments={benefit.required_documents}
             className="flex items-center justify-center w-full h-11 rounded-xl bg-blue-600 text-white text-sm font-semibold hover:bg-blue-700 transition-colors"
           >
             Learn How to Apply
-          </Link>
+          </ApplyButton>
         </div>
       </main>
 

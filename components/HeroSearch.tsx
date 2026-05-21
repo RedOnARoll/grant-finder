@@ -35,9 +35,9 @@ export default function HeroSearch() {
       if (keywords.length > 0) params.set("smart_q", keywords.join("|"))
       if (categories.length > 0) params.set("topic", categories.join(","))
       if (interpretation) params.set("hint", interpretation)
-      router.push(`/programs?${params.toString()}`)
+      router.push(`/ai-results?${params.toString()}`)
     } catch {
-      router.push(`/programs?q=${encodeURIComponent(q)}`)
+      router.push(`/ai-results?q=${encodeURIComponent(q)}`)
     } finally {
       setAiLoading(false)
     }

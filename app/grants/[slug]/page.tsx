@@ -7,6 +7,7 @@ import SaveInterestButton from "@/components/SaveInterestButton"
 import { Badge, StatusBadge } from "@/components/ui/Badge"
 import GrantEligibilityQuiz from "./GrantEligibilityQuiz"
 import NarrativeGate from "@/components/NarrativeGate"
+import ApplyButton from "@/components/ApplyButton"
 
 export const dynamic = "force-dynamic"
 export const dynamicParams = true
@@ -102,12 +103,18 @@ export default async function GrantDetailPage({
 
             {/* Mobile CTA — right after stats, before long-form content */}
             <div className="lg:hidden flex gap-3">
-              <Link
-                href={`/grants/${grant.slug}/apply`}
+              <ApplyButton
+                slug={grant.slug}
+                type="grant"
+                name={grant.name}
+                agency={grant.agency}
+                applicationUrl={grant.application_url}
+                officialSourceUrl={grant.official_source_url}
+                requiredDocuments={grant.required_documents}
                 className="flex-1 text-center bg-blue-600 text-white rounded-lg px-4 py-2.5 text-sm font-medium hover:bg-blue-700 transition-colors"
               >
                 Start Application
-              </Link>
+              </ApplyButton>
               <div className="shrink-0">
                 <SaveInterestButton slug={grant.slug} type="grant" />
               </div>
@@ -176,18 +183,30 @@ export default async function GrantDetailPage({
                 <div className="w-full">
                   <SaveInterestButton slug={grant.slug} type="grant" />
                 </div>
-                <Link
-                  href={`/grants/${grant.slug}/apply`}
+                <ApplyButton
+                  slug={grant.slug}
+                  type="grant"
+                  name={grant.name}
+                  agency={grant.agency}
+                  applicationUrl={grant.application_url}
+                  officialSourceUrl={grant.official_source_url}
+                  requiredDocuments={grant.required_documents}
                   className="block w-full text-center bg-blue-600 text-white rounded-lg px-6 py-3 text-sm font-medium hover:bg-blue-700 transition-colors"
                 >
                   Start Application
-                </Link>
-                <Link
-                  href={`/grants/${grant.slug}/apply`}
+                </ApplyButton>
+                <ApplyButton
+                  slug={grant.slug}
+                  type="grant"
+                  name={grant.name}
+                  agency={grant.agency}
+                  applicationUrl={grant.application_url}
+                  officialSourceUrl={grant.official_source_url}
+                  requiredDocuments={grant.required_documents}
                   className="block w-full text-center rounded-lg border border-slate-200 px-6 py-3 text-sm font-medium text-slate-700 hover:bg-slate-50 transition-colors"
                 >
                   View Document Checklist
-                </Link>
+                </ApplyButton>
               </div>
             </div>
           </div>
