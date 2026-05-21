@@ -63,10 +63,16 @@ export async function POST(request: Request) {
 
     const mode = (tier as string) === "one_time" ? "payment" : "subscription"
 
+    // Build success URL: go directly back to the originating page (if set),
+    // otherwise fall back to the account dashboard.
+    const successDestination = safeReturnTo || "/account"
+    const successUrl = new URL(BASE_URL + successDestination)
+    successUrl.searchParams.set("upgrade", "success")
+
     const sessionParams: Parameters<typeof stripe.checkout.sessions.create>[0] = {
       mode,
       line_items: [{ price: priceId, quantity: 1 }],
-      success_url: `${BASE_URL}/account?upgrade=success${safeReturnTo ? `&next=${encodeURIComponent(safeReturnTo)}` : ""}`,
+      success_url: successUrl.toString(),
       cancel_url: `${BASE_URL}/pricing?cancelled=true`,
       metadata: { userId: user.id },
       allow_promotion_codes: true,
