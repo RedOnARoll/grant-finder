@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation"
 import { Search, Sparkles, X, Loader2 } from "lucide-react"
 
 type Props = {
-  type: "grants" | "benefits"
+  type: "grants" | "benefits" | "programs"
   initialQuery?: string
   initialHint?: string
 }
@@ -43,7 +43,7 @@ export default function SmartSearchBar({ type, initialQuery = "", initialHint = 
       params.set("q", trimmed)
       if (keywords.length > 0) params.set("smart_q", keywords.join("|"))
       if (categories.length > 0) {
-        const filterKey = type === "grants" ? "category" : "subcategory"
+        const filterKey = type === "grants" ? "category" : type === "benefits" ? "subcategory" : "topic"
         params.set(filterKey, categories.join(","))
       }
       if (interpretation) params.set("hint", interpretation)

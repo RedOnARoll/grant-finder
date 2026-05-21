@@ -95,30 +95,38 @@ export default function AuthForm({
     setMessage(null)
 
     const trimmedEmail = email.trim()
-    const result =
-      mode === "signup"
-        ? await supabase.auth.signUp({
-            email: trimmedEmail,
-            password,
-            options: {
-              data: { full_name: fullName.trim() },
-              emailRedirectTo: getRedirectUrl("/", true),
-            },
-          })
-        : await supabase.auth.signInWithPassword({
-            email: trimmedEmail,
-            password,
-          })
+    if (mode === "signup") {
+      const response = await fetch("/api/auth/signup", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          email: trimmedEmail,
+          password,
+          fullName,
+        }),
+      })
+
+      const payload = await response.json().catch(() => null) as { error?: string } | null
+      setPending(false)
+
+      if (!response.ok) {
+        setError(payload?.error ?? "Could not create account.")
+        return
+      }
+
+      setMessage("Check your email to confirm your account. Once confirmed, this tab will open the main page automatically.")
+      return
+    }
+
+    const result = await supabase.auth.signInWithPassword({
+      email: trimmedEmail,
+      password,
+    })
 
     setPending(false)
 
     if (result.error) {
       setError(result.error.message)
-      return
-    }
-
-    if (mode === "signup" && !result.data.session) {
-      setMessage("Check your email to confirm your account. Once confirmed, this tab will open the main page automatically.")
       return
     }
 

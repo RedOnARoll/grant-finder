@@ -86,11 +86,17 @@ export default async function HomePage() {
                 {/* CTA buttons */}
                 <div className="flex flex-wrap gap-3 mb-8">
                   <Link
-                    href="/grants"
+                    href="/programs"
                     className="inline-flex items-center gap-2 bg-blue-600 text-white text-sm font-medium rounded-lg px-5 py-2.5 hover:bg-blue-700 transition-colors"
                   >
-                    Find My Grants
+                    Browse All Programs
                     <ArrowRight className="w-4 h-4" />
+                  </Link>
+                  <Link
+                    href="/grants"
+                    className="inline-flex items-center gap-2 border border-slate-600 text-white text-sm font-medium rounded-lg px-5 py-2.5 hover:border-white transition-colors"
+                  >
+                    Grants Only
                   </Link>
                   <Link
                     href="/quiz"
@@ -309,6 +315,7 @@ export default async function HomePage() {
             <div>
               <h4 className="text-sm font-semibold text-white mb-4">Explore</h4>
               <ul className="space-y-2.5 text-sm text-slate-400">
+                <li><Link href="/programs" className="hover:text-white transition-colors">All Programs</Link></li>
                 <li><Link href="/grants"   className="hover:text-white transition-colors">Grants</Link></li>
                 <li><Link href="/benefits" className="hover:text-white transition-colors">Benefits</Link></li>
                 <li><Link href="/quiz"     className="hover:text-white transition-colors">Eligibility Quiz</Link></li>

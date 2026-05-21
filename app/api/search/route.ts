@@ -3,18 +3,23 @@ import { anthropic } from "@/lib/anthropic"
 
 const GRANT_CATEGORIES = ["small_business", "individual", "agricultural", "research", "veterans", "arts"]
 const BENEFIT_SUBCATEGORIES = ["housing", "food", "disability", "education", "childcare", "energy", "health"]
+const ALL_TOPICS = [...GRANT_CATEGORIES, ...BENEFIT_SUBCATEGORIES]
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url)
   const query = (searchParams.get("q") ?? "").trim()
-  const type = searchParams.get("type") === "benefits" ? "benefits" : "grants"
+  const rawType = searchParams.get("type")
+  const type = rawType === "benefits" ? "benefits" : rawType === "programs" ? "programs" : "grants"
 
   if (!query) {
     return NextResponse.json({ keywords: [], categories: [], interpretation: "" })
   }
 
-  const availableCategories = type === "grants" ? GRANT_CATEGORIES : BENEFIT_SUBCATEGORIES
-  const categoryField = type === "grants" ? "category" : "subcategory"
+  const availableCategories =
+    type === "benefits" ? BENEFIT_SUBCATEGORIES :
+    type === "programs" ? ALL_TOPICS :
+    GRANT_CATEGORIES
+  const categoryField = type === "grants" ? "category" : type === "benefits" ? "subcategory" : "topic"
 
   try {
     const message = await anthropic.messages.create({

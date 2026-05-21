@@ -10,6 +10,15 @@ import { Badge, StatusBadge } from "@/components/ui/Badge"
 import { EmptyStateIllustration } from "@/components/illustrations/GeoShapes"
 import EligibleGrantsFilter from "@/components/EligibleGrantsFilter"
 import SmartSearchBar from "@/components/SmartSearchBar"
+import ZipFilter from "@/components/ZipFilter"
+
+// State-specific private agencies — only shown when user is in those states
+const AGENCY_STATES: Record<string, string[]> = {
+  "New York Foundation for the Arts":    ["NY"],
+  "Artist Trust":                         ["WA"],
+  "New England Foundation for the Arts": ["CT", "ME", "MA", "NH", "RI", "VT"],
+  "Western States Arts Federation":      ["AK", "AZ", "CO", "ID", "MT", "NV", "NM", "OR", "UT", "WA", "WY"],
+}
 
 export const dynamic = "force-dynamic"
 
@@ -103,10 +112,12 @@ const SOURCE_LABELS: Record<string, string> = {
   private:  "Private",
 }
 
-function buildGrantsUrl(p: { cats?: Set<string>; sources?: Set<string>; q?: string; sort?: string; eligible?: string }) {
+function buildGrantsUrl(p: { cats?: Set<string>; sources?: Set<string>; state?: string; zip?: string; q?: string; sort?: string; eligible?: string }) {
   const parts: string[] = []
   if (p.cats?.size) parts.push(`category=${Array.from(p.cats).join(",")}`)
   if (p.sources?.size) parts.push(`source=${Array.from(p.sources).join(",")}`)
+  if (p.state) parts.push(`state=${p.state}`)
+  if (p.zip)   parts.push(`zip=${p.zip}`)
   if (p.q) parts.push(`q=${encodeURIComponent(p.q)}`)
   if (p.sort) parts.push(`sort=${p.sort}`)
   if (p.eligible) parts.push(`eligible=${p.eligible}`)
@@ -126,9 +137,9 @@ function toggleCat(selected: Set<string>, cat: string): Set<string> {
 export default async function GrantsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ category?: string; source?: string; q?: string; smart_q?: string; hint?: string; sort?: string; eligible?: string }>
+  searchParams: Promise<{ category?: string; source?: string; state?: string; zip?: string; q?: string; smart_q?: string; hint?: string; sort?: string; eligible?: string }>
 }) {
-  const { category, source, q, smart_q, hint, sort, eligible } = await searchParams
+  const { category, source, state, zip, q, smart_q, hint, sort, eligible } = await searchParams
   const isEligibleMode = eligible === "1"
   const selectedCategories = new Set((category ?? "").split(",").filter(Boolean))
   const selectedSources = new Set((source ?? "").split(",").filter(Boolean))
@@ -145,6 +156,11 @@ export default async function GrantsPage({
   const filtered = allGrants.filter((g) => {
     if (selectedCategories.size > 0 && !selectedCategories.has(g.category)) return false
     if (selectedSources.size > 0 && !selectedSources.has(g.funding_source ?? "")) return false
+    // Location filter — hide state-specific programs outside user's state
+    if (state) {
+      const agencyStates = AGENCY_STATES[g.agency]
+      if (agencyStates && !agencyStates.includes(state)) return false
+    }
     if (searchTerms.length > 0) {
       const haystack = `${g.name} ${g.description} ${g.agency}`.toLowerCase()
       if (!searchTerms.some((term) => haystack.includes(term.toLowerCase()))) return false
@@ -194,7 +210,7 @@ export default async function GrantsPage({
             {Object.entries(SOURCE_LABELS).map(([key, label]) => (
               <Link
                 key={key}
-                href={buildGrantsUrl({ cats: selectedCategories, sources: toggleCat(selectedSources, key), q, sort })}
+                href={buildGrantsUrl({ cats: selectedCategories, sources: toggleCat(selectedSources, key), state, zip, q, sort })}
                 className={`px-3 py-1.5 rounded-lg text-sm font-medium whitespace-nowrap transition-colors ${
                   selectedSources.has(key)
                     ? "bg-indigo-600 text-white"
@@ -206,7 +222,7 @@ export default async function GrantsPage({
             ))}
             {/* Category chips */}
             <Link
-              href={buildGrantsUrl({ sources: selectedSources, q, sort })}
+              href={buildGrantsUrl({ sources: selectedSources, state, zip, q, sort })}
               className={`px-3 py-1.5 rounded-lg text-sm font-medium whitespace-nowrap transition-colors ${
                 selectedCategories.size === 0
                   ? "bg-blue-600 text-white"
@@ -218,7 +234,7 @@ export default async function GrantsPage({
             {categories.map((cat) => (
               <Link
                 key={cat}
-                href={buildGrantsUrl({ cats: toggleCat(selectedCategories, cat), sources: selectedSources, q, sort })}
+                href={buildGrantsUrl({ cats: toggleCat(selectedCategories, cat), sources: selectedSources, state, zip, q, sort })}
                 className={`px-3 py-1.5 rounded-lg text-sm font-medium whitespace-nowrap transition-colors ${
                   selectedCategories.has(cat)
                     ? "bg-blue-600 text-white"
@@ -230,7 +246,7 @@ export default async function GrantsPage({
             ))}
             {(selectedCategories.size > 0 || selectedSources.size > 0 || q) && (
               <Link
-                href={buildGrantsUrl({ sort })}
+                href={buildGrantsUrl({ state, zip, sort })}
                 className="px-3 py-1.5 rounded-lg text-sm text-blue-600 hover:underline whitespace-nowrap"
               >
                 Clear
@@ -242,8 +258,11 @@ export default async function GrantsPage({
         <div className="flex gap-8">
           {/* Sidebar — desktop only */}
           <aside className="hidden lg:block w-64 shrink-0">
-            <div className="bg-white rounded-xl border border-slate-200 p-4 sticky top-20">
-              <h2 className="text-sm font-semibold text-slate-900 mb-4">Filters</h2>
+            <div className="bg-white rounded-xl border border-slate-200 p-4 sticky top-20 space-y-5">
+              <h2 className="text-sm font-semibold text-slate-900">Filters</h2>
+
+              {/* ZIP / Location */}
+              <ZipFilter basePath="/grants" initialState={state} initialZip={zip} />
 
               {/* Eligible for me */}
               <div className="mb-5">
@@ -268,7 +287,7 @@ export default async function GrantsPage({
                   {Object.entries(SOURCE_LABELS).map(([key, label]) => (
                     <Link
                       key={key}
-                      href={buildGrantsUrl({ cats: selectedCategories, sources: toggleCat(selectedSources, key), q, sort })}
+                      href={buildGrantsUrl({ cats: selectedCategories, sources: toggleCat(selectedSources, key), state, zip, q, sort })}
                       className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
                         selectedSources.has(key)
                           ? "bg-blue-600 text-white"
@@ -286,7 +305,7 @@ export default async function GrantsPage({
                 <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-2">Category</p>
                 <div className="flex flex-col gap-1">
                   <Link
-                    href={buildGrantsUrl({ sources: selectedSources, q, sort })}
+                    href={buildGrantsUrl({ sources: selectedSources, state, zip, q, sort })}
                     className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
                       selectedCategories.size === 0
                         ? "bg-blue-600 text-white"
@@ -298,7 +317,7 @@ export default async function GrantsPage({
                   {categories.map((cat) => (
                     <Link
                       key={cat}
-                      href={buildGrantsUrl({ cats: toggleCat(selectedCategories, cat), sources: selectedSources, q, sort })}
+                      href={buildGrantsUrl({ cats: toggleCat(selectedCategories, cat), sources: selectedSources, state, zip, q, sort })}
                       className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
                         selectedCategories.has(cat)
                           ? "bg-blue-600 text-white"
@@ -315,7 +334,7 @@ export default async function GrantsPage({
               {(selectedCategories.size > 0 || selectedSources.size > 0 || q) && (
                 <div className="mt-4 pt-4 border-t border-slate-100">
                   <Link
-                    href={buildGrantsUrl({ sort })}
+                    href={buildGrantsUrl({ state, zip, sort })}
                     className="text-sm text-blue-600 hover:underline"
                   >
                     Clear Filters
