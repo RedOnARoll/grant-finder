@@ -4,7 +4,7 @@ import { FormEvent, useEffect, useMemo, useState } from "react"
 import { useRouter } from "next/navigation"
 import { getProfile, migrateAccountMetadata } from "@/lib/account-db"
 import { sanitizeNextPath } from "@/lib/auth"
-import { listenForAuthConfirmation } from "@/lib/auth-confirmation"
+import { listenForAuthConfirmation, readLatestAuthConfirmation } from "@/lib/auth-confirmation"
 import { profileCompletion, type UserProfile } from "@/lib/profile"
 import { getBrowserSupabase } from "@/lib/supabase-browser"
 
@@ -45,10 +45,26 @@ export default function AuthForm({
   const targetAfterAuth = mode === "signup" && safeNext === "/account" ? "/account/profile" : safeNext
 
   useEffect(() => {
-    return listenForAuthConfirmation(({ target }) => {
-      router.replace(sanitizeNextPath(target, "/"))
+    function openConfirmedTarget(target: string) {
+      const path = sanitizeNextPath(target, "/")
+      router.replace(path)
       router.refresh()
-    })
+      window.setTimeout(() => {
+        if (window.location.pathname === "/auth") window.location.assign(path)
+      }, 250)
+    }
+
+    const stopListening = listenForAuthConfirmation(({ target }) => openConfirmedTarget(target))
+
+    const poll = window.setInterval(() => {
+      const payload = readLatestAuthConfirmation()
+      if (payload) openConfirmedTarget(payload.target)
+    }, 1500)
+
+    return () => {
+      stopListening()
+      window.clearInterval(poll)
+    }
   }, [router])
 
   async function targetForUser(userId: string | undefined, userProfile?: Partial<UserProfile>) {
