@@ -239,7 +239,7 @@ export default async function ProgramsPage({
         {/* Smart search bar */}
         <SmartSearchBar type="programs" initialQuery={q ?? ""} initialHint={hint ?? ""} />
 
-        {/* ── Filter bar (2 rows) ─────────────────────────────────────────── */}
+        {/* ── Filter bar ──────────────────────────────────────────────────── */}
         <div className="mb-6 space-y-2">
 
           {/* Row 1: type + ZIP + sort */}
@@ -260,22 +260,20 @@ export default async function ProgramsPage({
                 {t === "grant" ? "Grants" : "Benefits"}
               </Link>
             ))}
-            <div className="ml-auto flex items-center gap-2">
-              <SortSelect
-                value={sort ?? ""}
-                options={(Object.entries(SORT_LABELS) as [ProgramSort, string][]).map(([val, label]) => ({ value: val, label }))}
-              />
-              {hasActiveFilters && (
-                <Link href={buildUrl({ sort })} className="text-sm text-blue-600 hover:underline whitespace-nowrap">
-                  Clear all
-                </Link>
-              )}
-            </div>
+            <SortSelect
+              value={sort ?? ""}
+              options={(Object.entries(SORT_LABELS) as [ProgramSort, string][]).map(([val, label]) => ({ value: val, label }))}
+            />
+            {hasActiveFilters && (
+              <Link href={buildUrl({ sort })} className="text-sm text-blue-600 hover:underline whitespace-nowrap">
+                Clear all
+              </Link>
+            )}
           </div>
 
-          {/* Row 2: source + topic chips */}
-          <div className="flex items-center gap-1.5 flex-wrap">
-            <span className="text-xs font-medium text-slate-400 uppercase tracking-wider mr-1">Source</span>
+          {/* Row 2: funding source */}
+          <div className="flex items-center gap-1.5 overflow-x-auto pb-0.5 -mx-4 px-4 sm:mx-0 sm:px-0">
+            <span className="shrink-0 text-xs font-medium text-slate-400 uppercase tracking-wider mr-1">Source</span>
             {Object.entries(SOURCE_LABELS).map(([key, label]) => (
               <Link
                 key={key}
@@ -285,10 +283,11 @@ export default async function ProgramsPage({
                 {label}
               </Link>
             ))}
+          </div>
 
-            <Divider />
-
-            <span className="text-xs font-medium text-slate-400 uppercase tracking-wider mr-1">Topic</span>
+          {/* Row 3: topic */}
+          <div className="flex items-center gap-1.5 overflow-x-auto pb-0.5 -mx-4 px-4 sm:mx-0 sm:px-0">
+            <span className="shrink-0 text-xs font-medium text-slate-400 uppercase tracking-wider mr-1">Topic</span>
             <Link
               href={buildUrl({ type, sources: selectedSources, state, zip, q, sort })}
               className={`${chipBase} ${selectedTopics.size === 0 ? chipActive : chipInactive}`}

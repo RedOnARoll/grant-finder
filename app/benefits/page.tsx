@@ -196,7 +196,7 @@ export default async function BenefitsPage({
         {/* Smart search bar */}
         <SmartSearchBar type="benefits" initialQuery={q ?? ""} initialHint={hint ?? ""} />
 
-        {/* ── Filter bar (2 rows) ─────────────────────────────────────────── */}
+        {/* ── Filter bar ──────────────────────────────────────────────────── */}
         <div className="mb-6 space-y-2">
 
           {/* Row 1: quick filters + sort */}
@@ -212,22 +212,20 @@ export default async function BenefitsPage({
               <Sparkles className="w-3 h-3" />
               Eligible for me
             </Link>
-            <div className="ml-auto flex items-center gap-2">
-              <SortSelect
-                value={sort ?? ""}
-                options={(Object.entries(BENEFIT_SORT_LABELS) as [BenefitSort, string][]).map(([val, label]) => ({ value: val, label }))}
-              />
-              {hasActiveFilters && (
-                <Link href={buildBenefitsUrl({ sort })} className="text-sm text-blue-600 hover:underline whitespace-nowrap">
-                  Clear all
-                </Link>
-              )}
-            </div>
+            <SortSelect
+              value={sort ?? ""}
+              options={(Object.entries(BENEFIT_SORT_LABELS) as [BenefitSort, string][]).map(([val, label]) => ({ value: val, label }))}
+            />
+            {hasActiveFilters && (
+              <Link href={buildBenefitsUrl({ sort })} className="text-sm text-blue-600 hover:underline whitespace-nowrap">
+                Clear all
+              </Link>
+            )}
           </div>
 
-          {/* Row 2: source + category chips */}
-          <div className="flex items-center gap-1.5 flex-wrap">
-            <span className="text-xs font-medium text-slate-400 uppercase tracking-wider mr-1">Source</span>
+          {/* Row 2: funding source */}
+          <div className="flex items-center gap-1.5 overflow-x-auto pb-0.5 -mx-4 px-4 sm:mx-0 sm:px-0">
+            <span className="shrink-0 text-xs font-medium text-slate-400 uppercase tracking-wider mr-1">Source</span>
             {Object.entries(SOURCE_LABELS).map(([key, label]) => (
               <Link
                 key={key}
@@ -237,10 +235,11 @@ export default async function BenefitsPage({
                 {label}
               </Link>
             ))}
+          </div>
 
-            <Divider />
-
-            <span className="text-xs font-medium text-slate-400 uppercase tracking-wider mr-1">Category</span>
+          {/* Row 3: category */}
+          <div className="flex items-center gap-1.5 overflow-x-auto pb-0.5 -mx-4 px-4 sm:mx-0 sm:px-0">
+            <span className="shrink-0 text-xs font-medium text-slate-400 uppercase tracking-wider mr-1">Category</span>
             <Link
               href={buildBenefitsUrl({ sources: selectedSources, state, zip, q, sort })}
               className={`${chipBase} ${selectedSubcategories.size === 0 ? chipActive : chipInactive}`}
