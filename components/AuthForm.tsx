@@ -1,6 +1,6 @@
 "use client"
 
-import { FormEvent, useEffect, useMemo, useState } from "react"
+import { FormEvent, useEffect, useMemo, useRef, useState } from "react"
 import { useRouter } from "next/navigation"
 import { getProfile, migrateAccountMetadata } from "@/lib/account-db"
 import { sanitizeNextPath } from "@/lib/auth"
@@ -40,12 +40,15 @@ export default function AuthForm({
   const [message, setMessage] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [pending, setPending] = useState(false)
+  const handledConfirmationAt = useRef(0)
 
   const safeNext = sanitizeNextPath(next)
   const targetAfterAuth = mode === "signup" && safeNext === "/account" ? "/account/profile" : safeNext
 
   useEffect(() => {
-    function openConfirmedTarget(target: string) {
+    function openConfirmedTarget(target: string, at?: number) {
+      if (at && at <= handledConfirmationAt.current) return
+      if (at) handledConfirmationAt.current = at
       const path = sanitizeNextPath(target, "/")
       router.replace(path)
       router.refresh()
@@ -55,13 +58,13 @@ export default function AuthForm({
     }
 
     const stopListening = listenForAuthConfirmation(
-      ({ target }) => openConfirmedTarget(target),
+      ({ target, at }) => openConfirmedTarget(target, at),
       { replayLatest: true }
     )
 
     const poll = window.setInterval(() => {
       const payload = readLatestAuthConfirmation()
-      if (payload) openConfirmedTarget(payload.target)
+      if (payload) openConfirmedTarget(payload.target, payload.at)
     }, 1500)
 
     return () => {
