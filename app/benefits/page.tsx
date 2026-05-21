@@ -196,16 +196,12 @@ export default async function BenefitsPage({
         {/* Smart search bar */}
         <SmartSearchBar type="benefits" initialQuery={q ?? ""} initialHint={hint ?? ""} />
 
-        {/* ── Horizontal filter bar ────────────────────────────────────────── */}
-        <div className="mb-6 overflow-x-auto -mx-4 sm:mx-0">
-          <div className="flex items-center gap-1.5 px-4 sm:px-0 pb-1 min-w-max">
+        {/* ── Filter bar (2 rows) ─────────────────────────────────────────── */}
+        <div className="mb-6 space-y-2">
 
-            {/* ZIP (compact) */}
+          {/* Row 1: quick filters + sort */}
+          <div className="flex items-center gap-2 flex-wrap">
             <ZipFilter basePath="/benefits" initialState={state} initialZip={zip} compact />
-
-            <Divider />
-
-            {/* Eligible for me */}
             <Link
               href={isEligibleMode
                 ? buildBenefitsUrl({ cats: selectedSubcategories, sources: selectedSources, state, zip, q, sort })
@@ -216,10 +212,22 @@ export default async function BenefitsPage({
               <Sparkles className="w-3 h-3" />
               Eligible for me
             </Link>
+            <div className="ml-auto flex items-center gap-2">
+              <SortSelect
+                value={sort ?? ""}
+                options={(Object.entries(BENEFIT_SORT_LABELS) as [BenefitSort, string][]).map(([val, label]) => ({ value: val, label }))}
+              />
+              {hasActiveFilters && (
+                <Link href={buildBenefitsUrl({ sort })} className="text-sm text-blue-600 hover:underline whitespace-nowrap">
+                  Clear all
+                </Link>
+              )}
+            </div>
+          </div>
 
-            <Divider />
-
-            {/* Funding Source chips */}
+          {/* Row 2: source + category chips */}
+          <div className="flex items-center gap-1.5 flex-wrap">
+            <span className="text-xs font-medium text-slate-400 uppercase tracking-wider mr-1">Source</span>
             {Object.entries(SOURCE_LABELS).map(([key, label]) => (
               <Link
                 key={key}
@@ -232,7 +240,7 @@ export default async function BenefitsPage({
 
             <Divider />
 
-            {/* Subcategory chips */}
+            <span className="text-xs font-medium text-slate-400 uppercase tracking-wider mr-1">Category</span>
             <Link
               href={buildBenefitsUrl({ sources: selectedSources, state, zip, q, sort })}
               className={`${chipBase} ${selectedSubcategories.size === 0 ? chipActive : chipInactive}`}
@@ -248,25 +256,8 @@ export default async function BenefitsPage({
                 {label}
               </Link>
             ))}
-
-            <Divider />
-
-            {/* Sort */}
-            <SortSelect
-              value={sort ?? ""}
-              options={(Object.entries(BENEFIT_SORT_LABELS) as [BenefitSort, string][]).map(([val, label]) => ({ value: val, label }))}
-            />
-
-            {/* Clear all */}
-            {hasActiveFilters && (
-              <Link
-                href={buildBenefitsUrl({ sort })}
-                className="shrink-0 px-3 py-1.5 text-sm text-blue-600 hover:underline whitespace-nowrap"
-              >
-                Clear all
-              </Link>
-            )}
           </div>
+
         </div>
 
         {/* Results */}
