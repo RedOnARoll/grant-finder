@@ -128,13 +128,13 @@ export default async function HomePage() {
         {/* ── STATS BAR ────────────────────────────────────────────── */}
         <section className="bg-white py-8 border-b border-slate-200">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-8 text-center">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-6 text-center">
               <div>
                 <p className="text-2xl font-bold text-slate-900">{grants.length + benefits.length}+</p>
                 <p className="text-sm text-slate-500 mt-0.5">Grants &amp; Benefits</p>
               </div>
               <div>
-                <p className="text-2xl font-bold text-slate-900">Federal, State &amp; Private</p>
+                <p className="text-xl sm:text-2xl font-bold text-slate-900">Fed, State &amp; Private</p>
                 <p className="text-sm text-slate-500 mt-0.5">Funding Sources</p>
               </div>
               <div>

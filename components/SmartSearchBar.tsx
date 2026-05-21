@@ -89,7 +89,7 @@ export default function SmartSearchBar({ type, initialQuery = "", initialHint = 
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder={placeholder}
-            className="w-full h-14 pl-14 pr-36 rounded-2xl border border-slate-200 bg-white text-base text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
+            className="w-full h-14 pl-14 pr-14 sm:pr-36 rounded-2xl border border-slate-200 bg-white text-base text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
             autoComplete="off"
           />
 
@@ -98,7 +98,7 @@ export default function SmartSearchBar({ type, initialQuery = "", initialHint = 
             <button
               type="button"
               onClick={handleClear}
-              className="absolute right-[8.5rem] p-1.5 text-slate-400 hover:text-slate-600 transition-colors"
+              className="absolute right-14 sm:right-[8.5rem] p-1.5 text-slate-400 hover:text-slate-600 transition-colors"
               aria-label="Clear search"
             >
               <X className="w-4 h-4" />
@@ -109,19 +109,16 @@ export default function SmartSearchBar({ type, initialQuery = "", initialHint = 
           <button
             type="submit"
             disabled={loading}
-            className="absolute right-2 h-10 px-5 rounded-xl bg-blue-600 text-white text-sm font-semibold hover:bg-blue-700 active:bg-blue-800 transition-colors disabled:opacity-60 flex items-center gap-2 whitespace-nowrap"
+            className="absolute right-2 h-10 px-3 sm:px-5 rounded-xl bg-blue-600 text-white text-sm font-semibold hover:bg-blue-700 active:bg-blue-800 transition-colors disabled:opacity-60 flex items-center gap-2 whitespace-nowrap"
           >
             {loading ? (
-              <>
-                <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                Searching…
-              </>
+              <Loader2 className="w-4 h-4 animate-spin" />
             ) : (
-              <>
-                <Sparkles className="w-3.5 h-3.5" />
-                Smart Search
-              </>
+              <Sparkles className="w-4 h-4" />
             )}
+            <span className="hidden sm:inline">
+              {loading ? "Searching…" : "Smart Search"}
+            </span>
           </button>
         </div>
       </form>

@@ -100,6 +100,19 @@ export default async function GrantDetailPage({
               )}
             </div>
 
+            {/* Mobile CTA — right after stats, before long-form content */}
+            <div className="lg:hidden flex gap-3">
+              <Link
+                href={`/grants/${grant.slug}/apply`}
+                className="flex-1 text-center bg-blue-600 text-white rounded-lg px-4 py-2.5 text-sm font-medium hover:bg-blue-700 transition-colors"
+              >
+                Start Application
+              </Link>
+              <div className="shrink-0">
+                <SaveInterestButton slug={grant.slug} type="grant" />
+              </div>
+            </div>
+
             {/* Description card */}
             <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-5">
               <h2 className="text-base font-semibold text-slate-900 mb-3">About this grant</h2>
