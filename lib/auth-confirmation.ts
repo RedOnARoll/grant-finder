@@ -42,7 +42,10 @@ export function broadcastAuthConfirmation(target = "/") {
   }
 }
 
-export function listenForAuthConfirmation(onConfirm: (payload: AuthConfirmationPayload) => void) {
+export function listenForAuthConfirmation(
+  onConfirm: (payload: AuthConfirmationPayload) => void,
+  options: { replayLatest?: boolean } = {}
+) {
   if (typeof window === "undefined") return () => {}
 
   let lastHandledAt = Number(window.sessionStorage.getItem(`${AUTH_CONFIRMATION_EVENT}:handled`) ?? 0)
@@ -69,7 +72,9 @@ export function listenForAuthConfirmation(onConfirm: (payload: AuthConfirmationP
   window.addEventListener("focus", handleFocus)
   document.addEventListener("visibilitychange", handleVisibilityChange)
 
-  const initialTimer = window.setTimeout(() => confirmOnce(readLatestAuthConfirmation()), 0)
+  const initialTimer = options.replayLatest
+    ? window.setTimeout(() => confirmOnce(readLatestAuthConfirmation()), 0)
+    : null
 
   let channel: BroadcastChannel | null = null
   if ("BroadcastChannel" in window) {
@@ -83,7 +88,7 @@ export function listenForAuthConfirmation(onConfirm: (payload: AuthConfirmationP
     window.removeEventListener("storage", handleStorage)
     window.removeEventListener("focus", handleFocus)
     document.removeEventListener("visibilitychange", handleVisibilityChange)
-    window.clearTimeout(initialTimer)
+    if (initialTimer) window.clearTimeout(initialTimer)
     channel?.close()
   }
 }
