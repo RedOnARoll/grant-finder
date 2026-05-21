@@ -38,6 +38,15 @@ export async function getBenefits(): Promise<Grant[]> {
   return data ?? []
 }
 
+export async function getAllPrograms(): Promise<Grant[]> {
+  const { data, error } = await supabase
+    .from("grants")
+    .select("*")
+    .order("name")
+  if (error) throw error
+  return data ?? []
+}
+
 export async function getBenefitBySlug(slug: string): Promise<Grant | null> {
   const { data, error } = await supabase
     .from("grants")

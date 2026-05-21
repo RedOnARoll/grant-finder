@@ -97,9 +97,17 @@ function BenefitCard({ benefit }: { benefit: Grant }) {
   )
 }
 
-function buildBenefitsUrl(p: { cats?: Set<string>; q?: string; sort?: string; eligible?: string }) {
+const SOURCE_LABELS: Record<string, string> = {
+  federal: "Federal",
+  state:   "State",
+  local:   "Local",
+  private: "Private",
+}
+
+function buildBenefitsUrl(p: { cats?: Set<string>; sources?: Set<string>; q?: string; sort?: string; eligible?: string }) {
   const parts: string[] = []
   if (p.cats?.size) parts.push(`subcategory=${Array.from(p.cats).join(",")}`)
+  if (p.sources?.size) parts.push(`source=${Array.from(p.sources).join(",")}`)
   if (p.q) parts.push(`q=${encodeURIComponent(p.q)}`)
   if (p.sort) parts.push(`sort=${p.sort}`)
   if (p.eligible) parts.push(`eligible=${p.eligible}`)
@@ -119,11 +127,12 @@ function toggleSubcat(selected: Set<string>, cat: string): Set<string> {
 export default async function BenefitsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ subcategory?: string; q?: string; smart_q?: string; hint?: string; sort?: string; eligible?: string }>
+  searchParams: Promise<{ subcategory?: string; source?: string; q?: string; smart_q?: string; hint?: string; sort?: string; eligible?: string }>
 }) {
-  const { subcategory, q, smart_q, hint, sort, eligible } = await searchParams
+  const { subcategory, source, q, smart_q, hint, sort, eligible } = await searchParams
   const isEligibleMode = eligible === "1"
   const selectedSubcategories = new Set((subcategory ?? "").split(",").filter(Boolean))
+  const selectedSources = new Set((source ?? "").split(",").filter(Boolean))
   const allBenefits = await getBenefits()
 
   // Smart search: use expanded keywords from Claude (pipe-separated) or fall back to literal query
@@ -135,6 +144,7 @@ export default async function BenefitsPage({
 
   const filtered = allBenefits.filter((b) => {
     if (selectedSubcategories.size > 0 && !selectedSubcategories.has(b.subcategory ?? "")) return false
+    if (selectedSources.size > 0 && !selectedSources.has(b.funding_source ?? "")) return false
     if (searchTerms.length > 0) {
       const haystack = `${b.name} ${b.description} ${b.agency} ${b.subcategory ?? ""}`.toLowerCase()
       if (!searchTerms.some((term) => haystack.includes(term.toLowerCase()))) return false
@@ -180,6 +190,26 @@ export default async function BenefitsPage({
               </Link>
             </div>
 
+            {/* Funding Source filter */}
+            <div>
+              <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-2">Funding Source</p>
+              <div className="flex flex-col gap-1.5">
+                {Object.entries(SOURCE_LABELS).map(([key, label]) => (
+                  <Link
+                    key={key}
+                    href={buildBenefitsUrl({ cats: selectedSubcategories, sources: toggleSubcat(selectedSources, key), q, sort })}
+                    className={`text-sm px-3 py-1.5 rounded-lg font-medium transition-colors ${
+                      selectedSources.has(key)
+                        ? "bg-blue-600 text-white"
+                        : "bg-slate-100 text-slate-600 hover:bg-slate-200"
+                    }`}
+                  >
+                    {label}
+                  </Link>
+                ))}
+              </div>
+            </div>
+
             {/* Benefit Type filter */}
             <div>
               <div className="flex items-center justify-between mb-2">
@@ -188,7 +218,7 @@ export default async function BenefitsPage({
                 </span>
                 {selectedSubcategories.size > 0 && (
                   <Link
-                    href={buildBenefitsUrl({ q, sort })}
+                    href={buildBenefitsUrl({ sources: selectedSources, q, sort })}
                     className="text-xs text-blue-600 hover:text-blue-700"
                   >
                     Clear
@@ -197,7 +227,7 @@ export default async function BenefitsPage({
               </div>
               <div className="flex flex-col gap-1.5">
                 <Link
-                  href={buildBenefitsUrl({ q, sort })}
+                  href={buildBenefitsUrl({ sources: selectedSources, q, sort })}
                   className={`text-sm px-3 py-1.5 rounded-lg font-medium transition-colors ${
                     selectedSubcategories.size === 0
                       ? "bg-blue-600 text-white"
@@ -209,7 +239,7 @@ export default async function BenefitsPage({
                 {Object.entries(SUBCATEGORY_LABELS).map(([key, label]) => (
                   <Link
                     key={key}
-                    href={buildBenefitsUrl({ cats: toggleSubcat(selectedSubcategories, key), q, sort })}
+                    href={buildBenefitsUrl({ cats: toggleSubcat(selectedSubcategories, key), sources: selectedSources, q, sort })}
                     className={`text-sm px-3 py-1.5 rounded-lg font-medium transition-colors ${
                       selectedSubcategories.has(key)
                         ? "bg-blue-600 text-white"
@@ -231,7 +261,7 @@ export default async function BenefitsPage({
                 {(Object.entries(BENEFIT_SORT_LABELS) as [BenefitSort, string][]).map(([val, label]) => (
                   <Link
                     key={val}
-                    href={buildBenefitsUrl({ cats: selectedSubcategories, q, sort: val })}
+                    href={buildBenefitsUrl({ cats: selectedSubcategories, sources: selectedSources, q, sort: val })}
                     className={`text-sm px-3 py-1.5 rounded-lg font-medium transition-colors ${
                       sort === val
                         ? "bg-blue-600 text-white"
@@ -245,7 +275,7 @@ export default async function BenefitsPage({
             </div>
 
             {/* Clear all */}
-            {(selectedSubcategories.size > 0 || q || sort) && (
+            {(selectedSubcategories.size > 0 || selectedSources.size > 0 || q || sort) && (
               <Link href="/benefits" className="text-sm text-blue-600 hover:text-blue-700 font-medium">
                 Clear all filters
               </Link>
@@ -260,7 +290,7 @@ export default async function BenefitsPage({
             <>
             {/* Mobile: horizontal chip row */}
             <div className="lg:hidden mb-4">
-              {/* Mobile subcategory chips */}
+              {/* Mobile filter chips */}
               <div className="flex gap-2 overflow-x-auto pb-1 -mx-4 px-4 scrollbar-none">
                 <Link
                   href={isEligibleMode ? `/benefits${q ? `?q=${q}` : ""}` : `/benefits?eligible=1`}
@@ -271,8 +301,23 @@ export default async function BenefitsPage({
                   <Sparkles className="w-3 h-3" />
                   Eligible for me
                 </Link>
+                {/* Source chips */}
+                {Object.entries(SOURCE_LABELS).map(([key, label]) => (
+                  <Link
+                    key={key}
+                    href={buildBenefitsUrl({ cats: selectedSubcategories, sources: toggleSubcat(selectedSources, key), q, sort })}
+                    className={`shrink-0 text-sm px-3 py-1.5 rounded-lg font-medium transition-colors ${
+                      selectedSources.has(key)
+                        ? "bg-indigo-600 text-white"
+                        : "bg-slate-100 text-slate-600"
+                    }`}
+                  >
+                    {label}
+                  </Link>
+                ))}
+                {/* Subcategory chips */}
                 <Link
-                  href={buildBenefitsUrl({ q, sort })}
+                  href={buildBenefitsUrl({ sources: selectedSources, q, sort })}
                   className={`shrink-0 text-sm px-3 py-1.5 rounded-lg font-medium transition-colors ${
                     selectedSubcategories.size === 0 && !isEligibleMode
                       ? "bg-blue-600 text-white"
@@ -284,7 +329,7 @@ export default async function BenefitsPage({
                 {Object.entries(SUBCATEGORY_LABELS).map(([key, label]) => (
                   <Link
                     key={key}
-                    href={buildBenefitsUrl({ cats: toggleSubcat(selectedSubcategories, key), q, sort })}
+                    href={buildBenefitsUrl({ cats: toggleSubcat(selectedSubcategories, key), sources: selectedSources, q, sort })}
                     className={`shrink-0 text-sm px-3 py-1.5 rounded-lg font-medium transition-colors ${
                       selectedSubcategories.has(key)
                         ? "bg-blue-600 text-white"
@@ -294,6 +339,14 @@ export default async function BenefitsPage({
                     {label}
                   </Link>
                 ))}
+                {(selectedSubcategories.size > 0 || selectedSources.size > 0) && (
+                  <Link
+                    href={buildBenefitsUrl({ q, sort })}
+                    className="shrink-0 text-sm px-3 py-1.5 rounded-lg text-blue-600 hover:underline"
+                  >
+                    Clear
+                  </Link>
+                )}
               </div>
             </div>
 

@@ -96,9 +96,17 @@ const SORT_LABELS: Record<GrantSort, string> = {
   name_asc:        "Name: A–Z",
 }
 
-function buildGrantsUrl(p: { cats?: Set<string>; q?: string; sort?: string; eligible?: string }) {
+const SOURCE_LABELS: Record<string, string> = {
+  federal:  "Federal",
+  state:    "State",
+  local:    "Local",
+  private:  "Private",
+}
+
+function buildGrantsUrl(p: { cats?: Set<string>; sources?: Set<string>; q?: string; sort?: string; eligible?: string }) {
   const parts: string[] = []
   if (p.cats?.size) parts.push(`category=${Array.from(p.cats).join(",")}`)
+  if (p.sources?.size) parts.push(`source=${Array.from(p.sources).join(",")}`)
   if (p.q) parts.push(`q=${encodeURIComponent(p.q)}`)
   if (p.sort) parts.push(`sort=${p.sort}`)
   if (p.eligible) parts.push(`eligible=${p.eligible}`)
@@ -118,11 +126,12 @@ function toggleCat(selected: Set<string>, cat: string): Set<string> {
 export default async function GrantsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ category?: string; q?: string; smart_q?: string; hint?: string; sort?: string; eligible?: string }>
+  searchParams: Promise<{ category?: string; source?: string; q?: string; smart_q?: string; hint?: string; sort?: string; eligible?: string }>
 }) {
-  const { category, q, smart_q, hint, sort, eligible } = await searchParams
+  const { category, source, q, smart_q, hint, sort, eligible } = await searchParams
   const isEligibleMode = eligible === "1"
   const selectedCategories = new Set((category ?? "").split(",").filter(Boolean))
+  const selectedSources = new Set((source ?? "").split(",").filter(Boolean))
   const allGrants = await getGrants()
   const categories = Object.keys(CATEGORY_LABELS)
 
@@ -135,6 +144,7 @@ export default async function GrantsPage({
 
   const filtered = allGrants.filter((g) => {
     if (selectedCategories.size > 0 && !selectedCategories.has(g.category)) return false
+    if (selectedSources.size > 0 && !selectedSources.has(g.funding_source ?? "")) return false
     if (searchTerms.length > 0) {
       const haystack = `${g.name} ${g.description} ${g.agency}`.toLowerCase()
       if (!searchTerms.some((term) => haystack.includes(term.toLowerCase()))) return false
@@ -168,53 +178,65 @@ export default async function GrantsPage({
         {/* Smart search bar — full width at top */}
         <SmartSearchBar type="grants" initialQuery={q ?? ""} initialHint={hint ?? ""} />
 
-        {/* Mobile: horizontal scrollable category chips */}
+        {/* Mobile: horizontal scrollable filter chips */}
         <div className="lg:hidden mb-6 overflow-x-auto">
-          <form>
-            <div className="flex gap-2 pb-1 min-w-max">
+          <div className="flex gap-2 pb-1 min-w-max">
+            <Link
+              href={isEligibleMode ? `/grants${q ? `?q=${q}` : ""}` : `/grants?eligible=1`}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium whitespace-nowrap transition-colors ${
+                isEligibleMode ? "bg-blue-600 text-white" : "bg-slate-100 text-slate-600 hover:bg-slate-200"
+              }`}
+            >
+              <Sparkles className="w-3 h-3" />
+              Eligible for me
+            </Link>
+            {/* Source chips */}
+            {Object.entries(SOURCE_LABELS).map(([key, label]) => (
               <Link
-                href={isEligibleMode ? `/grants${q ? `?q=${q}` : ""}` : `/grants?eligible=1`}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium whitespace-nowrap transition-colors ${
-                  isEligibleMode ? "bg-blue-600 text-white" : "bg-slate-100 text-slate-600 hover:bg-slate-200"
+                key={key}
+                href={buildGrantsUrl({ cats: selectedCategories, sources: toggleCat(selectedSources, key), q, sort })}
+                className={`px-3 py-1.5 rounded-lg text-sm font-medium whitespace-nowrap transition-colors ${
+                  selectedSources.has(key)
+                    ? "bg-indigo-600 text-white"
+                    : "bg-slate-100 text-slate-600 hover:bg-slate-200"
                 }`}
               >
-                <Sparkles className="w-3 h-3" />
-                Eligible for me
+                {label}
               </Link>
-              <input type="hidden" name="q" value={q ?? ""} />
+            ))}
+            {/* Category chips */}
+            <Link
+              href={buildGrantsUrl({ sources: selectedSources, q, sort })}
+              className={`px-3 py-1.5 rounded-lg text-sm font-medium whitespace-nowrap transition-colors ${
+                selectedCategories.size === 0
+                  ? "bg-blue-600 text-white"
+                  : "bg-slate-100 text-slate-600 hover:bg-slate-200"
+              }`}
+            >
+              All
+            </Link>
+            {categories.map((cat) => (
               <Link
-                href={buildGrantsUrl({ q, sort })}
+                key={cat}
+                href={buildGrantsUrl({ cats: toggleCat(selectedCategories, cat), sources: selectedSources, q, sort })}
                 className={`px-3 py-1.5 rounded-lg text-sm font-medium whitespace-nowrap transition-colors ${
-                  selectedCategories.size === 0
+                  selectedCategories.has(cat)
                     ? "bg-blue-600 text-white"
                     : "bg-slate-100 text-slate-600 hover:bg-slate-200"
                 }`}
               >
-                All
+                {CATEGORY_LABELS[cat] ?? cat.replace("_", " ")}
               </Link>
-              {categories.map((cat) => (
-                <Link
-                  key={cat}
-                  href={buildGrantsUrl({ cats: toggleCat(selectedCategories, cat), q, sort })}
-                  className={`px-3 py-1.5 rounded-lg text-sm font-medium whitespace-nowrap transition-colors ${
-                    selectedCategories.has(cat)
-                      ? "bg-blue-600 text-white"
-                      : "bg-slate-100 text-slate-600 hover:bg-slate-200"
-                  }`}
-                >
-                  {CATEGORY_LABELS[cat] ?? cat.replace("_", " ")}
-                </Link>
-              ))}
-              {(selectedCategories.size > 0 || q) && (
-                <Link
-                  href={buildGrantsUrl({ sort })}
-                  className="px-3 py-1.5 rounded-lg text-sm text-blue-600 hover:underline whitespace-nowrap"
-                >
-                  Clear
-                </Link>
-              )}
-            </div>
-          </form>
+            ))}
+            {(selectedCategories.size > 0 || selectedSources.size > 0 || q) && (
+              <Link
+                href={buildGrantsUrl({ sort })}
+                className="px-3 py-1.5 rounded-lg text-sm text-blue-600 hover:underline whitespace-nowrap"
+              >
+                Clear
+              </Link>
+            )}
+          </div>
         </div>
 
         <div className="flex gap-8">
@@ -239,12 +261,32 @@ export default async function GrantsPage({
                 </Link>
               </div>
 
+              {/* Funding Source */}
+              <div className="mb-5">
+                <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-2">Funding Source</p>
+                <div className="flex flex-col gap-1">
+                  {Object.entries(SOURCE_LABELS).map(([key, label]) => (
+                    <Link
+                      key={key}
+                      href={buildGrantsUrl({ cats: selectedCategories, sources: toggleCat(selectedSources, key), q, sort })}
+                      className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+                        selectedSources.has(key)
+                          ? "bg-blue-600 text-white"
+                          : "bg-slate-100 text-slate-600 hover:bg-slate-200"
+                      }`}
+                    >
+                      {label}
+                    </Link>
+                  ))}
+                </div>
+              </div>
+
               {/* Category */}
               <div>
                 <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-2">Category</p>
                 <div className="flex flex-col gap-1">
                   <Link
-                    href={buildGrantsUrl({ q, sort })}
+                    href={buildGrantsUrl({ sources: selectedSources, q, sort })}
                     className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
                       selectedCategories.size === 0
                         ? "bg-blue-600 text-white"
@@ -256,7 +298,7 @@ export default async function GrantsPage({
                   {categories.map((cat) => (
                     <Link
                       key={cat}
-                      href={buildGrantsUrl({ cats: toggleCat(selectedCategories, cat), q, sort })}
+                      href={buildGrantsUrl({ cats: toggleCat(selectedCategories, cat), sources: selectedSources, q, sort })}
                       className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
                         selectedCategories.has(cat)
                           ? "bg-blue-600 text-white"
@@ -270,7 +312,7 @@ export default async function GrantsPage({
               </div>
 
               {/* Clear filters */}
-              {(selectedCategories.size > 0 || q) && (
+              {(selectedCategories.size > 0 || selectedSources.size > 0 || q) && (
                 <div className="mt-4 pt-4 border-t border-slate-100">
                   <Link
                     href={buildGrantsUrl({ sort })}

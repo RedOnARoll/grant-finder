@@ -38,6 +38,8 @@ export interface EligibilityCriteria {
   max_household_income_percent_ami?: number
 }
 
+export type FundingSource = "federal" | "state" | "local" | "private"
+
 export interface Grant {
   id: string
   name: string
@@ -45,6 +47,7 @@ export interface Grant {
   category: GrantCategory
   subcategory: string | null
   type: "grant" | "benefit"
+  funding_source: FundingSource | null
   description: string
   max_amount: number | null
   is_recurring: boolean

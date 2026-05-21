@@ -11,8 +11,14 @@ import { getBrowserSupabase } from "@/lib/supabase-browser"
 type AuthMode = "login" | "signup"
 type OAuthProvider = "google" | "azure"
 
+function getSiteOrigin() {
+  const configuredUrl = process.env.NEXT_PUBLIC_SITE_URL?.trim()
+  if (configuredUrl) return new URL(configuredUrl).origin
+  return window.location.origin
+}
+
 function getRedirectUrl(next: string, confirmed = false) {
-  const url = new URL("/auth/callback", window.location.origin)
+  const url = new URL("/auth/callback", getSiteOrigin())
   url.searchParams.set("next", next)
   if (confirmed) url.searchParams.set("confirmed", "1")
   return url.toString()
