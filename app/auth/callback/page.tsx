@@ -14,6 +14,7 @@ function AuthCallback() {
   const supabase = useMemo(() => getBrowserSupabase(), [])
   const [error, setError] = useState<string | null>(null)
   const [confirmed, setConfirmed] = useState(false)
+  const [confirmedTarget, setConfirmedTarget] = useState("/")
 
   useEffect(() => {
     async function finishSignIn() {
@@ -51,8 +52,14 @@ function AuthCallback() {
         : safeNext
 
       if (isEmailConfirmation) {
-        broadcastAuthConfirmation("/")
+        const confirmationTarget = "/"
+        broadcastAuthConfirmation(confirmationTarget)
+        setConfirmedTarget(confirmationTarget)
         setConfirmed(true)
+        window.setTimeout(() => {
+          router.replace(confirmationTarget)
+          router.refresh()
+        }, 1500)
         return
       }
 
@@ -70,12 +77,15 @@ function AuthCallback() {
           {error ? "Sign-in needs another try" : confirmed ? "Authorization confirmed" : "Finishing sign-in..."}
         </h1>
         <p className="text-sm text-zinc-500">
-          {error ?? (confirmed ? "You are now logged in. You can close this tab." : "You will be redirected in a moment.")}
+          {error ?? (confirmed ? "You are now logged in. Opening GrantWay now." : "You will be redirected in a moment.")}
         </p>
         {confirmed && (
-          <p className="mt-4 text-xs text-zinc-400">
-            Your original GrantWay tab will open the main page automatically.
-          </p>
+          <a
+            href={confirmedTarget}
+            className="mt-4 inline-flex rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
+          >
+            Continue to GrantWay
+          </a>
         )}
       </div>
     </main>
