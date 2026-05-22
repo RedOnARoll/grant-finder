@@ -1,6 +1,9 @@
-import { createClient } from "@supabase/supabase-js"
+import { createClient, SupabaseClient } from "@supabase/supabase-js"
 import Anthropic from "@anthropic-ai/sdk"
 import type { Grant } from "./types"
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type AnySupabase = SupabaseClient<any, any, any>
 
 export interface RefreshSummary {
   total: number
@@ -175,8 +178,193 @@ Return only the JSON object, no explanation.`,
   }
 }
 
+// ── Concurrency limiter ───────────────────────────────────────────────
+function withConcurrency<T>(
+  items: T[],
+  concurrency: number,
+  fn: (item: T) => Promise<void>
+): Promise<void> {
+  return new Promise((resolve, reject) => {
+    let idx = 0
+    let active = 0
+    let failed = false
+
+    function next() {
+      if (failed) return
+      while (active < concurrency && idx < items.length) {
+        const item = items[idx++]
+        active++
+        fn(item)
+          .catch(reject)
+          .finally(() => {
+            active--
+            if (idx < items.length) {
+              next()
+            } else if (active === 0) {
+              resolve()
+            }
+          })
+      }
+      if (idx >= items.length && active === 0) resolve()
+    }
+
+    next()
+  })
+}
+
+// ── Process a single grant ────────────────────────────────────────────
+async function processGrant(
+  grant: Grant,
+  supabase: AnySupabase,
+  anthropic: Anthropic,
+  summary: RefreshSummary
+): Promise<void> {
+  try {
+    const updates: Record<string, unknown> = {
+      last_verified_at: new Date().toISOString(),
+    }
+    let dataSource = grant.data_source ?? "manual"
+    let isVerified = false
+    let verificationNotes: string | null = null
+    let changed = false
+
+    // ── Path A: Federal grants → Grants.gov ──────────────────────
+    if (grant.funding_source === "federal") {
+      const govResult = await searchGrantsGov(grant)
+
+      if (govResult.found) {
+        dataSource = "grants.gov"
+        isVerified = true
+
+        const changes: string[] = []
+
+        if (govResult.deadline !== undefined && govResult.deadline !== grant.deadline) {
+          updates.deadline = govResult.deadline
+          changes.push(`deadline: ${grant.deadline ?? "null"} → ${govResult.deadline ?? "null"}`)
+        }
+        if (
+          govResult.max_amount !== undefined &&
+          govResult.max_amount !== null &&
+          govResult.max_amount !== grant.max_amount
+        ) {
+          updates.max_amount = govResult.max_amount
+          changes.push(`max_amount: ${grant.max_amount} → ${govResult.max_amount}`)
+        }
+        if (govResult.application_url && !grant.application_url) {
+          updates.application_url = govResult.application_url
+          changes.push(`application_url added`)
+        }
+
+        if (changes.length > 0) {
+          verificationNotes = `grants.gov match. Changes: ${changes.join("; ")}`
+          changed = true
+        } else {
+          verificationNotes = "grants.gov match. No changes needed."
+        }
+      } else {
+        verificationNotes = "No grants.gov match found — manual review recommended."
+      }
+    }
+
+    // ── Path B: Has source URL → scrape + Claude extract ─────────
+    if (grant.official_source_url && !isVerified) {
+      const extracted = await extractFromUrl(
+        grant.official_source_url,
+        grant.name,
+        anthropic
+      ).catch(() => null)
+
+      if (extracted) {
+        dataSource = "scraped"
+        isVerified = true
+
+        const changes: string[] = []
+
+        if (extracted.deadline && extracted.deadline !== grant.deadline) {
+          updates.deadline = extracted.deadline
+          changes.push(`deadline: ${grant.deadline ?? "null"} → ${extracted.deadline}`)
+        }
+        if (
+          extracted.max_amount !== null &&
+          extracted.max_amount !== undefined &&
+          extracted.max_amount !== grant.max_amount
+        ) {
+          updates.max_amount = extracted.max_amount
+          changes.push(`max_amount: ${grant.max_amount} → ${extracted.max_amount}`)
+        }
+        if (
+          extracted.required_documents?.length > 0 &&
+          JSON.stringify(extracted.required_documents) !==
+            JSON.stringify(grant.required_documents)
+        ) {
+          updates.required_documents = extracted.required_documents
+          changes.push(`required_documents updated`)
+        }
+        if (extracted.application_url && !grant.application_url) {
+          updates.application_url = extracted.application_url
+          changes.push(`application_url added`)
+        }
+
+        if (changes.length > 0) {
+          verificationNotes = `Scraped ${grant.official_source_url}. Changes: ${changes.join("; ")}`
+          changed = true
+        } else {
+          verificationNotes = `Scraped ${grant.official_source_url}. No changes needed.`
+        }
+      } else {
+        verificationNotes = `Failed to extract from ${grant.official_source_url}`
+      }
+    }
+
+    // ── Path C: No source URL, not federal ──────────────────────
+    if (!grant.official_source_url && grant.funding_source !== "federal") {
+      isVerified = false
+      verificationNotes = "No source URL and not a federal grant — flagged as unverified."
+      summary.unverified++
+    }
+
+    // Apply updates
+    updates.data_source = dataSource
+    updates.is_verified = isVerified
+    updates.verification_notes = verificationNotes
+
+    const { error: updateError } = await supabase
+      .from("grants")
+      .update(updates)
+      .eq("id", grant.id)
+
+    if (updateError) throw new Error(updateError.message)
+
+    if (changed) {
+      summary.updated++
+      console.log(`[refresh] ✓ updated: ${grant.slug}`)
+    } else {
+      summary.unchanged++
+      console.log(`[refresh] — unchanged: ${grant.slug}`)
+    }
+  } catch (err) {
+    summary.failed++
+    const msg = err instanceof Error ? err.message : String(err)
+    summary.errors.push({ slug: grant.slug, error: msg })
+    console.error(`[refresh] ✗ failed: ${grant.slug} — ${msg}`)
+
+    // Mark as failed but still update last_verified_at
+    try {
+      await supabase
+        .from("grants")
+        .update({
+          last_verified_at: new Date().toISOString(),
+          verification_notes: `Refresh failed: ${msg}`,
+        })
+        .eq("id", grant.id)
+    } catch {
+      // best-effort — ignore secondary failure
+    }
+  }
+}
+
 // ── Main refresh function ─────────────────────────────────────────────
-export async function runRefresh(batchSize = 20): Promise<RefreshSummary> {
+export async function runRefresh(batchSize = 100, concurrency = 5): Promise<RefreshSummary> {
   const startedAt = Date.now()
   const supabase = serviceClient()
   const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
@@ -201,168 +389,20 @@ export async function runRefresh(batchSize = 20): Promise<RefreshSummary> {
   if (fetchError) throw new Error(`Failed to fetch grants: ${fetchError.message}`)
 
   summary.total = grants?.length ?? 0
-  console.log(`[refresh] Starting refresh for ${summary.total} rows (batch=${batchSize})`)
+  console.log(
+    `[refresh] Starting refresh for ${summary.total} rows (batch=${batchSize}, concurrency=${concurrency})`
+  )
 
-  for (const grant of grants ?? []) {
-    try {
-      const updates: Record<string, unknown> = {
-        last_verified_at: new Date().toISOString(),
-      }
-      let dataSource = (grant as Grant).data_source ?? "manual"
-      let isVerified = false
-      let verificationNotes: string | null = null
-      let changed = false
-
-      // ── Path A: Federal grants → Grants.gov ──────────────────────
-      if ((grant as Grant).funding_source === "federal") {
-        await sleep(300) // 300ms between Grants.gov calls
-        const govResult = await searchGrantsGov(grant as Grant)
-
-        if (govResult.found) {
-          dataSource = "grants.gov"
-          isVerified = true
-
-          const changes: string[] = []
-
-          if (
-            govResult.deadline !== undefined &&
-            govResult.deadline !== (grant as Grant).deadline
-          ) {
-            updates.deadline = govResult.deadline
-            changes.push(
-              `deadline: ${(grant as Grant).deadline ?? "null"} → ${govResult.deadline ?? "null"}`
-            )
-          }
-          if (
-            govResult.max_amount !== undefined &&
-            govResult.max_amount !== null &&
-            govResult.max_amount !== (grant as Grant).max_amount
-          ) {
-            updates.max_amount = govResult.max_amount
-            changes.push(
-              `max_amount: ${(grant as Grant).max_amount} → ${govResult.max_amount}`
-            )
-          }
-          if (govResult.application_url && !(grant as Grant).application_url) {
-            updates.application_url = govResult.application_url
-            changes.push(`application_url added`)
-          }
-
-          if (changes.length > 0) {
-            verificationNotes = `grants.gov match. Changes: ${changes.join("; ")}`
-            changed = true
-          } else {
-            verificationNotes = "grants.gov match. No changes needed."
-          }
-        } else {
-          verificationNotes = "No grants.gov match found — manual review recommended."
-        }
-      }
-
-      // ── Path B: Has source URL → scrape + Claude extract ─────────
-      if ((grant as Grant).official_source_url && !isVerified) {
-        await sleep(500) // 500ms between scrape calls
-        const extracted = await extractFromUrl(
-          (grant as Grant).official_source_url,
-          (grant as Grant).name,
-          anthropic
-        ).catch(() => null)
-
-        if (extracted) {
-          dataSource = "scraped"
-          isVerified = true
-
-          const changes: string[] = []
-
-          if (extracted.deadline && extracted.deadline !== (grant as Grant).deadline) {
-            updates.deadline = extracted.deadline
-            changes.push(`deadline: ${(grant as Grant).deadline ?? "null"} → ${extracted.deadline}`)
-          }
-          if (
-            extracted.max_amount !== null &&
-            extracted.max_amount !== undefined &&
-            extracted.max_amount !== (grant as Grant).max_amount
-          ) {
-            updates.max_amount = extracted.max_amount
-            changes.push(`max_amount: ${(grant as Grant).max_amount} → ${extracted.max_amount}`)
-          }
-          if (
-            extracted.required_documents?.length > 0 &&
-            JSON.stringify(extracted.required_documents) !==
-              JSON.stringify((grant as Grant).required_documents)
-          ) {
-            updates.required_documents = extracted.required_documents
-            changes.push(`required_documents updated`)
-          }
-          if (extracted.application_url && !(grant as Grant).application_url) {
-            updates.application_url = extracted.application_url
-            changes.push(`application_url added`)
-          }
-
-          if (changes.length > 0) {
-            verificationNotes = `Scraped ${(grant as Grant).official_source_url}. Changes: ${changes.join("; ")}`
-            changed = true
-          } else {
-            verificationNotes = `Scraped ${(grant as Grant).official_source_url}. No changes needed.`
-          }
-
-          await sleep(1500) // extra pause after Claude call
-        } else {
-          verificationNotes = `Failed to extract from ${(grant as Grant).official_source_url}`
-        }
-      }
-
-      // ── Path C: No source URL, not federal ──────────────────────
-      if (!(grant as Grant).official_source_url && (grant as Grant).funding_source !== "federal") {
-        isVerified = false
-        verificationNotes = "No source URL and not a federal grant — flagged as unverified."
-        summary.unverified++
-      }
-
-      // Apply updates
-      updates.data_source = dataSource
-      updates.is_verified = isVerified
-      updates.verification_notes = verificationNotes
-
-      const { error: updateError } = await supabase
-        .from("grants")
-        .update(updates)
-        .eq("id", (grant as Grant).id)
-
-      if (updateError) throw new Error(updateError.message)
-
-      if (changed) {
-        summary.updated++
-        console.log(`[refresh] ✓ updated: ${(grant as Grant).slug}`)
-      } else {
-        summary.unchanged++
-        console.log(`[refresh] — unchanged: ${(grant as Grant).slug}`)
-      }
-    } catch (err) {
-      summary.failed++
-      const msg = err instanceof Error ? err.message : String(err)
-      summary.errors.push({ slug: (grant as Grant).slug, error: msg })
-      console.error(`[refresh] ✗ failed: ${(grant as Grant).slug} — ${msg}`)
-
-      // Mark as failed but still update last_verified_at
-      try {
-        await supabase
-          .from("grants")
-          .update({
-            last_verified_at: new Date().toISOString(),
-            verification_notes: `Refresh failed: ${msg}`,
-          })
-          .eq("id", (grant as Grant).id)
-      } catch {
-        // best-effort — ignore secondary failure
-      }
-    }
-  }
+  // Process grants in parallel with a concurrency cap
+  await withConcurrency(
+    (grants ?? []) as Grant[],
+    concurrency,
+    (grant) => processGrant(grant, supabase, anthropic, summary)
+  )
 
   summary.durationMs = Date.now() - startedAt
 
-  console.log(`
-[refresh] ── Summary ──────────────────────`)
+  console.log(`\n[refresh] ── Summary ──────────────────────`)
   console.log(`  Total:     ${summary.total}`)
   console.log(`  Updated:   ${summary.updated}`)
   console.log(`  Unchanged: ${summary.unchanged}`)
