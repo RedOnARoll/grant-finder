@@ -8,6 +8,7 @@ import SaveInterestButton from "@/components/SaveInterestButton"
 import { Badge, StatusBadge } from "@/components/ui/Badge"
 import ApplyButton from "@/components/ApplyButton"
 import BenefitDetailGuide from "./BenefitDetailGuide"
+import StateProgramBanner from "@/components/StateProgramBanner"
 
 export const dynamic = "force-dynamic"
 export const dynamicParams = true
@@ -110,6 +111,8 @@ export default async function BenefitDetailPage({
         <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_20rem] lg:items-start">
           <div className="min-w-0 space-y-6">
             <VerificationWarning isVerified={benefit.is_verified} lastVerifiedAt={benefit.last_verified_at} />
+
+            <StateProgramBanner slug={benefit.slug} />
 
             <section className="rounded-xl border border-amber-200 bg-white p-6 shadow-sm sm:p-8">
               <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">{benefit.agency}</p>
