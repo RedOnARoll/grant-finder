@@ -1,6 +1,6 @@
 "use client"
 
-import type { ComponentType } from "react"
+import type { ComponentType, ReactNode } from "react"
 import {
   Accessibility,
   Baby,
@@ -65,7 +65,7 @@ function Card({
   stripe: StripeColor
   portalUrl: string | null
   stateName: string
-  children: React.ReactNode
+  children: ReactNode
 }) {
   const stripeClass =
     stripe === "green"

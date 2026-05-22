@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useRef, useState } from "react"
+import { type ChangeEvent, useEffect, useRef, useState } from "react"
 import { MapPin, ChevronDown } from "lucide-react"
 import { US_STATES } from "@/lib/state-programs"
 
@@ -53,7 +53,7 @@ export default function StateSelector({ onStateChange, className = "" }: Props) 
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  function handleChange(e: React.ChangeEvent<HTMLSelectElement>) {
+  function handleChange(e: ChangeEvent<HTMLSelectElement>) {
     const code = e.target.value || null
     setStateCode(code)
     setAutoDetected(false)
