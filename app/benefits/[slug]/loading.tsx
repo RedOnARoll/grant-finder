@@ -74,9 +74,6 @@ export default function BenefitDetailLoading() {
         </div>
       </main>
 
-      <footer className="border-t border-zinc-200 py-8 px-6 text-center text-sm text-zinc-500 mt-10">
-        Benefit information is for reference only. Verify eligibility with the issuing agency.
-      </footer>
     </div>
   )
 }
