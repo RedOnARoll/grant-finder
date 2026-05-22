@@ -1,14 +1,13 @@
 import Link from "next/link"
 import { notFound } from "next/navigation"
-import { ChevronRight } from "lucide-react"
+import { ChevronRight, ExternalLink, HeartHandshake } from "lucide-react"
 import { getBenefits, getBenefitBySlug } from "@/lib/supabase"
 import { getBenefitStats } from "@/lib/benefit-stats"
-import EligibilityQuiz from "./EligibilityQuiz"
 import SiteNav from "@/components/SiteNav"
 import SaveInterestButton from "@/components/SaveInterestButton"
 import { Badge, StatusBadge } from "@/components/ui/Badge"
 import ApplyButton from "@/components/ApplyButton"
-import type { Grant } from "@/lib/types"
+import BenefitDetailGuide from "./BenefitDetailGuide"
 
 export const dynamic = "force-dynamic"
 export const dynamicParams = true
@@ -23,7 +22,7 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
   const benefit = await getBenefitBySlug(slug)
   if (!benefit) return {}
   return {
-    title: `${benefit.name} – GrantFinder`,
+    title: `${benefit.name} - GrantWay`,
     description: benefit.description,
   }
 }
@@ -43,27 +42,25 @@ function VerificationWarning({ isVerified, lastVerifiedAt }: { isVerified?: bool
     : null
 
   const message = !isVerified
-    ? "This record hasn't been verified against an official source yet."
+    ? "This record has not been verified against an official source yet."
     : `This record was last verified ${daysAgo} days ago and may be outdated.`
 
   return (
-    <div className="flex items-start gap-3 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
-      <svg className="mt-0.5 h-4 w-4 shrink-0 text-amber-500" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
-        <path fillRule="evenodd" d="M8.485 2.495c.673-1.167 2.357-1.167 3.03 0l6.28 10.875c.673 1.167-.17 2.625-1.516 2.625H3.72c-1.347 0-2.189-1.458-1.515-2.625L8.485 2.495zM10 5a.75.75 0 01.75.75v3.5a.75.75 0 01-1.5 0v-3.5A.75.75 0 0110 5zm0 9a1 1 0 100-2 1 1 0 000 2z" clipRule="evenodd" />
-      </svg>
+    <div className="flex items-start gap-3 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+      <span className="mt-1 h-2 w-2 shrink-0 rounded-full bg-amber-500" />
       <span>{message} Always verify details directly with the issuing agency before applying.</span>
     </div>
   )
 }
 
 const SUBCATEGORY_LABELS: Record<string, string> = {
-  housing:    "Housing Assistance",
-  food:       "Food Aid",
+  housing: "Housing Assistance",
+  food: "Food Aid",
   disability: "Disability Support",
-  education:  "Education",
-  childcare:  "Childcare",
-  energy:     "Energy Assistance",
-  health:     "Healthcare",
+  education: "Education",
+  childcare: "Childcare",
+  energy: "Energy Assistance",
+  health: "Healthcare",
 }
 
 function formatAmount(amount: number | null) {
@@ -96,195 +93,156 @@ export default async function BenefitDetailPage({
   const deadline = formatDeadline(benefit.deadline)
   const subcategoryLabel = benefit.subcategory
     ? (SUBCATEGORY_LABELS[benefit.subcategory] ?? benefit.subcategory.replace("_", " "))
-    : null
+    : "Benefit"
   const stats = getBenefitStats(benefit.slug)
 
   return (
-    <div className="flex flex-col min-h-full bg-slate-50">
+    <div className="flex min-h-full flex-col bg-slate-50">
       <SiteNav active="benefits" />
 
-      <main className="flex-1 max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-10">
-        {/* Breadcrumb */}
-        <nav className="flex items-center gap-1.5 text-sm text-slate-500 mb-8" aria-label="Breadcrumb">
-          <Link href="/benefits" className="hover:text-slate-900 transition-colors">Benefits</Link>
-          <ChevronRight className="w-4 h-4 text-slate-400" />
-          <span className="text-slate-900 truncate">{benefit.name}</span>
+      <main className="mx-auto w-full max-w-7xl flex-1 px-4 py-8 sm:px-6 lg:px-8">
+        <nav className="mb-6 flex items-center gap-1.5 text-sm text-slate-500" aria-label="Breadcrumb">
+          <Link href="/benefits" className="text-blue-600 hover:text-blue-700">
+            All benefits
+          </Link>
+          <ChevronRight className="h-4 w-4 text-slate-400" />
+          <span>{subcategoryLabel}</span>
+          <ChevronRight className="h-4 w-4 text-slate-400" />
+          <span className="max-w-xs truncate text-slate-900">{benefit.name}</span>
         </nav>
 
-        <VerificationWarning
-          isVerified={(benefit as Grant & { is_verified?: boolean; last_verified_at?: string | null }).is_verified ?? false}
-          lastVerifiedAt={(benefit as Grant & { is_verified?: boolean; last_verified_at?: string | null }).last_verified_at ?? null}
-        />
+        <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_20rem] lg:items-start">
+          <div className="min-w-0 space-y-6">
+            <VerificationWarning isVerified={benefit.is_verified} lastVerifiedAt={benefit.last_verified_at} />
 
-        <div className="flex gap-8 items-start">
-          {/* Left main column */}
-          <div className="flex-1 min-w-0 space-y-6">
-            {/* Header card */}
-            <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-6">
-              {/* Badges */}
-              <div className="flex flex-wrap gap-2 mb-4">
+            <section className="rounded-xl border border-amber-200 bg-white p-6 shadow-sm sm:p-8">
+              <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">{benefit.agency}</p>
+              <h1 className="mt-3 max-w-3xl text-3xl font-bold leading-tight tracking-tight text-slate-900 sm:text-4xl">
+                {benefit.name}
+              </h1>
+              <div className="mt-5 flex flex-wrap gap-2">
                 <Badge variant="green">Benefit</Badge>
-                {subcategoryLabel && <Badge variant="blue">{subcategoryLabel}</Badge>}
+                <Badge variant="amber">{subcategoryLabel}</Badge>
                 {benefit.is_recurring && <Badge variant="slate">Recurring</Badge>}
+                <StatusBadge deadline={benefit.deadline} isRecurring={benefit.is_recurring ?? false} />
               </div>
 
-              {/* Title + agency */}
-              <h1 className="text-2xl font-bold text-slate-900 leading-tight mb-1">{benefit.name}</h1>
-              <p className="text-sm text-slate-500 mb-5">{benefit.agency}</p>
-
-              {/* Key stats row */}
-              <div className="flex flex-wrap gap-6 border-t border-slate-100 pt-5">
-                {amount && (
-                  <div>
-                    <p className="text-xs text-slate-400 uppercase tracking-wide font-medium mb-1">Max Benefit</p>
-                    <p className="text-2xl font-bold text-slate-900">{amount}</p>
-                  </div>
-                )}
+              <div className="mt-6 grid gap-4 border-t border-amber-100 pt-6 sm:grid-cols-3">
                 <div>
-                  <p className="text-xs text-slate-400 uppercase tracking-wide font-medium mb-1">Enrollment Period</p>
-                  {deadline ? (
-                    <p className="text-2xl font-bold text-slate-900">{deadline}</p>
-                  ) : (
-                    <p className="text-lg font-medium text-slate-500">Open enrollment</p>
-                  )}
+                  <p className="text-xs font-medium uppercase tracking-wide text-slate-400">What it may cover</p>
+                  <p className="mt-1 text-lg font-bold text-slate-900">{amount ?? "Varies"}</p>
                 </div>
-                {stats?.yearEstablished && (
-                  <div>
-                    <p className="text-xs text-slate-400 uppercase tracking-wide font-medium mb-1">Established</p>
-                    <p className="text-2xl font-bold text-slate-900">{stats.yearEstablished}</p>
-                  </div>
-                )}
+                <div>
+                  <p className="text-xs font-medium uppercase tracking-wide text-slate-400">Enrollment</p>
+                  <p className="mt-1 text-lg font-bold text-slate-900">{deadline ?? "Open enrollment"}</p>
+                </div>
+                <div>
+                  <p className="text-xs font-medium uppercase tracking-wide text-slate-400">Where available</p>
+                  <p className="mt-1 text-lg font-bold text-slate-900">{stats?.availability ?? "Check locally"}</p>
+                </div>
               </div>
-            </div>
+            </section>
 
-            {/* About section */}
-            <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-6">
-              <h2 className="text-lg font-semibold text-slate-900 mb-3">About this benefit</h2>
-              <p className="text-slate-600 leading-7">{benefit.description}</p>
-            </div>
+            <BenefitDetailGuide
+              slug={benefit.slug}
+              name={benefit.name}
+              subcategory={benefit.subcategory}
+              description={benefit.description}
+              eligibilityCriteria={benefit.eligibility_criteria}
+              documents={benefit.required_documents}
+              processingTimeDays={benefit.processing_time_days}
+            />
 
-            {/* Program Impact */}
             {stats && (
-              <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-6">
-                <h2 className="text-lg font-semibold text-slate-900 mb-4">Program Impact</h2>
-
+              <section className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
+                <h2 className="text-xl font-bold text-slate-900">Program impact</h2>
                 {stats.keyFact && (
-                  <div className="rounded-xl bg-blue-50 border border-blue-100 px-5 py-4 mb-4">
-                    <p className="text-sm text-blue-800 leading-6">{stats.keyFact}</p>
+                  <div className="mt-4 rounded-lg border border-blue-100 bg-blue-50 px-5 py-4">
+                    <p className="text-sm leading-6 text-blue-800">{stats.keyFact}</p>
                   </div>
                 )}
-
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="rounded-xl border border-slate-200 px-5 py-4">
-                    <p className="text-xs text-slate-400 uppercase tracking-wide font-medium mb-1">People Helped</p>
-                    <p className="text-xl font-bold text-slate-900">{stats.recipientsLabel}</p>
-                    {stats.recipientsNote && (
-                      <p className="text-xs text-slate-500 mt-0.5">{stats.recipientsNote}</p>
-                    )}
-                  </div>
-                  <div className="rounded-xl border border-slate-200 px-5 py-4">
-                    <p className="text-xs text-slate-400 uppercase tracking-wide font-medium mb-1">Annual Federal Budget</p>
-                    <p className="text-xl font-bold text-slate-900">{stats.annualBudget}</p>
-                  </div>
-                  {stats.avgBenefit && (
-                    <div className="rounded-xl border border-slate-200 px-5 py-4">
-                      <p className="text-xs text-slate-400 uppercase tracking-wide font-medium mb-1">Average Benefit</p>
-                      <p className="text-base font-semibold text-slate-900">{stats.avgBenefit}</p>
-                    </div>
-                  )}
-                  <div className="rounded-xl border border-slate-200 px-5 py-4">
-                    <p className="text-xs text-slate-400 uppercase tracking-wide font-medium mb-1">Where Available</p>
-                    <p className="text-sm font-medium text-slate-900">{stats.availability}</p>
-                  </div>
+                <div className="mt-4 grid gap-4 sm:grid-cols-2">
+                  <ImpactStat label="People helped" value={stats.recipientsLabel} note={stats.recipientsNote} />
+                  <ImpactStat label="Annual federal budget" value={stats.annualBudget} />
+                  {stats.avgBenefit && <ImpactStat label="Average benefit" value={stats.avgBenefit} />}
+                  <ImpactStat label="Established" value={stats.yearEstablished ? String(stats.yearEstablished) : "Varies"} />
                 </div>
-              </div>
+              </section>
             )}
-
-            {/* Eligibility Quiz */}
-            <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-6">
-              <EligibilityQuiz criteria={benefit.eligibility_criteria} slug={benefit.slug} />
-            </div>
           </div>
 
-          {/* Right sticky sidebar */}
-          <aside className="hidden lg:flex flex-col gap-4 w-72 shrink-0 sticky top-6">
-            {/* Key details card */}
-            <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-5">
-              <h3 className="text-sm font-semibold text-slate-900 mb-4">Key Details</h3>
-              <dl className="space-y-3">
+          <aside className="space-y-4 lg:sticky lg:top-20">
+            <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+              <div className="mb-4 flex h-10 w-10 items-center justify-center rounded-lg bg-amber-50 text-amber-700">
+                <HeartHandshake className="h-5 w-5" />
+              </div>
+              <h2 className="text-sm font-semibold uppercase tracking-wide text-slate-500">Key details</h2>
+              <dl className="mt-4 space-y-3 text-sm">
                 <div>
-                  <dt className="text-xs text-slate-400 uppercase tracking-wide font-medium mb-0.5">Status</dt>
-                  <dd>
+                  <dt className="text-xs font-medium uppercase tracking-wide text-slate-400">Status</dt>
+                  <dd className="mt-1">
                     <StatusBadge deadline={benefit.deadline} isRecurring={benefit.is_recurring ?? false} />
                   </dd>
                 </div>
-                {amount && (
-                  <div>
-                    <dt className="text-xs text-slate-400 uppercase tracking-wide font-medium mb-0.5">Max Benefit</dt>
-                    <dd className="text-sm font-semibold text-slate-900">{amount}</dd>
-                  </div>
-                )}
-                {subcategoryLabel && (
-                  <div>
-                    <dt className="text-xs text-slate-400 uppercase tracking-wide font-medium mb-0.5">Type</dt>
-                    <dd className="text-sm text-slate-600">{subcategoryLabel}</dd>
-                  </div>
-                )}
-                <div>
-                  <dt className="text-xs text-slate-400 uppercase tracking-wide font-medium mb-0.5">Enrollment</dt>
-                  <dd className="text-sm text-slate-600">{deadline ?? "Open enrollment"}</dd>
-                </div>
-                <div>
-                  <dt className="text-xs text-slate-400 uppercase tracking-wide font-medium mb-0.5">Administered by</dt>
-                  <dd className="text-sm text-slate-600">{benefit.agency}</dd>
-                </div>
+                <DetailRow label="Max benefit" value={amount ?? "Varies"} />
+                <DetailRow label="Type" value={subcategoryLabel} />
+                <DetailRow label="Enrollment" value={deadline ?? "Open enrollment"} />
+                <DetailRow label="Administered by" value={benefit.agency} />
               </dl>
             </div>
 
-            {/* Save button */}
-            <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-5">
+            <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
               <SaveInterestButton slug={benefit.slug} type="benefit" />
+              <ApplyButton
+                slug={benefit.slug}
+                type="benefit"
+                name={benefit.name}
+                agency={benefit.agency}
+                applicationUrl={benefit.application_url}
+                officialSourceUrl={benefit.official_source_url}
+                requiredDocuments={benefit.required_documents}
+                className="mt-3 flex h-11 w-full items-center justify-center gap-2 rounded-lg bg-blue-600 px-4 text-sm font-semibold text-white hover:bg-blue-700"
+              >
+                Learn How to Apply
+                <ExternalLink className="h-4 w-4" />
+              </ApplyButton>
+              {benefit.official_source_url && (
+                <a
+                  href={benefit.official_source_url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="mt-3 flex h-10 w-full items-center justify-center gap-2 rounded-lg border border-slate-200 px-4 text-sm font-medium text-slate-700 hover:bg-slate-50"
+                >
+                  Official Source
+                  <ExternalLink className="h-4 w-4" />
+                </a>
+              )}
+              <p className="mt-4 text-xs leading-5 text-slate-500">
+                GrantWay helps you prepare. The agency or local office decides eligibility and benefit amounts.
+              </p>
             </div>
-
-            {/* Apply CTA */}
-            <ApplyButton
-              slug={benefit.slug}
-              type="benefit"
-              name={benefit.name}
-              agency={benefit.agency}
-              applicationUrl={benefit.application_url}
-              officialSourceUrl={benefit.official_source_url}
-              requiredDocuments={benefit.required_documents}
-              className="flex items-center justify-center w-full h-11 rounded-xl bg-blue-600 text-white text-sm font-semibold hover:bg-blue-700 transition-colors"
-            >
-              Learn How to Apply
-            </ApplyButton>
-
-            <p className="text-xs text-slate-400 text-center leading-relaxed px-1">
-              You may qualify for this benefit. Review all eligibility requirements before applying.
-            </p>
           </aside>
         </div>
-
-        {/* Mobile apply CTA */}
-        <div className="lg:hidden mt-6 space-y-3">
-          <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-4">
-            <SaveInterestButton slug={benefit.slug} type="benefit" />
-          </div>
-          <ApplyButton
-            slug={benefit.slug}
-            type="benefit"
-            name={benefit.name}
-            agency={benefit.agency}
-            applicationUrl={benefit.application_url}
-            officialSourceUrl={benefit.official_source_url}
-            requiredDocuments={benefit.required_documents}
-            className="flex items-center justify-center w-full h-11 rounded-xl bg-blue-600 text-white text-sm font-semibold hover:bg-blue-700 transition-colors"
-          >
-            Learn How to Apply
-          </ApplyButton>
-        </div>
       </main>
+    </div>
+  )
+}
+
+function DetailRow({ label, value }: { label: string; value: string }) {
+  return (
+    <div>
+      <dt className="text-xs font-medium uppercase tracking-wide text-slate-400">{label}</dt>
+      <dd className="mt-1 text-sm font-medium text-slate-900">{value}</dd>
+    </div>
+  )
+}
+
+function ImpactStat({ label, value, note }: { label: string; value: string; note?: string }) {
+  return (
+    <div className="rounded-lg border border-slate-200 bg-slate-50 px-5 py-4">
+      <p className="text-xs font-medium uppercase tracking-wide text-slate-400">{label}</p>
+      <p className="mt-1 text-lg font-bold text-slate-900">{value}</p>
+      {note && <p className="mt-1 text-xs text-slate-500">{note}</p>}
     </div>
   )
 }
