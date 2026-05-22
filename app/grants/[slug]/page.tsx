@@ -38,13 +38,9 @@ function VerificationWarning({ isVerified, lastVerifiedAt }: { isVerified?: bool
   const stale = isStale(lastVerifiedAt)
   if (isVerified && !stale) return null
 
-  const daysAgo = lastVerifiedAt
-    ? Math.floor((Date.now() - new Date(lastVerifiedAt).getTime()) / (24 * 60 * 60 * 1000))
-    : null
-
   const message = !isVerified
     ? "This record has not been verified against an official source yet."
-    : `This record was last verified ${daysAgo} days ago and may be outdated.`
+    : "This record was last verified more than 30 days ago and may be outdated."
 
   return (
     <div className="flex items-start gap-3 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
