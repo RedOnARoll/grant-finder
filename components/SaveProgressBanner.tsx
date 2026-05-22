@@ -20,12 +20,17 @@ export default function SaveProgressBanner({ threshold = 2 }: { threshold?: numb
   const [dismissed, setDismissed] = useState(true)
 
   useEffect(() => {
-    setDismissed(localStorage.getItem(DISMISS_KEY) === "1")
-    setActivityCount(readActivityCount())
+    const frame = requestAnimationFrame(() => {
+      setDismissed(localStorage.getItem(DISMISS_KEY) === "1")
+      setActivityCount(readActivityCount())
+    })
 
     const handleFocus = () => setActivityCount(readActivityCount())
     window.addEventListener("focus", handleFocus)
-    return () => window.removeEventListener("focus", handleFocus)
+    return () => {
+      cancelAnimationFrame(frame)
+      window.removeEventListener("focus", handleFocus)
+    }
   }, [])
 
   function dismiss() {
