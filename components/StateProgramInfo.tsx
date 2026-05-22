@@ -4,7 +4,6 @@ import type { ComponentType } from "react"
 import {
   Accessibility,
   Baby,
-  BriefcaseBusiness,
   DollarSign,
   GraduationCap,
   HeartPulse,
