@@ -3,7 +3,7 @@ import { ArrowRight, ChevronRight } from "lucide-react"
 import { getGrants, getBenefits } from "@/lib/supabase"
 import SiteNav from "@/components/SiteNav"
 import { Badge } from "@/components/ui/Badge"
-import { QuizIllustration, LogoMark } from "@/components/illustrations/GeoShapes"
+import { QuizIllustration } from "@/components/illustrations/GeoShapes"
 import HeroSearch from "@/components/HeroSearch"
 
 export const dynamic = "force-dynamic"
@@ -370,60 +370,6 @@ export default async function HomePage() {
         </section>
 
       </main>
-
-      {/* ── FOOTER ───────────────────────────────────────────────── */}
-      <footer className="bg-slate-900 border-t border-slate-800">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-8 mb-10">
-
-            {/* Column 1 — Brand */}
-            <div className="col-span-2 md:col-span-1">
-              <div className="flex items-center gap-2 mb-3">
-                <LogoMark className="w-6 h-6" />
-                <span className="text-base font-bold text-white">GrantWay</span>
-              </div>
-              <p className="text-sm text-slate-400 max-w-xs">
-                Helping people and organizations discover grants and benefits they actually qualify for.
-              </p>
-            </div>
-
-            {/* Column 2 — Explore */}
-            <div>
-              <h4 className="text-sm font-semibold text-white mb-4">Explore</h4>
-              <ul className="space-y-2.5 text-sm text-slate-400">
-                <li><Link href="/programs" className="hover:text-white transition-colors">All Programs</Link></li>
-                <li><Link href="/grants"   className="hover:text-white transition-colors">Grants</Link></li>
-                <li><Link href="/benefits" className="hover:text-white transition-colors">Benefits</Link></li>
-                <li><Link href="/quiz"     className="hover:text-white transition-colors">Eligibility Quiz</Link></li>
-              </ul>
-            </div>
-
-            {/* Column 3 — Account */}
-            <div>
-              <h4 className="text-sm font-semibold text-white mb-4">Account</h4>
-              <ul className="space-y-2.5 text-sm text-slate-400">
-                <li><Link href="/auth"    className="hover:text-white transition-colors">Sign In</Link></li>
-                <li><Link href="/account" className="hover:text-white transition-colors">Dashboard</Link></li>
-                <li><Link href="/account" className="hover:text-white transition-colors">Profile</Link></li>
-              </ul>
-            </div>
-
-            {/* Column 4 — Legal */}
-            <div>
-              <h4 className="text-sm font-semibold text-white mb-4">Legal</h4>
-              <ul className="space-y-2.5 text-sm text-slate-400">
-                <li><Link href="#" className="hover:text-white transition-colors">Privacy Policy</Link></li>
-                <li><Link href="#" className="hover:text-white transition-colors">Terms of Use</Link></li>
-              </ul>
-            </div>
-          </div>
-
-          {/* Bottom bar */}
-          <div className="border-t border-slate-800 pt-6 text-sm text-slate-500 text-center">
-            © 2025 GrantWay. Built to help people find funding. Information is for reference only — verify eligibility directly with each program.
-          </div>
-        </div>
-      </footer>
     </div>
   )
 }

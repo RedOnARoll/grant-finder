@@ -212,10 +212,6 @@ export default async function GrantDetailPage({
           </div>
         </div>
       </main>
-
-      <footer className="border-t border-slate-200 py-6 text-center text-xs text-slate-400 mt-10">
-        Grant information is for reference only. Verify eligibility with the issuing agency.
-      </footer>
     </div>
   )
 }
