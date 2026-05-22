@@ -176,7 +176,7 @@ Return only the JSON object, no explanation.`,
 }
 
 // ── Main refresh function ─────────────────────────────────────────────
-export async function runRefresh(): Promise<RefreshSummary> {
+export async function runRefresh(batchSize = 20): Promise<RefreshSummary> {
   const startedAt = Date.now()
   const supabase = serviceClient()
   const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
@@ -191,16 +191,17 @@ export async function runRefresh(): Promise<RefreshSummary> {
     durationMs: 0,
   }
 
-  // Fetch all rows
+  // Fetch the N most-stale rows (oldest last_verified_at first, nulls first)
   const { data: grants, error: fetchError } = await supabase
     .from("grants")
     .select("*")
     .order("last_verified_at", { ascending: true, nullsFirst: true })
+    .limit(batchSize)
 
   if (fetchError) throw new Error(`Failed to fetch grants: ${fetchError.message}`)
 
   summary.total = grants?.length ?? 0
-  console.log(`[refresh] Starting refresh for ${summary.total} rows`)
+  console.log(`[refresh] Starting refresh for ${summary.total} rows (batch=${batchSize})`)
 
   for (const grant of grants ?? []) {
     try {
