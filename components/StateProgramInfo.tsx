@@ -1,5 +1,19 @@
 "use client"
 
+import type { ComponentType } from "react"
+import {
+  Accessibility,
+  Baby,
+  BriefcaseBusiness,
+  DollarSign,
+  GraduationCap,
+  HeartPulse,
+  Home,
+  MapPin,
+  Plug,
+  ShoppingCart,
+  Zap,
+} from "lucide-react"
 import { STATE_PROGRAM_DETAILS } from "@/lib/state-program-details"
 import { STATE_APPLY_URLS } from "@/lib/state-programs"
 
@@ -41,12 +55,14 @@ type StripeColor = "blue" | "green" | "amber"
 
 function Card({
   title,
+  icon: Icon,
   stripe,
   portalUrl,
   stateName,
   children,
 }: {
   title: string
+  icon: ComponentType<{ className?: string }>
   stripe: StripeColor
   portalUrl: string | null
   stateName: string
@@ -60,10 +76,13 @@ function Card({
       : "bg-blue-500"
 
   return (
-    <div className="flex rounded-xl border border-slate-200 shadow-sm overflow-hidden bg-white">
+    <div className="flex overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
       <div className={`w-1 shrink-0 ${stripeClass}`} />
       <div className="flex-1 p-4 space-y-3">
-        <p className="text-sm font-semibold text-slate-900">{title}</p>
+        <p className="flex items-center gap-2 text-sm font-semibold text-slate-900">
+          <Icon className="h-4 w-4 text-blue-600" />
+          {title}
+        </p>
         <div className="space-y-1 text-sm text-slate-600">{children}</div>
         {portalUrl && (
           <a
@@ -87,14 +106,14 @@ function StaticCard({
   portalUrl,
   stateName,
 }: {
-  icon: string
+  icon: ComponentType<{ className?: string }>
   title: string
   note: string
   portalUrl: string | null
   stateName: string
 }) {
   return (
-    <Card title={`${icon} ${title} in ${stateName}`} stripe="blue" portalUrl={portalUrl} stateName={stateName}>
+    <Card title={`${title} in ${stateName}`} icon={icon} stripe="blue" portalUrl={portalUrl} stateName={stateName}>
       <p>{note}</p>
     </Card>
   )
@@ -108,7 +127,7 @@ export default function StateProgramInfo({ slug, stateCode, stateName }: Props) 
   if (!stateCode || !stateName) {
     return (
       <div className="flex items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-500">
-        <span className="text-base">📍</span>
+        <MapPin className="h-4 w-4 text-blue-600" />
         <span>Select your state above to see state-specific eligibility and benefit details.</span>
       </div>
     )
@@ -121,7 +140,7 @@ export default function StateProgramInfo({ slug, stateCode, stateName }: Props) 
     if (!detail?.medicaid) {
       return (
         <StaticCard
-          icon="🏥"
+          icon={HeartPulse}
           title="Medicaid"
           note="Medicaid eligibility varies by state. Check your state portal for current income limits and enrollment options."
           portalUrl={portalUrl}
@@ -133,7 +152,8 @@ export default function StateProgramInfo({ slug, stateCode, stateName }: Props) 
     const stripe: StripeColor = expanded ? "green" : "amber"
     return (
       <Card
-        title={`🏥 Medicaid in ${stateName}`}
+        title={`Medicaid in ${stateName}`}
+        icon={HeartPulse}
         stripe={stripe}
         portalUrl={portalUrl}
         stateName={stateName}
@@ -160,7 +180,7 @@ export default function StateProgramInfo({ slug, stateCode, stateName }: Props) 
     if (!detail?.chip) {
       return (
         <StaticCard
-          icon="👶"
+          icon={Baby}
           title="CHIP"
           note="CHIP income limits vary by state. Most states cover children up to 200–300% FPL."
           portalUrl={portalUrl}
@@ -172,7 +192,8 @@ export default function StateProgramInfo({ slug, stateCode, stateName }: Props) 
     const displayName = programName ? `CHIP (${programName})` : "CHIP"
     return (
       <Card
-        title={`👶 ${displayName} in ${stateName}`}
+        title={`${displayName} in ${stateName}`}
+        icon={Baby}
         stripe="green"
         portalUrl={portalUrl}
         stateName={stateName}
@@ -188,7 +209,7 @@ export default function StateProgramInfo({ slug, stateCode, stateName }: Props) 
     if (!detail?.tanf) {
       return (
         <StaticCard
-          icon="💵"
+          icon={DollarSign}
           title="TANF Cash Assistance"
           note="TANF benefit amounts and time limits vary significantly by state. Check your state portal for details."
           portalUrl={portalUrl}
@@ -200,7 +221,8 @@ export default function StateProgramInfo({ slug, stateCode, stateName }: Props) 
     const stripe: StripeColor = maxMonthlyBenefitFamily3 >= 500 ? "green" : maxMonthlyBenefitFamily3 < 300 ? "amber" : "blue"
     return (
       <Card
-        title={`💵 TANF Cash Assistance in ${stateName}`}
+        title={`TANF Cash Assistance in ${stateName}`}
+        icon={DollarSign}
         stripe={stripe}
         portalUrl={portalUrl}
         stateName={stateName}
@@ -220,7 +242,7 @@ export default function StateProgramInfo({ slug, stateCode, stateName }: Props) 
     if (!detail?.snap) {
       return (
         <StaticCard
-          icon="🛒"
+          icon={ShoppingCart}
           title="SNAP Food Benefits"
           note="SNAP eligibility and income limits vary by state. Federal allotments apply in most cases."
           portalUrl={portalUrl}
@@ -232,7 +254,8 @@ export default function StateProgramInfo({ slug, stateCode, stateName }: Props) 
     const stripe: StripeColor = bbce ? "green" : "blue"
     return (
       <Card
-        title={`🛒 SNAP Food Benefits in ${stateName}`}
+        title={`SNAP Food Benefits in ${stateName}`}
+        icon={ShoppingCart}
         stripe={stripe}
         portalUrl={portalUrl}
         stateName={stateName}
@@ -249,7 +272,7 @@ export default function StateProgramInfo({ slug, stateCode, stateName }: Props) 
   if (programType === "section8") {
     return (
       <StaticCard
-        icon="🏠"
+        icon={Home}
         title="Section 8 Housing Choice Voucher"
         note="Vouchers are administered by local Public Housing Authorities (PHAs). Many areas have waitlists. Contact your local PHA for availability."
         portalUrl={portalUrl}
@@ -261,7 +284,7 @@ export default function StateProgramInfo({ slug, stateCode, stateName }: Props) 
   if (programType === "liheap") {
     return (
       <StaticCard
-        icon="⚡"
+        icon={Zap}
         title="LIHEAP Energy Assistance"
         note="Benefit amounts and eligibility vary by state and season. Most states open enrollment in fall/winter."
         portalUrl={portalUrl}
@@ -273,7 +296,7 @@ export default function StateProgramInfo({ slug, stateCode, stateName }: Props) 
   if (programType === "ccdf") {
     return (
       <StaticCard
-        icon="🧒"
+        icon={Baby}
         title="Child Care Development Fund"
         note="Income limits, co-pays, and provider choices vary by state. Some states have waitlists."
         portalUrl={portalUrl}
@@ -285,7 +308,7 @@ export default function StateProgramInfo({ slug, stateCode, stateName }: Props) 
   if (programType === "heehra") {
     return (
       <StaticCard
-        icon="🔌"
+        icon={Plug}
         title="HEEHRA Home Energy Rebates"
         note="Rebate amounts and eligible upgrades vary by state program. Check your state energy office for launch status."
         portalUrl={portalUrl}
@@ -297,7 +320,7 @@ export default function StateProgramInfo({ slug, stateCode, stateName }: Props) 
   if (programType === "able") {
     return (
       <StaticCard
-        icon="♿"
+        icon={Accessibility}
         title="ABLE Savings Account"
         note="Each state runs its own ABLE program. You can enroll in any state's program regardless of where you live."
         portalUrl={portalUrl}
@@ -309,7 +332,7 @@ export default function StateProgramInfo({ slug, stateCode, stateName }: Props) 
   if (programType === "vocrehab") {
     return (
       <StaticCard
-        icon="🎓"
+        icon={GraduationCap}
         title="Vocational Rehabilitation"
         note="Services and funding levels vary by state. Contact your state VR agency for an eligibility determination."
         portalUrl={portalUrl}

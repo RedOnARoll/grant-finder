@@ -16,28 +16,40 @@ export default function StateSelector({ onStateChange, className = "" }: Props) 
   const selectRef = useRef<HTMLSelectElement>(null)
 
   useEffect(() => {
-    const saved = localStorage.getItem("gw_state")
-    if (saved) {
-      setStateCode(saved)
-      onStateChange(saved)
-      return
+    let cancelled = false
+
+    const frame = requestAnimationFrame(() => {
+      const saved = localStorage.getItem("gw_state")
+      if (saved) {
+        if (!cancelled) {
+          setStateCode(saved)
+          onStateChange(saved)
+        }
+        return
+      }
+
+      const zip = localStorage.getItem("gw_profile_zip") ?? localStorage.getItem("gw_zip")
+      if (!zip) return
+
+      fetch(`https://api.zippopotam.us/us/${zip}`)
+        .then((r) => r.ok ? r.json() : null)
+        .then((data) => {
+          if (cancelled) return
+          const place = data?.places?.[0]
+          if (!place) return
+          const code = (place["state abbreviation"] as string).toUpperCase()
+          setStateCode(code)
+          setAutoDetected(true)
+          localStorage.setItem("gw_state", code)
+          onStateChange(code)
+        })
+        .catch(() => {/* ignore zip lookup errors */})
+    })
+
+    return () => {
+      cancelled = true
+      cancelAnimationFrame(frame)
     }
-
-    const zip = localStorage.getItem("gw_profile_zip")
-    if (!zip) return
-
-    fetch(`https://api.zippopotam.us/us/${zip}`)
-      .then((r) => r.ok ? r.json() : null)
-      .then((data) => {
-        const place = data?.places?.[0]
-        if (!place) return
-        const code = (place["state abbreviation"] as string).toUpperCase()
-        setStateCode(code)
-        setAutoDetected(true)
-        localStorage.setItem("gw_state", code)
-        onStateChange(code)
-      })
-      .catch(() => {/* ignore zip lookup errors */})
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
