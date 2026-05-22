@@ -163,11 +163,6 @@ export default function AboutPage() {
           </div>
         </section>
       </main>
-
-      {/* Footer */}
-      <footer className="bg-slate-900 border-t border-slate-800 py-8 px-4 text-center text-sm text-slate-500">
-        <p>© {new Date().getFullYear()} GrantWay. All rights reserved.</p>
-      </footer>
     </>
   )
 }

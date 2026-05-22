@@ -546,9 +546,6 @@ function Layout({ children }: { children: React.ReactNode }) {
         </div>
         {children}
       </main>
-      <footer className="border-t border-slate-200 py-6 px-6 text-center text-xs text-slate-400">
-        Grant information is for reference only. Verify eligibility with the issuing agency.
-      </footer>
     </div>
   )
 }

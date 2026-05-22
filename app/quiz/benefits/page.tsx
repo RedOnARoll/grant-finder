@@ -924,9 +924,6 @@ export default function BenefitsQuizPage() {
         )}
       </main>
 
-      <footer className="border-t border-slate-200 py-6 px-6 text-center text-xs text-slate-400">
-        Information is for reference only. Verify eligibility directly with each program.
-      </footer>
     </div>
   )
 }
