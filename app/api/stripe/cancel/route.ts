@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import { createClient } from "@supabase/supabase-js"
 import { stripe } from "@/lib/stripe"
+import { rateLimit, getClientIp, tooManyRequests } from "@/lib/rate-limit"
 
 function serviceClient() {
   return createClient(
@@ -22,6 +23,11 @@ async function getUser(token: string) {
 
 export async function POST(req: NextRequest) {
   try {
+    // Rate limit: 5 cancel attempts per hour per IP
+    const ip = getClientIp(req)
+    const rl = rateLimit(`cancel:${ip}`, 5, 60 * 60 * 1000)
+    if (!rl.allowed) return tooManyRequests(rl.resetAt)
+
     const token = req.headers.get("Authorization")?.replace("Bearer ", "") ?? ""
     const user = await getUser(token)
     if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })

@@ -1,6 +1,7 @@
 import { NextRequest } from "next/server"
 import { createClient } from "@supabase/supabase-js"
 import { anthropic } from "@/lib/anthropic"
+import { rateLimit, getClientIp, tooManyRequests, checkPayloadSize, sanitizeString } from "@/lib/rate-limit"
 
 function serviceClient() {
   return createClient(
@@ -23,11 +24,24 @@ async function getUser(token: string) {
 export const maxDuration = 60
 
 export async function POST(req: NextRequest) {
+  // Rate limit by IP: 30 per hour (before auth check to stop unauthenticated floods)
+  const ip = getClientIp(req)
+  const ipRl = rateLimit(`narrative-ip:${ip}`, 30, 60 * 60 * 1000)
+  if (!ipRl.allowed) return tooManyRequests(ipRl.resetAt)
+
+  // Payload size limit: 50 KB
+  const sizeCheck = checkPayloadSize(req, 50 * 1024)
+  if (sizeCheck) return sizeCheck
+
   const token = req.headers.get("Authorization")?.replace("Bearer ", "") ?? ""
   if (!token) return new Response("Unauthorized", { status: 401 })
 
   const user = await getUser(token)
   if (!user) return new Response("Unauthorized", { status: 401 })
+
+  // Per-user rate limit: 20 per hour
+  const userRl = rateLimit(`narrative-user:${user.id}`, 20, 60 * 60 * 1000)
+  if (!userRl.allowed) return tooManyRequests(userRl.resetAt)
 
   const supabase = serviceClient()
 
@@ -80,7 +94,19 @@ export async function POST(req: NextRequest) {
     return new Response("Invalid request body", { status: 400 })
   }
 
-  const { grantName, grantDescription, answers } = body
+  const rawGrantName = sanitizeString(String(body.grantName ?? ""))
+  const rawGrantDesc = sanitizeString(String(body.grantDescription ?? ""))
+  const rawAnswers = body.answers as Record<string, string>
+
+  const grantName = rawGrantName.slice(0, 200)
+  const grantDescription = rawGrantDesc.slice(0, 500)
+  const answers: Record<string, string> = {}
+  if (rawAnswers && typeof rawAnswers === "object") {
+    for (const [k, v] of Object.entries(rawAnswers)) {
+      if (typeof v === "string") answers[sanitizeString(k).slice(0, 50)] = sanitizeString(v).slice(0, 2000)
+    }
+  }
+
   if (!grantName) return new Response("grantName is required", { status: 400 })
 
   // Build profile context string

@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server"
 import { createClient } from "@supabase/supabase-js"
 import { stripe } from "@/lib/stripe"
+import { rateLimit, getClientIp, tooManyRequests, checkPayloadSize } from "@/lib/rate-limit"
 
 const BASE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "https://grantway.org"
 
@@ -14,6 +15,15 @@ function serviceClient() {
 
 export async function POST(request: Request) {
   try {
+    // Rate limit: 10 checkout attempts per 15 min per IP
+    const ip = getClientIp(request)
+    const rl = rateLimit(`checkout:${ip}`, 10, 15 * 60 * 1000)
+    if (!rl.allowed) return tooManyRequests(rl.resetAt)
+
+    // Payload size: 5 KB
+    const sizeCheck = checkPayloadSize(request, 5 * 1024)
+    if (sizeCheck) return sizeCheck
+
     // Authenticate caller
     const authHeader = request.headers.get("Authorization") ?? ""
     const token = authHeader.replace("Bearer ", "").trim()

@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server"
 import { createClient } from "@supabase/supabase-js"
+import { rateLimit, getClientIp, tooManyRequests, checkPayloadSize, sanitizeString } from "@/lib/rate-limit"
 
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "https://grantway.org"
 
@@ -27,6 +28,15 @@ function escapeHtml(value: string) {
 }
 
 export async function POST(request: Request) {
+  // Rate limit: 5 attempts per 15 min per IP
+  const ip = getClientIp(request)
+  const rl = rateLimit(`signup:${ip}`, 5, 15 * 60 * 1000)
+  if (!rl.allowed) return tooManyRequests(rl.resetAt)
+
+  // Payload size limit: 10 KB
+  const sizeCheck = checkPayloadSize(request, 10 * 1024)
+  if (sizeCheck) return sizeCheck
+
   const resendKey = process.env.RESEND_API_KEY
   const fromEmail = process.env.RESEND_FROM_EMAIL
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
@@ -52,16 +62,24 @@ export async function POST(request: Request) {
     fullName?: unknown
   } | null
 
-  const email = typeof body?.email === "string" ? body.email.trim().toLowerCase() : ""
+  const email = typeof body?.email === "string" ? sanitizeString(body.email).toLowerCase() : ""
   const password = typeof body?.password === "string" ? body.password : ""
-  const fullName = typeof body?.fullName === "string" ? body.fullName.trim() : ""
+  const fullName = typeof body?.fullName === "string" ? sanitizeString(body.fullName) : ""
 
-  if (!isValidEmail(email)) {
+  if (!isValidEmail(email) || email.length > 254) {
     return NextResponse.json({ error: "Enter a valid email address." }, { status: 400 })
   }
 
   if (password.length < 8) {
     return NextResponse.json({ error: "Password must be at least 8 characters." }, { status: 400 })
+  }
+
+  if (password.length > 128) {
+    return NextResponse.json({ error: "Password must be 128 characters or fewer." }, { status: 400 })
+  }
+
+  if (fullName.length > 100) {
+    return NextResponse.json({ error: "Name must be 100 characters or fewer." }, { status: 400 })
   }
 
   const supabaseAdmin = createClient(supabaseUrl, serviceRoleKey, {

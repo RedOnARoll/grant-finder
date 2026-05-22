@@ -1,13 +1,21 @@
 import { NextResponse } from "next/server"
 import { anthropic } from "@/lib/anthropic"
+import { rateLimit, getClientIp, tooManyRequests } from "@/lib/rate-limit"
 
 const GRANT_CATEGORIES = ["small_business", "individual", "agricultural", "research", "veterans", "arts"]
 const BENEFIT_SUBCATEGORIES = ["housing", "food", "disability", "education", "childcare", "energy", "health"]
 const ALL_TOPICS = [...GRANT_CATEGORIES, ...BENEFIT_SUBCATEGORIES]
 
 export async function GET(request: Request) {
+  // Rate limit: 60 requests per minute per IP
+  const ip = getClientIp(request)
+  const rl = rateLimit(`search:${ip}`, 60, 60 * 1000)
+  if (!rl.allowed) return tooManyRequests(rl.resetAt)
+
   const { searchParams } = new URL(request.url)
-  const query = (searchParams.get("q") ?? "").trim()
+  const rawQuery = (searchParams.get("q") ?? "").trim()
+  // Clamp query length to prevent prompt injection / oversized AI calls
+  const query = rawQuery.slice(0, 500)
   const rawType = searchParams.get("type")
   const type = rawType === "benefits" ? "benefits" : rawType === "programs" ? "programs" : "grants"
 

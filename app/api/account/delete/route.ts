@@ -1,9 +1,15 @@
 import { NextRequest, NextResponse } from "next/server"
 import { createClient } from "@supabase/supabase-js"
 import { stripe } from "@/lib/stripe"
+import { rateLimit, getClientIp, tooManyRequests } from "@/lib/rate-limit"
 
 export async function POST(req: NextRequest) {
   try {
+    // Rate limit: 3 delete attempts per hour per IP
+    const ip = getClientIp(req)
+    const rl = rateLimit(`delete:${ip}`, 3, 60 * 60 * 1000)
+    if (!rl.allowed) return tooManyRequests(rl.resetAt)
+
     const token = req.headers.get("Authorization")?.replace("Bearer ", "") ?? ""
     if (!token) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
 
