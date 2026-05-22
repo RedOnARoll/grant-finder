@@ -9,6 +9,7 @@ import { Badge, StatusBadge } from "@/components/ui/Badge"
 import ApplyButton from "@/components/ApplyButton"
 import BenefitDetailGuide from "./BenefitDetailGuide"
 import StateProgramBanner from "@/components/StateProgramBanner"
+import AdminVerificationWarning from "@/components/AdminVerificationWarning"
 
 export const dynamic = "force-dynamic"
 export const dynamicParams = true
@@ -110,7 +111,7 @@ export default async function BenefitDetailPage({
 
         <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_20rem] lg:items-start">
           <div className="min-w-0 space-y-6">
-            <VerificationWarning isVerified={benefit.is_verified} lastVerifiedAt={benefit.last_verified_at} />
+            <AdminVerificationWarning isVerified={benefit.is_verified} lastVerifiedAt={benefit.last_verified_at} />
 
             <StateProgramBanner slug={benefit.slug} />
 

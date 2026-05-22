@@ -9,6 +9,7 @@ import { Badge } from "@/components/ui/Badge"
 import NarrativeGate from "@/components/NarrativeGate"
 import ApplyButton from "@/components/ApplyButton"
 import GrantDetailTabs from "./GrantDetailTabs"
+import AdminVerificationWarning from "@/components/AdminVerificationWarning"
 
 export const dynamic = "force-dynamic"
 export const dynamicParams = true
@@ -172,7 +173,7 @@ export default async function GrantDetailPage({
 
       <main className="mx-auto w-full max-w-7xl flex-1 px-4 py-8 sm:px-6 lg:px-8">
         <div className="space-y-6">
-          <VerificationWarning isVerified={grant.is_verified} lastVerifiedAt={grant.last_verified_at} />
+          <AdminVerificationWarning isVerified={grant.is_verified} lastVerifiedAt={grant.last_verified_at} />
 
           <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_21rem] lg:items-start">
             <div className="min-w-0">
