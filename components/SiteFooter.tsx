@@ -2,12 +2,26 @@
 
 import Link from "next/link"
 import { usePathname } from "next/navigation"
+import { LogoMark } from "@/components/illustrations/GeoShapes"
 
 const LEGAL_LINKS = [
-  { label: "Privacy", href: "/privacy" },
-  { label: "Terms", href: "/terms" },
-  { label: "Refunds", href: "/refund-policy" },
+  { label: "Privacy Policy", href: "/privacy" },
+  { label: "Terms of Use", href: "/terms" },
+  { label: "Refund Policy", href: "/refund-policy" },
   { label: "Contact", href: "/contact" },
+]
+
+const EXPLORE_LINKS = [
+  { label: "All Programs", href: "/programs" },
+  { label: "Grants", href: "/grants" },
+  { label: "Benefits", href: "/benefits" },
+  { label: "Eligibility Quiz", href: "/quiz" },
+]
+
+const ACCOUNT_LINKS = [
+  { label: "Sign In", href: "/auth" },
+  { label: "Dashboard", href: "/account" },
+  { label: "Profile", href: "/account/profile" },
 ]
 
 export default function SiteFooter() {
@@ -15,32 +29,55 @@ export default function SiteFooter() {
   if (pathname?.startsWith("/admin")) return null
 
   return (
-    <footer className="border-t border-slate-200 bg-white">
-      <div className="mx-auto grid max-w-7xl gap-5 px-4 py-8 text-sm text-slate-500 sm:px-6 lg:px-8">
-        <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
-          <div className="max-w-2xl">
-            <p className="font-semibold text-slate-900">GrantWay</p>
-            <p className="mt-2 leading-6">
-              GrantWay is an independent service and is not affiliated with, endorsed by, or operated by any government agency.
-              Program information is provided for reference only. Always verify eligibility, deadlines, required documents, and
-              application instructions with the official program source before applying.
+    <footer className="border-t border-slate-800 bg-slate-900">
+      <div className="mx-auto max-w-7xl px-4 py-12 text-sm text-slate-400 sm:px-6 lg:px-8">
+        <div className="grid gap-8 md:grid-cols-4">
+          <div>
+            <div className="mb-3 flex items-center gap-2">
+              <LogoMark className="h-6 w-6" />
+              <span className="text-base font-bold text-white">GrantWay</span>
+            </div>
+            <p className="max-w-xs leading-6">
+              Helping people and organizations discover grants and benefits they actually qualify for.
             </p>
           </div>
 
-          <div className="flex flex-wrap gap-x-4 gap-y-2 md:justify-end">
-            {LEGAL_LINKS.map((link) => (
-              <Link key={link.href} href={link.href} className="font-medium text-slate-600 hover:text-slate-900">
-                {link.label}
-              </Link>
-            ))}
-          </div>
+          <FooterColumn title="Explore" links={EXPLORE_LINKS} />
+          <FooterColumn title="Account" links={ACCOUNT_LINKS} />
+          <FooterColumn title="Legal" links={LEGAL_LINKS} />
         </div>
 
-        <div className="flex flex-col gap-2 border-t border-slate-100 pt-5 sm:flex-row sm:items-center sm:justify-between">
-          <p>Support: <a href="mailto:support@grantway.org" className="font-medium text-blue-600 hover:text-blue-700">support@grantway.org</a></p>
-          <p>© 2026 GrantWay. All rights reserved.</p>
+        <div className="mt-10 border-t border-slate-800 pt-6 text-center text-xs leading-6 text-slate-500">
+          <p>
+            © 2026 GrantWay. Built to help people find funding. GrantWay is an independent service and is not affiliated
+            with, endorsed by, or operated by any government agency.
+          </p>
+          <p>
+            Information is for reference only. Always verify eligibility, deadlines, required documents, and application
+            instructions with the official program source before applying. Support:{" "}
+            <a href="mailto:support@grantway.org" className="font-medium text-slate-300 hover:text-white">
+              support@grantway.org
+            </a>
+          </p>
         </div>
       </div>
     </footer>
+  )
+}
+
+function FooterColumn({ title, links }: { title: string; links: { label: string; href: string }[] }) {
+  return (
+    <div>
+      <h2 className="mb-4 text-sm font-semibold text-white">{title}</h2>
+      <ul className="space-y-2.5">
+        {links.map((link) => (
+          <li key={link.href}>
+            <Link href={link.href} className="hover:text-white">
+              {link.label}
+            </Link>
+          </li>
+        ))}
+      </ul>
+    </div>
   )
 }

@@ -4,6 +4,7 @@ import { Inter } from "next/font/google";
 import SiteFooter from "@/components/SiteFooter";
 import UpgradeBanner from "@/components/UpgradeBanner";
 import ReturningVisitorBanner from "@/components/ReturningVisitorBanner";
+import SaveProgressBanner from "@/components/SaveProgressBanner";
 import "./globals.css";
 
 const inter = Inter({
@@ -36,6 +37,9 @@ export default function RootLayout({
           <ReturningVisitorBanner />
         </Suspense>
         <div className="flex-1">{children}</div>
+        <Suspense fallback={null}>
+          <SaveProgressBanner />
+        </Suspense>
         <SiteFooter />
       </body>
     </html>
