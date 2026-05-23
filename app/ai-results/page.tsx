@@ -39,8 +39,14 @@ export default async function AIResultsPage({
               <Sparkles className="w-5 h-5" />
             </div>
             <div className="min-w-0 flex-1">
-              <p className="text-xs text-slate-400 uppercase tracking-wide font-medium mb-1">You searched</p>
+              <div className="flex items-center gap-2 mb-1">
+                <p className="text-xs text-slate-400 uppercase tracking-wide font-medium">AI Match</p>
+                <span className="px-1.5 py-0.5 rounded text-[10px] font-bold uppercase tracking-wide bg-amber-500 text-slate-900">Beta</span>
+              </div>
               <p className="text-lg font-medium text-white leading-snug">&ldquo;{q}&rdquo;</p>
+              <p className="text-xs text-slate-400 mt-1.5 leading-relaxed">
+                Results are keyword-based and not personalized. Always verify eligibility directly with the program.
+              </p>
             </div>
           </div>
 

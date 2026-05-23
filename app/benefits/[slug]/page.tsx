@@ -77,6 +77,16 @@ function formatDeadline(deadline: string | null) {
   })
 }
 
+function getApplyHostname(applicationUrl?: string | null, officialSourceUrl?: string | null): string | null {
+  const url = applicationUrl || officialSourceUrl
+  if (!url) return null
+  try {
+    return new URL(url).hostname.replace(/^www\./, "")
+  } catch {
+    return null
+  }
+}
+
 export default async function BenefitDetailPage({
   params,
 }: {
@@ -93,6 +103,13 @@ export default async function BenefitDetailPage({
     ? (SUBCATEGORY_LABELS[benefit.subcategory] ?? benefit.subcategory.replace("_", " "))
     : "Benefit"
   const stats = getBenefitStats(benefit.slug)
+  const applyHostname = getApplyHostname(benefit.application_url, benefit.official_source_url)
+
+  // Related programs: same subcategory, different slug, up to 3
+  const allBenefits = await getBenefits()
+  const relatedBenefits = allBenefits
+    .filter(b => b.slug !== benefit.slug && b.subcategory === benefit.subcategory)
+    .slice(0, 3)
 
   return (
     <div className="flex min-h-full flex-col bg-slate-50">
@@ -169,6 +186,28 @@ export default async function BenefitDetailPage({
                 </div>
               </section>
             )}
+
+            {relatedBenefits.length > 0 && (
+              <section className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
+                <h2 className="text-xl font-bold text-slate-900">You may also qualify for</h2>
+                <p className="mt-1 text-sm text-slate-500">Other programs in the same category that often go hand-in-hand.</p>
+                <div className="mt-4 flex flex-col gap-3">
+                  {relatedBenefits.map(b => (
+                    <Link
+                      key={b.slug}
+                      href={`/benefits/${b.slug}`}
+                      className="flex items-start justify-between gap-4 rounded-lg border border-slate-200 p-4 hover:border-blue-200 hover:bg-blue-50 transition-colors group"
+                    >
+                      <div className="min-w-0">
+                        <p className="text-xs text-slate-400 mb-0.5">{b.agency}</p>
+                        <p className="text-sm font-semibold text-slate-900 group-hover:text-blue-700 leading-snug">{b.name}</p>
+                      </div>
+                      <ChevronRight className="h-4 w-4 text-slate-400 shrink-0 mt-0.5 group-hover:text-blue-600" />
+                    </Link>
+                  ))}
+                </div>
+              </section>
+            )}
           </div>
 
           <aside className="space-y-4 lg:sticky lg:top-20">
@@ -206,6 +245,9 @@ export default async function BenefitDetailPage({
                 Learn How to Apply
                 <ExternalLink className="h-4 w-4" />
               </ApplyButton>
+              {applyHostname && (
+                <p className="mt-1.5 text-center text-xs text-slate-400">Opens {applyHostname}</p>
+              )}
               {benefit.official_source_url && (
                 <a
                   href={benefit.official_source_url}

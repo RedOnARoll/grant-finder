@@ -1,8 +1,9 @@
 "use client"
 
 import { useState, useMemo } from "react"
+import { useRouter } from "next/navigation"
 import Link from "next/link"
-import { Search, ArrowRight, ArrowUpDown, Sparkles } from "lucide-react"
+import { Search, ArrowRight, ArrowUpDown, Sparkles, MapPin } from "lucide-react"
 import type { Grant } from "@/lib/types"
 
 // ── Constants ────────────────────────────────────────────────────────
@@ -58,6 +59,10 @@ interface Props {
 }
 
 export default function GrantsTableClient({ allGrants, initialCategory, initialSource, initialQ }: Props) {
+  const router = useRouter()
+  const [aiDesc, setAiDesc] = useState("")
+  const [aiZip, setAiZip] = useState("")
+
   // Filter state
   const [search, setSearch] = useState(initialQ ?? "")
   const [selectedSources, setSelectedSources] = useState<Set<string>>(
@@ -190,23 +195,47 @@ export default function GrantsTableClient({ allGrants, initialCategory, initialS
             </div>
           </div>
 
-          {/* AI search CTA */}
-          <Link
-            href="/ai-results?q=grants+for+my+organization"
-            className="flex items-center gap-3 bg-white/5 border border-white/10 rounded-xl px-4 py-3 mb-4 hover:bg-white/10 transition-colors group"
-          >
-            <div className="w-8 h-8 rounded-lg bg-blue-600 flex items-center justify-center shrink-0">
-              <Sparkles className="w-4 h-4 text-white" />
+          {/* AI search form */}
+          <div className="bg-white/5 border border-white/10 rounded-xl px-4 py-4 mb-4">
+            <div className="flex items-center gap-2 mb-3">
+              <div className="w-7 h-7 rounded-lg bg-blue-600 flex items-center justify-center shrink-0">
+                <Sparkles className="w-3.5 h-3.5 text-white" />
+              </div>
+              <p className="text-sm font-semibold text-white">Describe your business</p>
             </div>
-            <div className="flex-1 min-w-0">
-              <p className="text-sm text-slate-400 group-hover:text-slate-300 transition-colors">
-                Describe what you&apos;re looking for and AI will rank the best matches for you
-              </p>
+            <textarea
+              value={aiDesc}
+              onChange={e => setAiDesc(e.target.value)}
+              placeholder="e.g. We're a 5-person catering company in rural Georgia, minority-owned, looking for funding to buy commercial kitchen equipment and hire two staff."
+              rows={3}
+              className="w-full bg-white/10 border border-white/15 rounded-lg px-3 py-2 text-sm text-white placeholder-slate-400 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 resize-none mb-3"
+            />
+            <div className="flex gap-3 items-center">
+              <div className="flex items-center gap-2 bg-white/10 border border-white/15 rounded-lg px-3 h-9 w-40 shrink-0">
+                <MapPin className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                <input
+                  value={aiZip}
+                  onChange={e => setAiZip(e.target.value.replace(/\D/g, "").slice(0, 5))}
+                  placeholder="ZIP code"
+                  inputMode="numeric"
+                  maxLength={5}
+                  className="flex-1 text-sm text-white placeholder-slate-400 outline-none bg-transparent w-full"
+                />
+              </div>
+              <button
+                onClick={() => {
+                  if (!aiDesc.trim()) return
+                  const params = new URLSearchParams({ q: aiDesc.trim() })
+                  if (aiZip) params.set("zip", aiZip)
+                  router.push(`/ai-results?${params.toString()}`)
+                }}
+                disabled={!aiDesc.trim()}
+                className="flex-1 sm:flex-none h-9 px-5 bg-blue-600 hover:bg-blue-700 disabled:opacity-40 disabled:cursor-not-allowed text-white text-sm font-semibold rounded-lg transition-colors inline-flex items-center justify-center gap-1.5 cursor-pointer"
+              >
+                Find funding <ArrowRight className="w-3.5 h-3.5" />
+              </button>
             </div>
-            <span className="text-sm font-semibold text-blue-400 whitespace-nowrap inline-flex items-center gap-1">
-              Try AI match <ArrowRight className="w-3.5 h-3.5" />
-            </span>
-          </Link>
+          </div>
 
           {/* Keyword search + urgency tabs */}
           <div className="flex flex-col sm:flex-row gap-3 items-stretch sm:items-center">

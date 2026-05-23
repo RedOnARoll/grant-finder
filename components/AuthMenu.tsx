@@ -83,10 +83,10 @@ export default function AuthMenu() {
           Sign In
         </Link>
         <Link
-          href={`/auth${next}`}
+          href="/programs"
           className="rounded-lg bg-blue-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-blue-700 transition-colors"
         >
-          Get Started
+          Browse Free
         </Link>
       </div>
     )

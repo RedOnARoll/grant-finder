@@ -102,19 +102,21 @@ export default async function HomePage() {
         <section className="bg-slate-900 pb-16 pt-14">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
 
-            {/* Eyebrow badge */}
-            <div className="flex justify-center mb-8">
-              <Badge variant="amber">Free · No account required to browse</Badge>
+            {/* Trust bar */}
+            <div className="flex flex-wrap justify-center gap-x-6 gap-y-2 mb-8 text-xs text-slate-400">
+              <span className="flex items-center gap-1.5"><span className="text-emerald-400">✓</span> 100% free to use</span>
+              <span className="flex items-center gap-1.5"><span className="text-emerald-400">✓</span> No account needed to browse</span>
+              <span className="flex items-center gap-1.5"><span className="text-emerald-400">✓</span> 500+ programs indexed</span>
+              <span className="flex items-center gap-1.5"><span className="text-emerald-400">✓</span> Federal, state &amp; private</span>
             </div>
 
             {/* Headline */}
             <div className="text-center max-w-3xl mx-auto mb-14">
               <h1 className="text-5xl sm:text-6xl font-bold text-white leading-[1.08] tracking-tight mb-4">
-                Who are you helping today?
+                Find grants and benefits you qualify for — free.
               </h1>
               <p className="text-lg text-slate-300 leading-relaxed">
-                GrantWay matches you to grants and benefits you actually qualify for.
-                Tell us a little about who needs help, and we&apos;ll narrow it down.
+                Browse 500+ federal, state, and private programs. No account needed to start.
               </p>
             </div>
 
@@ -191,7 +193,7 @@ export default async function HomePage() {
               <div className="flex items-center gap-3 mb-4 px-1">
                 <span className="flex-1 h-px bg-slate-700" />
                 <span className="text-xs text-slate-400 uppercase tracking-widest font-medium whitespace-nowrap">
-                  Or skip the choice
+                  Or describe your situation
                 </span>
                 <span className="flex-1 h-px bg-slate-700" />
               </div>

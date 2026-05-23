@@ -69,7 +69,7 @@ export default function GrantDetailTabs({
     { key: "overview", label: "Overview" },
     { key: "eligibility", label: "Eligibility" },
     { key: "documents", label: `Documents (${checkedDocs.size}/${documentList.length})` },
-    { key: "reviewer", label: "Reviewer notes" },
+    { key: "reviewer", label: "What funders look for" },
     { key: "awards", label: "Past awards" },
   ]
 
@@ -177,7 +177,7 @@ export default function GrantDetailTabs({
 
       {activeTab === "reviewer" && (
         <section className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
-          <h2 className="text-lg font-semibold text-slate-900">Reviewer notes</h2>
+          <h2 className="text-lg font-semibold text-slate-900">What funders look for</h2>
           <div className="mt-5 grid gap-3">
             {[
               "Show that your project directly matches the funder's published priorities.",

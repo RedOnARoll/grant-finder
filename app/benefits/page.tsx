@@ -1,5 +1,5 @@
 import Link from "next/link"
-import { Sparkles, ArrowRight } from "lucide-react"
+import { ArrowRight } from "lucide-react"
 import { getBenefits } from "@/lib/supabase"
 import type { Grant } from "@/lib/types"
 import SiteNav from "@/components/SiteNav"
@@ -15,13 +15,30 @@ const AGENCY_STATES: Record<string, string[]> = {
 
 type BenefitSort = "name_asc" | "subcategory_asc" | "amount_desc"
 
+// Programs most people need first
+const SUBCATEGORY_PRIORITY: Record<string, number> = {
+  food:       1,
+  health:     2,
+  housing:    3,
+  energy:     4,
+  disability: 5,
+  childcare:  6,
+  education:  7,
+}
+
 function sortBenefits(benefits: Grant[], sort: BenefitSort | undefined): Grant[] {
   const arr = [...benefits]
   switch (sort) {
     case "name_asc":        return arr.sort((a, b) => a.name.localeCompare(b.name))
     case "subcategory_asc": return arr.sort((a, b) => (a.subcategory ?? "").localeCompare(b.subcategory ?? ""))
     case "amount_desc":     return arr.sort((a, b) => (b.max_amount ?? -1) - (a.max_amount ?? -1))
-    default:                return arr
+    default:
+      return arr.sort((a, b) => {
+        const pa = SUBCATEGORY_PRIORITY[a.subcategory ?? ""] ?? 99
+        const pb = SUBCATEGORY_PRIORITY[b.subcategory ?? ""] ?? 99
+        if (pa !== pb) return pa - pb
+        return a.name.localeCompare(b.name)
+      })
   }
 }
 
@@ -172,17 +189,11 @@ export default async function BenefitsPage({
               <h1 className="text-4xl font-bold text-slate-900 leading-tight tracking-tight mb-3">
                 Real help with everyday needs.
               </h1>
-              <p className="text-lg text-slate-600 leading-relaxed mb-6 max-w-lg">
+              <p className="text-lg text-slate-600 leading-relaxed mb-5 max-w-lg">
                 Benefits are ongoing programs you may qualify for based on your income, family size,
                 or situation. Free to apply, funded by your taxes.
               </p>
-              <Link
-                href="/ai-results?q=help+with+everyday+needs"
-                className="inline-flex items-center gap-2 h-10 px-5 bg-emerald-600 text-white text-sm font-semibold rounded-xl hover:bg-emerald-700 transition-colors"
-              >
-                <Sparkles className="w-4 h-4" />
-                Find what I qualify for
-              </Link>
+              <SmartSearchBar type="benefits" initialQuery={q} initialHint={hint} />
             </div>
 
             {/* Right — quick stats card */}
@@ -207,6 +218,33 @@ export default async function BenefitsPage({
 
       <main className="flex-1">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+          {/* Mobile-only horizontal category strip */}
+          <div className="lg:hidden flex gap-2 overflow-x-auto pb-2 mb-4 -mx-4 px-4">
+            <Link
+              href="/benefits"
+              className={`shrink-0 px-3 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap border transition-colors ${
+                selectedSubcategories.size === 0
+                  ? "bg-emerald-600 text-white border-emerald-600"
+                  : "bg-white border-amber-200 text-slate-600 hover:bg-amber-50"
+              }`}
+            >
+              All benefits
+            </Link>
+            {SITUATIONS.map(s => (
+              <Link
+                key={s.key}
+                href={buildBenefitsUrl({ cats: new Set([s.key]), sources: selectedSources, state, zip, q, sort })}
+                className={`shrink-0 px-3 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap border transition-colors ${
+                  selectedSubcategories.has(s.key)
+                    ? "bg-emerald-600 text-white border-emerald-600"
+                    : "bg-white border-amber-200 text-slate-600 hover:bg-amber-50"
+                }`}
+              >
+                {s.label}
+              </Link>
+            ))}
+          </div>
+
           <div className="flex gap-8 items-start">
 
             {/* Left rail — situation chips — sticky */}

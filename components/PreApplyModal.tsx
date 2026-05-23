@@ -1,6 +1,7 @@
 "use client"
 
 import { useEffect, useState } from "react"
+import { createPortal } from "react-dom"
 import { X, ExternalLink } from "lucide-react"
 
 interface PreApplyModalProps {
@@ -83,7 +84,10 @@ export default function PreApplyModal({ program, isOpen, onClose }: PreApplyModa
     }
   }, [isOpen])
 
-  if (!isOpen) return null
+  const [mounted, setMounted] = useState(false)
+  useEffect(() => { setMounted(true) }, [])
+
+  if (!isOpen || !mounted) return null
 
   function handleContinue() {
     const key = "gw_applications"
@@ -117,7 +121,7 @@ export default function PreApplyModal({ program, isOpen, onClose }: PreApplyModa
   const accentLightBg = isGrant ? "bg-blue-50" : "bg-emerald-50"
   const accentSelectedBg = isGrant ? "bg-blue-50 border-blue-500" : "bg-emerald-50 border-emerald-500"
 
-  return (
+  return createPortal(
     <>
       {/* Backdrop */}
       <div
@@ -256,6 +260,7 @@ export default function PreApplyModal({ program, isOpen, onClose }: PreApplyModa
           </button>
         </div>
       </div>
-    </>
+    </>,
+    document.body
   )
 }
