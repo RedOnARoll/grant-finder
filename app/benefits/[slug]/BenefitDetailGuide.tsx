@@ -317,7 +317,7 @@ function StateParticipationStatusCard({
   useEffect(() => {
     function onStateSet() {
       const s = localStorage.getItem("gw_state")
-      if (s) setStateCode(s)
+      setStateCode(s || null)
     }
     window.addEventListener("gw:zip-updated", onStateSet)
     window.addEventListener("gw:state-updated", onStateSet)
@@ -483,7 +483,7 @@ export default function BenefitDetailGuide({
   useEffect(() => {
     function onZipUpdated() {
       const s = localStorage.getItem("gw_state")
-      if (s) setDetectedState(s)
+      setDetectedState(s || null)
     }
     window.addEventListener("gw:zip-updated", onZipUpdated)
     window.addEventListener("gw:state-updated", onZipUpdated)
