@@ -2,7 +2,20 @@
 
 import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
-import { ArrowRight, X } from "lucide-react"
+import { ArrowRight, X, CheckCircle } from "lucide-react"
+
+type AppEntry = { slug: string; type: string; name: string; intent: string; status: string }
+
+function updateAppStatus(slug: string, type: string, status: string) {
+  try {
+    const key = "gw_applications"
+    const apps = JSON.parse(localStorage.getItem(key) ?? "[]") as AppEntry[]
+    const updated = apps.map(a =>
+      a.slug === slug && a.type === type ? { ...a, status } : a
+    )
+    localStorage.setItem(key, JSON.stringify(updated))
+  } catch {}
+}
 
 export default function ReturningVisitorBanner() {
   const router = useRouter()
@@ -10,12 +23,11 @@ export default function ReturningVisitorBanner() {
     name: string; slug: string; type: string; intent: string
   } | null>(null)
   const [dismissed, setDismissed] = useState(false)
+  const [feedback, setFeedback] = useState<"applied" | "dropped" | null>(null)
 
   useEffect(() => {
     try {
-      const apps = JSON.parse(localStorage.getItem("gw_applications") ?? "[]") as Array<{
-        slug: string; type: string; name: string; intent: string; status: string
-      }>
+      const apps = JSON.parse(localStorage.getItem("gw_applications") ?? "[]") as AppEntry[]
       const wasDismissed = localStorage.getItem("gw_banner_dismissed") === "1"
       if (wasDismissed) return
       const inProgress = apps.find(a => a.status === "applying")
@@ -28,12 +40,42 @@ export default function ReturningVisitorBanner() {
     setDismissed(true)
   }
 
+  const markApplied = () => {
+    if (!activity) return
+    updateAppStatus(activity.slug, activity.type, "applied")
+    setFeedback("applied")
+    setTimeout(() => setDismissed(true), 1800)
+  }
+
+  const markDropped = () => {
+    if (!activity) return
+    updateAppStatus(activity.slug, activity.type, "dropped")
+    setFeedback("dropped")
+    setTimeout(() => setDismissed(true), 1400)
+  }
+
   if (!activity || dismissed) return null
 
   const intentLabels: Record<string, string> = {
     today: "today", this_week: "this week", this_month: "this month", just_looking: "soon"
   }
   const href = `/${activity.type === "grant" ? "grants" : "benefits"}/${activity.slug}`
+
+  // Brief confirmation state before hiding
+  if (feedback) {
+    return (
+      <div className="bg-slate-900 border-b border-slate-800 text-white">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3 flex items-center gap-2">
+          <CheckCircle className="w-4 h-4 text-emerald-400 shrink-0" />
+          <p className="text-sm text-slate-300">
+            {feedback === "applied"
+              ? "Great work! We've marked that as applied."
+              : "Got it — removed from your list."}
+          </p>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className="bg-slate-900 border-b border-slate-800 text-white">
@@ -53,12 +95,24 @@ export default function ReturningVisitorBanner() {
             </p>
           </div>
         </div>
-        <div className="flex items-center gap-2 shrink-0">
+        <div className="flex items-center gap-2 shrink-0 flex-wrap">
           <button
             onClick={() => router.push(href)}
             className="h-8 px-3 bg-blue-600 text-white text-xs font-semibold rounded-lg hover:bg-blue-700 transition-colors inline-flex items-center gap-1.5 whitespace-nowrap"
           >
             Resume <ArrowRight className="w-3.5 h-3.5" />
+          </button>
+          <button
+            onClick={markApplied}
+            className="h-8 px-3 bg-emerald-600 text-white text-xs font-semibold rounded-lg hover:bg-emerald-700 transition-colors whitespace-nowrap"
+          >
+            I applied ✓
+          </button>
+          <button
+            onClick={markDropped}
+            className="h-8 px-3 border border-slate-700 text-slate-300 text-xs font-medium rounded-lg hover:border-slate-500 hover:text-white transition-colors whitespace-nowrap"
+          >
+            Not applying
           </button>
           <button
             onClick={dismiss}
