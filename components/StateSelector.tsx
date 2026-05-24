@@ -25,6 +25,7 @@ export default function StateSelector({ onStateChange, className = "" }: Props) 
         setStateCode(code)
         setAutoDetected(true)
         localStorage.setItem("gw_state", code)
+        window.dispatchEvent(new Event("gw:state-updated"))
         onStateChange(code)
       })
       .catch(() => {/* ignore zip lookup errors */})
@@ -78,6 +79,7 @@ export default function StateSelector({ onStateChange, className = "" }: Props) 
     } else {
       localStorage.removeItem("gw_state")
     }
+    window.dispatchEvent(new Event("gw:state-updated"))
     onStateChange(code)
     setOpen(false)
   }
