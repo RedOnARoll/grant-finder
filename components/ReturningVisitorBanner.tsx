@@ -3,10 +3,12 @@
 import { useState, useEffect } from "react"
 import { useRouter, usePathname } from "next/navigation"
 import { ArrowRight, X, CheckCircle } from "lucide-react"
+import { getBrowserSupabase } from "@/lib/supabase-browser"
+import { getSavedPrograms, saveProgram, updateProgramStatus } from "@/lib/account-db"
 
 type AppEntry = { slug: string; type: string; name: string; intent: string; status: string }
 
-function updateAppStatus(slug: string, type: string, status: string) {
+function updateLocalStatus(slug: string, type: string, status: string) {
   try {
     const key = "gw_applications"
     const apps = JSON.parse(localStorage.getItem(key) ?? "[]") as AppEntry[]
@@ -15,6 +17,23 @@ function updateAppStatus(slug: string, type: string, status: string) {
     )
     localStorage.setItem(key, JSON.stringify(updated))
   } catch {}
+}
+
+async function syncAppliedToProfile(slug: string, type: "grant" | "benefit") {
+  try {
+    const supabase = getBrowserSupabase()
+    const { data } = await supabase.auth.getUser()
+    if (!data.user) return
+    const saved = await getSavedPrograms(supabase, data.user.id)
+    const existing = saved.find(p => p.slug === slug && p.type === type)
+    if (existing) {
+      await updateProgramStatus(supabase, data.user.id, slug, type, "applied")
+    } else {
+      await saveProgram(supabase, data.user.id, slug, type, "applied")
+    }
+  } catch {
+    // Silently fail — localStorage is already updated
+  }
 }
 
 export default function ReturningVisitorBanner() {
@@ -43,14 +62,16 @@ export default function ReturningVisitorBanner() {
 
   const markApplied = () => {
     if (!activity) return
-    updateAppStatus(activity.slug, activity.type, "applied")
+    const type = activity.type as "grant" | "benefit"
+    updateLocalStatus(activity.slug, type, "applied")
+    syncAppliedToProfile(activity.slug, type) // fire-and-forget
     setFeedback("applied")
     setTimeout(() => setDismissed(true), 1800)
   }
 
   const markDropped = () => {
     if (!activity) return
-    updateAppStatus(activity.slug, activity.type, "dropped")
+    updateLocalStatus(activity.slug, activity.type, "dropped")
     setFeedback("dropped")
     setTimeout(() => setDismissed(true), 1400)
   }
