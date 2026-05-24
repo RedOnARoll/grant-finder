@@ -10,6 +10,7 @@ import NarrativeGate from "@/components/NarrativeGate"
 import ApplyButton from "@/components/ApplyButton"
 import GrantDetailTabs from "./GrantDetailTabs"
 import AdminVerificationWarning from "@/components/AdminVerificationWarning"
+import ScrollToTop from "@/components/ScrollToTop"
 
 export const dynamic = "force-dynamic"
 export const dynamicParams = true
@@ -114,6 +115,7 @@ export default async function GrantDetailPage({
 
   return (
     <div className="flex min-h-full flex-col bg-slate-50">
+      <ScrollToTop />
       <SiteNav active="grants" />
 
       <section className="bg-slate-900 text-white">

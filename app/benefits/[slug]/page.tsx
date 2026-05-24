@@ -10,6 +10,7 @@ import ApplyButton from "@/components/ApplyButton"
 import BenefitDetailGuide from "./BenefitDetailGuide"
 import StateProgramBanner from "@/components/StateProgramBanner"
 import AdminVerificationWarning from "@/components/AdminVerificationWarning"
+import ScrollToTop from "@/components/ScrollToTop"
 
 export const dynamic = "force-dynamic"
 export const dynamicParams = true

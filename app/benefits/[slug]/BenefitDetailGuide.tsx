@@ -1,10 +1,10 @@
 "use client"
 
 import { type FormEvent, useEffect, useMemo, useState } from "react"
-import { CheckCircle, Info, MapPin, RotateCcw } from "lucide-react"
+import { CheckCircle, ExternalLink, Info, MapPin, RotateCcw, XCircle } from "lucide-react"
 import type { EligibilityCriteria } from "@/lib/types"
 import { getIncomeLimit, HOUSEHOLD_SIZES } from "@/lib/poverty-guidelines"
-import { US_STATES } from "@/lib/state-programs"
+import { STATE_APPLY_URLS, US_STATES } from "@/lib/state-programs"
 
 type BenefitDetailGuideProps = {
   slug: string
@@ -293,14 +293,12 @@ function IncomeCriteriaCard({
   )
 }
 
-// ─── Inline state participation card ─────────────────────────────────────────
+// ─── Inline state participation status ───────────────────────────────────────
 
-function StateCriteriaCard({
-  answer,
-  onAnswer,
+function StateParticipationStatusCard({
+  slug,
 }: {
-  answer: "yes" | "no" | "unsure" | null
-  onAnswer: (v: "yes" | "no" | "unsure") => void
+  slug: string
 }) {
   const [stateCode, setStateCode] = useState<string | null>(null)
   const [zipInput, setZipInput] = useState("")
@@ -334,61 +332,98 @@ function StateCriteriaCard({
   }
 
   const stateName = stateCode ? (US_STATES.find(s => s.code === stateCode)?.name ?? stateCode) : null
+  const statePrograms = STATE_APPLY_URLS[slug]
+  const applyUrl = stateCode ? statePrograms?.[stateCode] : null
+  const hasParticipationData = Boolean(statePrograms)
+  const participates = Boolean(applyUrl)
 
   return (
-    <li className={`rounded-lg border p-4 transition-colors ${answer === "yes" ? "border-emerald-100 bg-emerald-50" : answer === "no" ? "border-rose-100 bg-rose-50" : "border-slate-200 bg-white"}`}>
-      <p className="text-sm font-semibold text-slate-900 mb-1">Must reside in a participating state or tribal area</p>
+    <div className={`rounded-lg border p-4 ${
+      stateName && participates
+        ? "border-emerald-100 bg-emerald-50"
+        : stateName && hasParticipationData
+          ? "border-rose-100 bg-rose-50"
+          : "border-slate-200 bg-white"
+    }`}>
+      <div className="flex items-start gap-3">
+        {stateName && participates ? (
+          <CheckCircle className="mt-0.5 h-5 w-5 shrink-0 text-emerald-700" />
+        ) : stateName && hasParticipationData ? (
+          <XCircle className="mt-0.5 h-5 w-5 shrink-0 text-rose-600" />
+        ) : (
+          <MapPin className="mt-0.5 h-5 w-5 shrink-0 text-blue-600" />
+        )}
+        <div className="min-w-0 flex-1">
+          <p className="text-sm font-semibold text-slate-900">State participation</p>
 
-      {stateName ? (
-        <div className="mb-3">
-          <div className="flex items-center gap-1.5 text-sm text-slate-700 mb-1">
-            <MapPin className="h-3.5 w-3.5 text-blue-600 shrink-0" />
-            <span>Your state: <strong>{stateName}</strong></span>
-          </div>
-          <p className="text-xs text-slate-500">
-            This program is administered state-by-state. Not every state has an active program.
-            Use the official apply link to confirm {stateName} is participating and find your local office.
-          </p>
-        </div>
-      ) : (
-        <div className="mb-3">
-          <p className="text-xs text-slate-500 mb-2">
-            Enter your ZIP to confirm your state participates in this program.
-          </p>
-          <form onSubmit={handleZipSubmit} className="flex gap-2">
-            <input
-              type="text"
-              inputMode="numeric"
-              maxLength={5}
-              value={zipInput}
-              onChange={e => setZipInput(e.target.value.replace(/\D/g, "").slice(0, 5))}
-              placeholder="ZIP code"
-              className="h-8 w-24 rounded-lg border border-slate-200 px-2.5 text-sm text-slate-900 placeholder:text-slate-400 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
-            />
-            <button type="submit" disabled={zipInput.length !== 5}
-              className="h-8 rounded-lg bg-blue-600 px-3 text-xs font-semibold text-white hover:bg-blue-700 disabled:opacity-40 disabled:cursor-not-allowed">
-              Check my state
-            </button>
-          </form>
-        </div>
-      )}
+          {stateName && participates && (
+            <div className="mt-1 space-y-2">
+              <p className="text-sm font-semibold text-emerald-900">
+                Yes. {stateName} participates in this program.
+              </p>
+              <p className="text-xs leading-5 text-emerald-800">
+                Use the {stateName} official apply link to confirm local office rules and start the application.
+              </p>
+              <a
+                href={applyUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1.5 rounded-lg bg-blue-600 px-3 py-1.5 text-xs font-semibold text-white transition-colors hover:bg-blue-700"
+              >
+                Open {stateName} apply page
+                <ExternalLink className="h-3.5 w-3.5" />
+              </a>
+            </div>
+          )}
 
-      <p className="text-xs font-medium text-slate-700 mb-2">
-        {stateName ? `Does ${stateName} participate in this program?` : "Does your state participate?"}
-      </p>
-      <div className="flex gap-2">
-        {(["yes", "no", "unsure"] as const).map(val => (
-          <button key={val} type="button" onClick={() => onAnswer(val)}
-            className={`h-8 px-4 rounded-full text-sm font-medium border transition-colors ${answer === val
-              ? val === "yes" ? "bg-emerald-600 text-white border-emerald-600"
-                : val === "no" ? "bg-rose-500 text-white border-rose-500"
-                : "bg-slate-600 text-white border-slate-600"
-              : "border-slate-300 text-slate-700 hover:border-slate-500"}`}>
-            {val === "yes" ? "Yes" : val === "no" ? "No" : "Not sure"}
-          </button>
-        ))}
+          {stateName && !participates && hasParticipationData && (
+            <div className="mt-1 space-y-1">
+              <p className="text-sm font-semibold text-rose-900">
+                No. GrantWay does not show {stateName} as participating in this program.
+              </p>
+              <p className="text-xs leading-5 text-rose-800">
+                This program is administered state-by-state, and we do not have an active {stateName} apply page on file.
+                Check the official source before ruling it out completely.
+              </p>
+            </div>
+          )}
+
+          {stateName && !hasParticipationData && (
+            <div className="mt-1 space-y-1">
+              <p className="text-sm font-semibold text-slate-900">
+                We do not have state participation data for this program yet.
+              </p>
+              <p className="text-xs leading-5 text-slate-500">
+                Use the official apply link on this page to confirm whether {stateName} participates.
+              </p>
+            </div>
+          )}
+
+          {!stateName && (
+            <div className="mt-2">
+              <p className="text-xs text-slate-500 mb-2">
+                Enter your ZIP code to see whether your state participates in this program.
+              </p>
+              <form onSubmit={handleZipSubmit} className="flex flex-wrap gap-2">
+                <input
+                  type="text"
+                  inputMode="numeric"
+                  maxLength={5}
+                  value={zipInput}
+                  onChange={e => setZipInput(e.target.value.replace(/\D/g, "").slice(0, 5))}
+                  placeholder="ZIP code"
+                  className="h-8 w-24 rounded-lg border border-slate-200 px-2.5 text-sm text-slate-900 placeholder:text-slate-400 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+                />
+                <button type="submit" disabled={zipInput.length !== 5}
+                  className="h-8 rounded-lg bg-blue-600 px-3 text-xs font-semibold text-white hover:bg-blue-700 disabled:opacity-40 disabled:cursor-not-allowed">
+                  Check my state
+                </button>
+              </form>
+            </div>
+          )}
+        </div>
       </div>
-    </li>
+    </div>
   )
 }
 
@@ -409,7 +444,15 @@ export default function BenefitDetailGuide({
   const [householdSizes, setHouseholdSizes] = useState<Record<number, number>>({})
   const [detectedState, setDetectedState] = useState<string | null>(null)
   const [ownRentAnswers, setOwnRentAnswers] = useState<Record<number, "own" | "rent" | "neither">>({})
-  const checklist = useMemo(() => criteriaToChecklist(eligibilityCriteria), [eligibilityCriteria])
+  const allChecklistItems = useMemo(() => criteriaToChecklist(eligibilityCriteria), [eligibilityCriteria])
+  const hasStateParticipationRequirement = useMemo(
+    () => allChecklistItems.some(isStateParticipationItem),
+    [allChecklistItems]
+  )
+  const checklist = useMemo(
+    () => allChecklistItems.filter((item) => !isStateParticipationItem(item)),
+    [allChecklistItems]
+  )
   const category = subcategory ? CATEGORY_COPY[subcategory] : undefined
   const documentList = documents.length > 0 ? documents : ["Photo ID", "Proof of address", "Proof of income"]
 
@@ -509,7 +552,11 @@ export default function BenefitDetailGuide({
           </div>
         )}
 
-        <ul className="mt-5 space-y-3">
+        <div className="mt-5 space-y-3">
+          {hasStateParticipationRequirement && <StateParticipationStatusCard slug={slug} />}
+        </div>
+
+        <ul className="mt-3 space-y-3">
           {checklist.map((item, index) => {
             // Priority notices — render as info banner, not a requirement
             if (isPriorityNotice(item)) {
@@ -545,17 +592,6 @@ export default function BenefitDetailGuide({
                   stateCode={detectedState}
                   onAnswer={v => setSpecialAnswers(prev => ({ ...prev, [index]: v }))}
                   onSize={n => setHouseholdSizes(prev => ({ ...prev, [index]: n }))}
-                />
-              )
-            }
-
-            // State participation card
-            if (isStateParticipationItem(item)) {
-              return (
-                <StateCriteriaCard
-                  key={`${item}-${index}`}
-                  answer={specialAnswers[index] ?? null}
-                  onAnswer={v => setSpecialAnswers(prev => ({ ...prev, [index]: v }))}
                 />
               )
             }
