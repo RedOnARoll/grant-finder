@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { useRouter } from "next/navigation"
+import { useRouter, usePathname } from "next/navigation"
 import { ArrowRight, X, CheckCircle } from "lucide-react"
 
 type AppEntry = { slug: string; type: string; name: string; intent: string; status: string }
@@ -19,6 +19,7 @@ function updateAppStatus(slug: string, type: string, status: string) {
 
 export default function ReturningVisitorBanner() {
   const router = useRouter()
+  const pathname = usePathname()
   const [activity, setActivity] = useState<{
     name: string; slug: string; type: string; intent: string
   } | null>(null)
@@ -54,12 +55,16 @@ export default function ReturningVisitorBanner() {
     setTimeout(() => setDismissed(true), 1400)
   }
 
-  if (!activity || dismissed) return null
+  const href = activity
+    ? `/${activity.type === "grant" ? "grants" : "benefits"}/${activity.slug}`
+    : null
+
+  // Hide banner when already on the program's page
+  if (!activity || dismissed || pathname === href) return null
 
   const intentLabels: Record<string, string> = {
     today: "today", this_week: "this week", this_month: "this month", just_looking: "soon"
   }
-  const href = `/${activity.type === "grant" ? "grants" : "benefits"}/${activity.slug}`
 
   // Brief confirmation state before hiding
   if (feedback) {
@@ -97,7 +102,7 @@ export default function ReturningVisitorBanner() {
         </div>
         <div className="flex items-center gap-2 shrink-0 flex-wrap">
           <button
-            onClick={() => router.push(href)}
+            onClick={() => router.push(href!)}
             className="h-8 px-3 bg-blue-600 text-white text-xs font-semibold rounded-lg hover:bg-blue-700 transition-colors inline-flex items-center gap-1.5 whitespace-nowrap"
           >
             Resume <ArrowRight className="w-3.5 h-3.5" />
