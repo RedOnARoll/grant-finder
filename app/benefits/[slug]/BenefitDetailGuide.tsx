@@ -365,7 +365,7 @@ function StateParticipationStatusCard({
                 Use the {stateName} official apply link to confirm local office rules and start the application.
               </p>
               <a
-                href={applyUrl}
+                href={applyUrl ?? undefined}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="inline-flex items-center gap-1.5 rounded-lg bg-blue-600 px-3 py-1.5 text-xs font-semibold text-white transition-colors hover:bg-blue-700"
