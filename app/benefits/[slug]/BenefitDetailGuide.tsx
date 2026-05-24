@@ -455,6 +455,9 @@ export default function BenefitDetailGuide({
   )
   const category = subcategory ? CATEGORY_COPY[subcategory] : undefined
   const documentList = documents.length > 0 ? documents : ["Photo ID", "Proof of address", "Proof of income"]
+  const confirmedCount = checked.size
+    + Object.values(specialAnswers).filter(a => a === "yes").length
+    + Object.values(ownRentAnswers).filter(a => a === "own" || a === "rent").length
 
   useEffect(() => {
     const frame = requestAnimationFrame(() => {
@@ -534,7 +537,7 @@ export default function BenefitDetailGuide({
             </p>
           </div>
           <span className="text-sm text-slate-500">
-            {checked.size + Object.values(specialAnswers).filter(a => a === "yes").length + Object.values(ownRentAnswers).filter(a => a === "own" || a === "rent").length}/{checklist.length} confirmed
+            {confirmedCount}/{checklist.length} confirmed
           </span>
         </div>
 
@@ -618,7 +621,7 @@ export default function BenefitDetailGuide({
           })}
         </ul>
 
-        {(checked.size + Object.values(specialAnswers).filter(a => a === "yes").length + Object.values(ownRentAnswers).filter(a => a === "own" || a === "rent").length) >= Math.ceil(checklist.length * 0.75) && (
+        {checklist.length > 0 && confirmedCount >= Math.ceil(checklist.length * 0.75) && (
           <div className="mt-5 flex gap-3 rounded-lg border border-emerald-100 bg-emerald-50 p-4 text-sm leading-6 text-emerald-900">
             <CheckCircle className="mt-0.5 h-5 w-5 shrink-0 text-emerald-700" />
             <p>
