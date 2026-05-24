@@ -320,7 +320,11 @@ function StateParticipationStatusCard({
       if (s) setStateCode(s)
     }
     window.addEventListener("gw:zip-updated", onStateSet)
-    return () => window.removeEventListener("gw:zip-updated", onStateSet)
+    window.addEventListener("gw:state-updated", onStateSet)
+    return () => {
+      window.removeEventListener("gw:zip-updated", onStateSet)
+      window.removeEventListener("gw:state-updated", onStateSet)
+    }
   }, [])
 
   function handleZipSubmit(e: FormEvent) {
@@ -439,7 +443,7 @@ export default function BenefitDetailGuide({
   const storageKey = `gw_elig_${slug}`
   const [checked, setChecked] = useState<Set<number>>(new Set())
   const [zip, setZip] = useState("")
-  // Special interactive items: income, state participation, own/rent
+  // Special interactive items: income and own/rent
   const [specialAnswers, setSpecialAnswers] = useState<Record<number, "yes" | "no" | "unsure">>({})
   const [householdSizes, setHouseholdSizes] = useState<Record<number, number>>({})
   const [detectedState, setDetectedState] = useState<string | null>(null)
@@ -482,7 +486,11 @@ export default function BenefitDetailGuide({
       if (s) setDetectedState(s)
     }
     window.addEventListener("gw:zip-updated", onZipUpdated)
-    return () => window.removeEventListener("gw:zip-updated", onZipUpdated)
+    window.addEventListener("gw:state-updated", onZipUpdated)
+    return () => {
+      window.removeEventListener("gw:zip-updated", onZipUpdated)
+      window.removeEventListener("gw:state-updated", onZipUpdated)
+    }
   }, [])
 
   useEffect(() => {
@@ -536,9 +544,11 @@ export default function BenefitDetailGuide({
               Check what applies to you. Your answers are saved on this device so you can come back later.
             </p>
           </div>
-          <span className="text-sm text-slate-500">
-            {confirmedCount}/{checklist.length} confirmed
-          </span>
+          {checklist.length > 0 && (
+            <span className="text-sm text-slate-500">
+              {confirmedCount}/{checklist.length} confirmed
+            </span>
+          )}
         </div>
 
         {(checked.size > 0 || Object.keys(specialAnswers).length > 0) && (
@@ -555,11 +565,13 @@ export default function BenefitDetailGuide({
           </div>
         )}
 
-        <div className="mt-5 space-y-3">
-          {hasStateParticipationRequirement && <StateParticipationStatusCard slug={slug} />}
-        </div>
+        {hasStateParticipationRequirement && (
+          <div className="mt-5 space-y-3">
+            <StateParticipationStatusCard slug={slug} />
+          </div>
+        )}
 
-        <ul className="mt-3 space-y-3">
+        <ul className={hasStateParticipationRequirement ? "mt-3 space-y-3" : "mt-5 space-y-3"}>
           {checklist.map((item, index) => {
             // Priority notices — render as info banner, not a requirement
             if (isPriorityNotice(item)) {
