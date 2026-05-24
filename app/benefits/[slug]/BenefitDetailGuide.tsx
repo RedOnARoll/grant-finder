@@ -1,8 +1,10 @@
 "use client"
 
-import { useEffect, useMemo, useState } from "react"
-import { CheckCircle, MapPin, RotateCcw } from "lucide-react"
+import { type FormEvent, useEffect, useMemo, useState } from "react"
+import { CheckCircle, Info, MapPin, RotateCcw } from "lucide-react"
 import type { EligibilityCriteria } from "@/lib/types"
+import { getIncomeLimit, HOUSEHOLD_SIZES } from "@/lib/poverty-guidelines"
+import { US_STATES } from "@/lib/state-programs"
 
 type BenefitDetailGuideProps = {
   slug: string
@@ -67,6 +69,329 @@ function criteriaToChecklist(criteria: EligibilityCriteria | string[]) {
   return items.length > 0 ? items : ["Your household matches the program rules listed by the agency."]
 }
 
+// ─── Criteria type detection ──────────────────────────────────────────────────
+
+type IncomeType =
+  | { kind: "pct"; percent: number }
+  | { kind: "dollar"; limit: number }
+  | { kind: "generic" }
+
+function detectIncomeItem(item: string): IncomeType | null {
+  const lower = item.toLowerCase()
+  const pct = item.match(/(\d+)\s*%\s*(?:fpl|of\s*(?:the\s*)?(?:federal\s*poverty(?:\s*level)?|fpl))/i)
+  if (pct) return { kind: "pct", percent: parseInt(pct[1]) }
+  const dollar = item.match(/\$([0-9,]+)/)
+  if (dollar && lower.includes("income")) return { kind: "dollar", limit: parseInt(dollar[1].replace(/,/g, "")) }
+  if (lower.includes("income") && (
+    lower.includes("income requirement") ||
+    lower.includes("income-eligible") ||
+    lower.includes("income eligible") ||
+    lower.includes("must meet income") ||
+    (lower.includes("low-income") && lower.includes("must"))
+  )) return { kind: "generic" }
+  return null
+}
+
+function isStateParticipationItem(item: string): boolean {
+  const lower = item.toLowerCase()
+  return (
+    lower.includes("participating state") ||
+    lower.includes("tribal area") ||
+    lower.includes("participating jurisdiction") ||
+    (lower.includes("participating") && lower.includes("state"))
+  )
+}
+
+function isOwnRentItem(item: string): boolean {
+  const lower = item.toLowerCase()
+  return (
+    lower.includes("own or rent") ||
+    lower.includes("owner or renter") ||
+    lower.includes("homeowner or renter") ||
+    (lower.includes("own") && lower.includes("rent") && (lower.includes("home") || lower.includes("property") || lower.includes("weather")))
+  )
+}
+
+function isPriorityNotice(item: string): boolean {
+  return (
+    /^priority (given|is given) to/i.test(item) ||
+    /\bgiven priority\b/i.test(item) ||
+    /^priority consideration/i.test(item)
+  )
+}
+
+/** Convert statement-style criteria to a short, direct question. */
+function toQuestion(text: string): string {
+  const cleaned = text.replace(/\s*\([^)]*\)/g, "").trim()
+  let q = cleaned
+    .replace(/^Must be a\s+/i, "Are you a ")
+    .replace(/^Must be an\s+/i, "Are you an ")
+    .replace(/^Must be\s+/i, "Are you ")
+    .replace(/^Must have\s+/i, "Do you have ")
+    .replace(/^Must meet\s+/i, "Do you meet ")
+    .replace(/^Must not have\s+/i, "Have you not ")
+    .replace(/^Must not\s+/i, "Do you ")
+    .replace(/^Must provide\s+/i, "Can you provide ")
+    .replace(/^Must demonstrate\s+/i, "Can you demonstrate ")
+    .replace(/^Must currently\s+/i, "Do you currently ")
+    .replace(/^Must\s+/i, "Do you ")
+    .replace(/^Required to\s+/i, "Are you ")
+    .replace(/^Should be\s+/i, "Are you ")
+    .replace(/^Applicant must\s+/i, "Do you ")
+    .replace(/^You are\s+/i, "Are you ")
+    .replace(/^You live\s+/i, "Do you live ")
+    .replace(/^You or the person applying is\s+/i, "Are you or the person applying ")
+    .replace(/^Your household income is at or below\s+/i, "Is your household income at or below ")
+    .replace(/^Your household income is under\s+/i, "Is your household income under ")
+    .replace(/^You meet\s+/i, "Do you meet ")
+  if (!q.endsWith("?")) q += "?"
+  return q
+}
+
+// ─── Own / rent card ──────────────────────────────────────────────────────────
+
+function OwnRentCard({
+  answer,
+  onAnswer,
+}: {
+  answer: "own" | "rent" | "neither" | null
+  onAnswer: (v: "own" | "rent" | "neither") => void
+}) {
+  return (
+    <li className={`rounded-lg border p-4 transition-colors ${
+      answer === "own" ? "border-emerald-100 bg-emerald-50" :
+      answer === "rent" ? "border-blue-100 bg-blue-50" :
+      answer === "neither" ? "border-rose-100 bg-rose-50" :
+      "border-slate-200 bg-white"
+    }`}>
+      <p className="text-sm font-semibold text-slate-900 mb-3">Do you own or rent the home to be weatherized?</p>
+      <div className="flex gap-2 flex-wrap">
+        {(["own", "rent", "neither"] as const).map(val => (
+          <button key={val} type="button" onClick={() => onAnswer(val)}
+            className={`h-8 px-5 rounded-full text-sm font-medium border transition-colors ${answer === val
+              ? val === "own" ? "bg-emerald-600 text-white border-emerald-600"
+                : val === "rent" ? "bg-blue-600 text-white border-blue-600"
+                : "bg-rose-500 text-white border-rose-500"
+              : "border-slate-300 text-slate-700 hover:border-slate-500"
+            }`}>
+            {val === "own" ? "I own it" : val === "rent" ? "I rent it" : "Neither"}
+          </button>
+        ))}
+      </div>
+      {answer === "rent" && (
+        <div className="mt-3 rounded-lg border border-blue-200 bg-blue-50 px-3 py-2.5 text-xs leading-5 text-blue-900">
+          <strong className="block mb-1">Renters can qualify — but you need landlord consent.</strong>
+          Most weatherization measures require written permission from your landlord before work begins. Ask your landlord to sign a consent form — the local weatherization agency can provide one. Many landlords agree because the work is free and increases the property's value.
+        </div>
+      )}
+      {answer === "neither" && (
+        <p className="mt-2 text-xs text-rose-700">
+          This program covers homeowners and renters. If you live in a shelter, group home, or similar arrangement, contact the local weatherization agency to ask about eligibility for your situation.
+        </p>
+      )}
+    </li>
+  )
+}
+
+// ─── Inline income quiz card ──────────────────────────────────────────────────
+
+function fmt(n: number) {
+  return new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 }).format(n)
+}
+
+function IncomeCriteriaCard({
+  item,
+  type,
+  answer,
+  householdSize,
+  stateCode,
+  onAnswer,
+  onSize,
+}: {
+  item: string
+  type: IncomeType
+  answer: "yes" | "no" | null
+  householdSize: number | null
+  stateCode: string | null
+  onAnswer: (v: "yes" | "no") => void
+  onSize: (n: number) => void
+}) {
+  const limit = householdSize && type.kind === "pct"
+    ? getIncomeLimit(householdSize, type.percent, stateCode ?? undefined)
+    : type.kind === "dollar" ? type.limit : null
+
+  return (
+    <li className={`rounded-lg border p-4 transition-colors ${answer === "yes" ? "border-emerald-100 bg-emerald-50" : answer === "no" ? "border-rose-100 bg-rose-50" : "border-slate-200 bg-white"}`}>
+      <p className="text-sm font-semibold text-slate-900 mb-1">
+        {type.kind === "generic" ? "Household income requirement" : item}
+      </p>
+
+      {type.kind === "generic" && (
+        <p className="text-xs text-slate-500 mb-3">
+          This program has income limits. Answer a couple of questions so we can check if you qualify.
+        </p>
+      )}
+
+      {type.kind === "pct" && !householdSize && (
+        <p className="text-xs text-slate-500 mb-3">
+          This program requires income at or below <strong>{type.percent}% of the Federal Poverty Level</strong>. Select your household size to see your exact dollar limit.
+        </p>
+      )}
+
+      {/* Household size selector for FPL-based limits */}
+      {(type.kind === "pct" || type.kind === "generic") && (
+        <div className="mb-3">
+          <p className="text-xs font-medium text-slate-500 mb-2">How many people are in your household?</p>
+          <div className="flex flex-wrap gap-1.5">
+            {HOUSEHOLD_SIZES.map(n => (
+              <button key={n} type="button" onClick={() => onSize(n)}
+                className={`w-9 h-9 rounded-full text-sm font-medium border transition-colors ${householdSize === n ? "bg-slate-900 text-white border-slate-900" : "border-slate-300 text-slate-700 hover:border-slate-500"}`}>
+                {n}
+              </button>
+            ))}
+            <button type="button" onClick={() => onSize(9)}
+              className={`h-9 px-2.5 rounded-full text-sm font-medium border transition-colors ${householdSize === 9 ? "bg-slate-900 text-white border-slate-900" : "border-slate-300 text-slate-700 hover:border-slate-500"}`}>
+              9+
+            </button>
+          </div>
+          <p className="text-xs text-slate-400 mt-1.5">Count everyone who lives and eats with you — yourself, partner, children, and dependents.</p>
+        </div>
+      )}
+
+      {/* Show limit once household size known */}
+      {limit !== null && (
+        <div className="rounded-lg bg-slate-50 border border-slate-200 px-3 py-2.5 mb-3">
+          <p className="text-xs text-slate-500 mb-0.5">
+            {type.kind === "pct" && householdSize
+              ? `For a household of ${householdSize}, income must be at or below:`
+              : "Your household income must be at or below:"}
+          </p>
+          <p className="text-xl font-bold text-slate-900">{fmt(limit)}<span className="text-sm font-normal text-slate-500">/year</span></p>
+          <p className="text-sm text-slate-500">{fmt(Math.round(limit / 12))}/month</p>
+        </div>
+      )}
+
+      {/* Show yes/no once limit is known (or always for dollar type) */}
+      {(limit !== null || (type.kind === "generic" && householdSize)) && (
+        <div>
+          <p className="text-xs font-medium text-slate-700 mb-2">
+            {limit ? `Is your household income at or below ${fmt(limit)}/year?` : "Does your household meet the income requirement?"}
+          </p>
+          <div className="flex gap-2">
+            {(["yes", "no"] as const).map(val => (
+              <button key={val} type="button" onClick={() => onAnswer(val)}
+                className={`h-8 px-5 rounded-full text-sm font-medium border transition-colors ${answer === val
+                  ? val === "yes" ? "bg-emerald-600 text-white border-emerald-600" : "bg-rose-500 text-white border-rose-500"
+                  : "border-slate-300 text-slate-700 hover:border-slate-500"}`}>
+                {val === "yes" ? "Yes" : "No"}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+    </li>
+  )
+}
+
+// ─── Inline state participation card ─────────────────────────────────────────
+
+function StateCriteriaCard({
+  answer,
+  onAnswer,
+}: {
+  answer: "yes" | "no" | "unsure" | null
+  onAnswer: (v: "yes" | "no" | "unsure") => void
+}) {
+  const [stateCode, setStateCode] = useState<string | null>(null)
+  const [zipInput, setZipInput] = useState("")
+
+  useEffect(() => {
+    const frame = requestAnimationFrame(() => {
+      const savedState = localStorage.getItem("gw_state")
+      if (savedState) { setStateCode(savedState); return }
+      const zip = localStorage.getItem("gw_zip") ?? localStorage.getItem("gw_profile_zip")
+      if (zip) setZipInput(zip)
+    })
+    return () => cancelAnimationFrame(frame)
+  }, [])
+
+  // React to state being set elsewhere on the page
+  useEffect(() => {
+    function onStateSet() {
+      const s = localStorage.getItem("gw_state")
+      if (s) setStateCode(s)
+    }
+    window.addEventListener("gw:zip-updated", onStateSet)
+    return () => window.removeEventListener("gw:zip-updated", onStateSet)
+  }, [])
+
+  function handleZipSubmit(e: FormEvent) {
+    e.preventDefault()
+    const clean = zipInput.replace(/\D/g, "").slice(0, 5)
+    if (clean.length !== 5) return
+    localStorage.setItem("gw_zip", clean)
+    window.dispatchEvent(new Event("gw:zip-updated"))
+  }
+
+  const stateName = stateCode ? (US_STATES.find(s => s.code === stateCode)?.name ?? stateCode) : null
+
+  return (
+    <li className={`rounded-lg border p-4 transition-colors ${answer === "yes" ? "border-emerald-100 bg-emerald-50" : answer === "no" ? "border-rose-100 bg-rose-50" : "border-slate-200 bg-white"}`}>
+      <p className="text-sm font-semibold text-slate-900 mb-1">Must reside in a participating state or tribal area</p>
+
+      {stateName ? (
+        <div className="mb-3">
+          <div className="flex items-center gap-1.5 text-sm text-slate-700 mb-1">
+            <MapPin className="h-3.5 w-3.5 text-blue-600 shrink-0" />
+            <span>Your state: <strong>{stateName}</strong></span>
+          </div>
+          <p className="text-xs text-slate-500">
+            This program is administered state-by-state. Not every state has an active program.
+            Use the official apply link to confirm {stateName} is participating and find your local office.
+          </p>
+        </div>
+      ) : (
+        <div className="mb-3">
+          <p className="text-xs text-slate-500 mb-2">
+            Enter your ZIP to confirm your state participates in this program.
+          </p>
+          <form onSubmit={handleZipSubmit} className="flex gap-2">
+            <input
+              type="text"
+              inputMode="numeric"
+              maxLength={5}
+              value={zipInput}
+              onChange={e => setZipInput(e.target.value.replace(/\D/g, "").slice(0, 5))}
+              placeholder="ZIP code"
+              className="h-8 w-24 rounded-lg border border-slate-200 px-2.5 text-sm text-slate-900 placeholder:text-slate-400 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+            />
+            <button type="submit" disabled={zipInput.length !== 5}
+              className="h-8 rounded-lg bg-blue-600 px-3 text-xs font-semibold text-white hover:bg-blue-700 disabled:opacity-40 disabled:cursor-not-allowed">
+              Check my state
+            </button>
+          </form>
+        </div>
+      )}
+
+      <p className="text-xs font-medium text-slate-700 mb-2">
+        {stateName ? `Does ${stateName} participate in this program?` : "Does your state participate?"}
+      </p>
+      <div className="flex gap-2">
+        {(["yes", "no", "unsure"] as const).map(val => (
+          <button key={val} type="button" onClick={() => onAnswer(val)}
+            className={`h-8 px-4 rounded-full text-sm font-medium border transition-colors ${answer === val
+              ? val === "yes" ? "bg-emerald-600 text-white border-emerald-600"
+                : val === "no" ? "bg-rose-500 text-white border-rose-500"
+                : "bg-slate-600 text-white border-slate-600"
+              : "border-slate-300 text-slate-700 hover:border-slate-500"}`}>
+            {val === "yes" ? "Yes" : val === "no" ? "No" : "Not sure"}
+          </button>
+        ))}
+      </div>
+    </li>
+  )
+}
+
 export default function BenefitDetailGuide({
   slug,
   name,
@@ -79,6 +404,11 @@ export default function BenefitDetailGuide({
   const storageKey = `gw_elig_${slug}`
   const [checked, setChecked] = useState<Set<number>>(new Set())
   const [zip, setZip] = useState("")
+  // Special interactive items: income, state participation, own/rent
+  const [specialAnswers, setSpecialAnswers] = useState<Record<number, "yes" | "no" | "unsure">>({})
+  const [householdSizes, setHouseholdSizes] = useState<Record<number, number>>({})
+  const [detectedState, setDetectedState] = useState<string | null>(null)
+  const [ownRentAnswers, setOwnRentAnswers] = useState<Record<number, "own" | "rent" | "neither">>({})
   const checklist = useMemo(() => criteriaToChecklist(eligibilityCriteria), [eligibilityCriteria])
   const category = subcategory ? CATEGORY_COPY[subcategory] : undefined
   const documentList = documents.length > 0 ? documents : ["Photo ID", "Proof of address", "Proof of income"]
@@ -89,6 +419,8 @@ export default function BenefitDetailGuide({
         const saved = JSON.parse(window.localStorage.getItem(storageKey) ?? "[]")
         if (Array.isArray(saved)) setChecked(new Set(saved.filter((item) => typeof item === "number")))
         setZip(window.localStorage.getItem("gw_zip") ?? "")
+        const s = window.localStorage.getItem("gw_state")
+        if (s) setDetectedState(s)
       } catch {
         setChecked(new Set())
       }
@@ -96,6 +428,16 @@ export default function BenefitDetailGuide({
 
     return () => cancelAnimationFrame(frame)
   }, [storageKey])
+
+  // Keep detectedState in sync when ZIP/state is set by other components on the page
+  useEffect(() => {
+    function onZipUpdated() {
+      const s = localStorage.getItem("gw_state")
+      if (s) setDetectedState(s)
+    }
+    window.addEventListener("gw:zip-updated", onZipUpdated)
+    return () => window.removeEventListener("gw:zip-updated", onZipUpdated)
+  }, [])
 
   useEffect(() => {
     try {
@@ -118,8 +460,13 @@ export default function BenefitDetailGuide({
     const clean = value.replace(/\D/g, "").slice(0, 5)
     setZip(clean)
     try {
-      if (clean) window.localStorage.setItem("gw_zip", clean)
-      else window.localStorage.removeItem("gw_zip")
+      if (clean) {
+        window.localStorage.setItem("gw_zip", clean)
+        // Notify StateSelector on the same page so it can auto-detect the state
+        window.dispatchEvent(new Event("gw:zip-updated"))
+      } else {
+        window.localStorage.removeItem("gw_zip")
+      }
     } catch {
       // Ignore storage failures.
     }
@@ -144,16 +491,16 @@ export default function BenefitDetailGuide({
             </p>
           </div>
           <span className="text-sm text-slate-500">
-            {checked.size}/{checklist.length} checked
+            {checked.size + Object.values(specialAnswers).filter(a => a === "yes").length + Object.values(ownRentAnswers).filter(a => a === "own" || a === "rent").length}/{checklist.length} confirmed
           </span>
         </div>
 
-        {checked.size > 0 && (
+        {(checked.size > 0 || Object.keys(specialAnswers).length > 0) && (
           <div className="mt-4 flex items-center justify-between gap-3 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-xs text-amber-900">
             <span>Your answers are saved on this device.</span>
             <button
               type="button"
-              onClick={() => setChecked(new Set())}
+              onClick={() => { setChecked(new Set()); setSpecialAnswers({}); setHouseholdSizes({}); setOwnRentAnswers({}) }}
               className="inline-flex items-center gap-1 font-medium text-slate-600 hover:text-slate-900"
             >
               <RotateCcw className="h-3.5 w-3.5" />
@@ -164,6 +511,56 @@ export default function BenefitDetailGuide({
 
         <ul className="mt-5 space-y-3">
           {checklist.map((item, index) => {
+            // Priority notices — render as info banner, not a requirement
+            if (isPriorityNotice(item)) {
+              return (
+                <li key={`${item}-${index}`} className="flex items-start gap-2 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+                  <Info className="h-4 w-4 text-amber-600 shrink-0 mt-0.5" />
+                  <span>{item} — but you can still apply even if you don&apos;t fall into those groups.</span>
+                </li>
+              )
+            }
+
+            // Own / rent card
+            if (isOwnRentItem(item)) {
+              return (
+                <OwnRentCard
+                  key={`${item}-${index}`}
+                  answer={ownRentAnswers[index] ?? null}
+                  onAnswer={v => setOwnRentAnswers(prev => ({ ...prev, [index]: v }))}
+                />
+              )
+            }
+
+            // Income cards
+            const incomeType = detectIncomeItem(item)
+            if (incomeType) {
+              return (
+                <IncomeCriteriaCard
+                  key={`${item}-${index}`}
+                  item={item}
+                  type={incomeType}
+                  answer={(specialAnswers[index] as "yes" | "no") ?? null}
+                  householdSize={householdSizes[index] ?? null}
+                  stateCode={detectedState}
+                  onAnswer={v => setSpecialAnswers(prev => ({ ...prev, [index]: v }))}
+                  onSize={n => setHouseholdSizes(prev => ({ ...prev, [index]: n }))}
+                />
+              )
+            }
+
+            // State participation card
+            if (isStateParticipationItem(item)) {
+              return (
+                <StateCriteriaCard
+                  key={`${item}-${index}`}
+                  answer={specialAnswers[index] ?? null}
+                  onAnswer={v => setSpecialAnswers(prev => ({ ...prev, [index]: v }))}
+                />
+              )
+            }
+
+            // Plain checkbox — label as a direct question
             const isChecked = checked.has(index)
             return (
               <li key={`${item}-${index}`}>
@@ -178,14 +575,14 @@ export default function BenefitDetailGuide({
                     onChange={() => toggle(index)}
                     className="mt-1 h-4 w-4 rounded border-slate-300 text-emerald-700"
                   />
-                  <span className="text-sm leading-6 text-slate-700">{item}</span>
+                  <span className="text-sm leading-6 text-slate-700">{toQuestion(item)}</span>
                 </label>
               </li>
             )
           })}
         </ul>
 
-        {checked.size >= Math.ceil(checklist.length * 0.75) && (
+        {(checked.size + Object.values(specialAnswers).filter(a => a === "yes").length + Object.values(ownRentAnswers).filter(a => a === "own" || a === "rent").length) >= Math.ceil(checklist.length * 0.75) && (
           <div className="mt-5 flex gap-3 rounded-lg border border-emerald-100 bg-emerald-50 p-4 text-sm leading-6 text-emerald-900">
             <CheckCircle className="mt-0.5 h-5 w-5 shrink-0 text-emerald-700" />
             <p>

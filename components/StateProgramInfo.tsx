@@ -127,7 +127,7 @@ export default function StateProgramInfo({ slug, stateCode, stateName }: Props) 
     return (
       <div className="flex items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-500">
         <MapPin className="h-4 w-4 text-blue-600" />
-        <span>Select your state above to see state-specific eligibility and benefit details.</span>
+        <span>Enter your ZIP code above to see state-specific eligibility and benefit details.</span>
       </div>
     )
   }

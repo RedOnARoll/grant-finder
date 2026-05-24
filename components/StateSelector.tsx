@@ -15,6 +15,21 @@ export default function StateSelector({ onStateChange, className = "" }: Props) 
   const [open, setOpen] = useState(false)
   const selectRef = useRef<HTMLSelectElement>(null)
 
+  function lookupZip(zip: string) {
+    fetch(`https://api.zippopotam.us/us/${zip}`)
+      .then((r) => r.ok ? r.json() : null)
+      .then((data) => {
+        const place = data?.places?.[0]
+        if (!place) return
+        const code = (place["state abbreviation"] as string).toUpperCase()
+        setStateCode(code)
+        setAutoDetected(true)
+        localStorage.setItem("gw_state", code)
+        onStateChange(code)
+      })
+      .catch(() => {/* ignore zip lookup errors */})
+  }
+
   useEffect(() => {
     let cancelled = false
 
@@ -30,26 +45,27 @@ export default function StateSelector({ onStateChange, className = "" }: Props) 
 
       const zip = localStorage.getItem("gw_profile_zip") ?? localStorage.getItem("gw_zip")
       if (!zip) return
-
-      fetch(`https://api.zippopotam.us/us/${zip}`)
-        .then((r) => r.ok ? r.json() : null)
-        .then((data) => {
-          if (cancelled) return
-          const place = data?.places?.[0]
-          if (!place) return
-          const code = (place["state abbreviation"] as string).toUpperCase()
-          setStateCode(code)
-          setAutoDetected(true)
-          localStorage.setItem("gw_state", code)
-          onStateChange(code)
-        })
-        .catch(() => {/* ignore zip lookup errors */})
+      lookupZip(zip)
     })
 
     return () => {
       cancelled = true
       cancelAnimationFrame(frame)
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  // React to ZIP being saved by another component on the same page
+  useEffect(() => {
+    function handleZipUpdated() {
+      // Don't overwrite an explicit state selection
+      if (localStorage.getItem("gw_state")) return
+      const zip = localStorage.getItem("gw_profile_zip") ?? localStorage.getItem("gw_zip")
+      if (!zip) return
+      lookupZip(zip)
+    }
+    window.addEventListener("gw:zip-updated", handleZipUpdated)
+    return () => window.removeEventListener("gw:zip-updated", handleZipUpdated)
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
