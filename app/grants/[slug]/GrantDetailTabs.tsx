@@ -111,7 +111,7 @@ export default function GrantDetailTabs({
 
       {activeTab === "eligibility" && (
         <section className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
-          <h2 className="text-lg font-semibold text-slate-900">Eligibility in plain English</h2>
+          <h2 className="text-lg font-semibold text-slate-900">Eligibility</h2>
           <p className="mt-2 text-sm leading-6 text-slate-600">
             You are more likely to qualify if these statements fit your situation. The official source makes the final decision.
           </p>
