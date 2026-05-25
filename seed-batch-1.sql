@@ -78,23 +78,6 @@ INSERT INTO grants (name, agency, category, subcategory, description, max_amount
   'sba-community-advantage-loans'
 ) ON CONFLICT (slug) DO NOTHING;
 
-INSERT INTO grants (name, agency, category, subcategory, description, max_amount, is_recurring, deadline, eligibility_criteria, required_documents, application_url, official_source_url, form_numbers, processing_time_days, slug) VALUES (
-  'Economic Development Administration Grants',
-  'Economic Development Administration',
-  'small_business',
-  'economic_development',
-  'EDA grants fund infrastructure, planning, and technical assistance projects that create and retain jobs and attract private investment in economically distressed communities. Awards support a wide range of projects from industrial parks to broadband infrastructure. Eligible applicants include states, cities, counties, and nonprofits in qualifying distressed areas.',
-  3000000,
-  true,
-  NULL,
-  '{"requires_distressed_area": true, "eligible_applicants": ["local_government", "state_government", "nonprofit", "economic_development_district"]}'::jsonb,
-  '["Application narrative", "Economic impact analysis", "Letters of support", "Financial statements", "NEPA documentation", "Budget detail", "Match documentation"]'::jsonb,
-  'https://www.eda.gov/funding/programs',
-  'https://www.eda.gov',
-  '[]'::jsonb,
-  NULL,
-  'eda-economic-development-grants'
-) ON CONFLICT (slug) DO NOTHING;
 
 INSERT INTO grants (name, agency, category, subcategory, description, max_amount, is_recurring, deadline, eligibility_criteria, required_documents, application_url, official_source_url, form_numbers, processing_time_days, slug) VALUES (
   'CDFI Fund Technical Assistance Grants',
