@@ -24,22 +24,29 @@ export async function POST(request: Request) {
     const sizeCheck = checkPayloadSize(request, 5 * 1024)
     if (sizeCheck) return sizeCheck
 
-    // Authenticate caller
+    // Auth is optional — no token = guest checkout
     const authHeader = request.headers.get("Authorization") ?? ""
     const token = authHeader.replace("Bearer ", "").trim()
-    if (!token) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
 
-    const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-    const verifyClient = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      anonKey,
-      {
-        global: { headers: { Authorization: `Bearer ${token}` } },
-        auth: { autoRefreshToken: false, persistSession: false },
+    let userId: string | null = null
+    let userEmail: string | null = null
+
+    if (token) {
+      const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+      const verifyClient = createClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        anonKey,
+        {
+          global: { headers: { Authorization: `Bearer ${token}` } },
+          auth: { autoRefreshToken: false, persistSession: false },
+        }
+      )
+      const { data: { user } } = await verifyClient.auth.getUser()
+      if (user) {
+        userId = user.id
+        userEmail = user.email ?? null
       }
-    )
-    const { data: { user }, error: authError } = await verifyClient.auth.getUser()
-    if (authError || !user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+    }
 
     // Validate tier → resolve to priceId server-side (price IDs stay off the client)
     type Tier = "one_time" | "monthly" | "annual"
@@ -61,50 +68,60 @@ export async function POST(request: Request) {
         : ""
 
     const supabase = serviceClient()
-
-    // Look up existing Stripe customer
-    const { data: profile } = await supabase
-      .from("profiles")
-      .select("stripe_customer_id")
-      .eq("user_id", user.id)
-      .maybeSingle()
-
-    const existingCustomerId = profile?.stripe_customer_id as string | null | undefined
-
     const mode = (tier as string) === "one_time" ? "payment" : "subscription"
-
-    // Build success URL: go directly back to the originating page (if set),
-    // otherwise fall back to the account dashboard.
-    const successDestination = safeReturnTo || "/account"
-    const successUrl = new URL(BASE_URL + successDestination)
-    successUrl.searchParams.set("upgrade", "success")
 
     const sessionParams: Parameters<typeof stripe.checkout.sessions.create>[0] = {
       mode,
       line_items: [{ price: priceId, quantity: 1 }],
-      success_url: successUrl.toString(),
       cancel_url: `${BASE_URL}/pricing?cancelled=true`,
-      metadata: { userId: user.id },
       allow_promotion_codes: true,
     }
 
-    if (existingCustomerId) {
-      sessionParams.customer = existingCustomerId
-    } else {
-      sessionParams.customer_email = user.email
-    }
+    if (userId) {
+      // ── Authenticated user ──────────────────────────────────────────────────
+      const successDestination = safeReturnTo || "/account"
+      const successUrl = new URL(BASE_URL + successDestination)
+      successUrl.searchParams.set("upgrade", "success")
+      sessionParams.success_url = successUrl.toString()
+      sessionParams.metadata = { userId }
 
-    const session = await stripe.checkout.sessions.create(sessionParams)
-
-    // Persist new customer ID immediately (before webhook arrives)
-    if (!existingCustomerId && session.customer) {
-      await supabase
+      const { data: profile } = await supabase
         .from("profiles")
-        .update({ stripe_customer_id: session.customer as string })
-        .eq("user_id", user.id)
-    }
+        .select("stripe_customer_id")
+        .eq("user_id", userId)
+        .maybeSingle()
 
-    return NextResponse.json({ url: session.url })
+      const existingCustomerId = profile?.stripe_customer_id as string | null | undefined
+
+      if (existingCustomerId) {
+        sessionParams.customer = existingCustomerId
+      } else if (userEmail) {
+        sessionParams.customer_email = userEmail
+      }
+
+      const session = await stripe.checkout.sessions.create(sessionParams)
+
+      // Persist new customer ID immediately (before webhook arrives)
+      if (!existingCustomerId && session.customer) {
+        await supabase
+          .from("profiles")
+          .update({ stripe_customer_id: session.customer as string })
+          .eq("user_id", userId)
+      }
+
+      return NextResponse.json({ url: session.url })
+    } else {
+      // ── Guest checkout ──────────────────────────────────────────────────────
+      // Stripe Checkout will collect the email. Webhook creates the account.
+      const successUrl = new URL(`${BASE_URL}/welcome`)
+      successUrl.searchParams.set("setup", "1")
+      if (safeReturnTo) successUrl.searchParams.set("returnTo", safeReturnTo)
+      sessionParams.success_url = successUrl.toString()
+      sessionParams.metadata = { guest: "true" }
+
+      const session = await stripe.checkout.sessions.create(sessionParams)
+      return NextResponse.json({ url: session.url })
+    }
   } catch (err) {
     console.error("[checkout]", err)
     return NextResponse.json(
