@@ -9,7 +9,7 @@ import { profileCompletion, type UserProfile } from "@/lib/profile"
 import { getBrowserSupabase } from "@/lib/supabase-browser"
 
 type AuthMode = "login" | "signup"
-type OAuthProvider = "google" | "azure"
+type OAuthProvider = "google"
 
 function getSiteOrigin() {
   const configuredUrl = process.env.NEXT_PUBLIC_SITE_URL?.trim()
