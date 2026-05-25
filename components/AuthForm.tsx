@@ -196,15 +196,6 @@ export default function AuthForm({
           <span className="flex items-center justify-center w-5 h-5 rounded bg-red-500 text-white text-xs font-bold shrink-0">G</span>
           Continue with Google
         </button>
-        <button
-          type="button"
-          onClick={() => continueWithProvider("azure")}
-          disabled={pending}
-          className="h-11 w-full rounded-lg border border-slate-200 px-4 text-sm font-medium text-slate-900 hover:bg-slate-50 transition-colors disabled:cursor-not-allowed disabled:opacity-60 flex items-center justify-center gap-2"
-        >
-          <span className="flex items-center justify-center w-5 h-5 rounded bg-blue-600 text-white text-xs font-bold shrink-0">M</span>
-          Continue with Microsoft
-        </button>
       </div>
 
       {/* Divider */}
