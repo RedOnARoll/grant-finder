@@ -114,6 +114,7 @@ export default async function BenefitDetailPage({
 
   return (
     <div className="flex min-h-full flex-col bg-slate-50">
+      <ScrollToTop />
       <SiteNav active="benefits" />
 
       <main className="mx-auto w-full max-w-7xl flex-1 px-4 py-8 sm:px-6 lg:px-8">
