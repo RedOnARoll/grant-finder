@@ -338,6 +338,7 @@ export async function POST(request: Request) {
     }
 
     await logEvent(supabase, event.id, event.type, "processed", event.data.object)
+    return NextResponse.json({ received: true })
   } catch (err) {
     console.error(`[webhook] error handling ${event.type}:`, err)
     await logEvent(
@@ -348,7 +349,7 @@ export async function POST(request: Request) {
       event.data.object,
       err instanceof Error ? err.message : String(err)
     )
+    // Return 500 so Stripe retries the event on processing failures
+    return NextResponse.json({ error: "Processing failed" }, { status: 500 })
   }
-
-  return NextResponse.json({ received: true })
 }
