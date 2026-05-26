@@ -143,6 +143,11 @@ async function extractFromUrl(
   grantName: string,
   anthropic: Anthropic
 ): Promise<ExtractedData | null> {
+  if (!isSafeUrl(url)) {
+    console.warn(`[refresh] Skipping unsafe URL: ${url}`)
+    return null
+  }
+
   // Fetch page
   const res = await fetch(url, {
     headers: {
