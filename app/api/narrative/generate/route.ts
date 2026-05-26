@@ -40,7 +40,7 @@ export async function POST(req: NextRequest) {
   if (!user) return new Response("Unauthorized", { status: 401 })
 
   // Per-user rate limit: 20 per hour
-  const userRl = rateLimit(`narrative-user:${user.id}`, 20, 60 * 60 * 1000)
+  const userRl = await rateLimit(`narrative-user:${user.id}`, 20, 60 * 60 * 1000)
   if (!userRl.allowed) return tooManyRequests(userRl.resetAt)
 
   const supabase = serviceClient()
