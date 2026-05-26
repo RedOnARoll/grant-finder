@@ -103,7 +103,7 @@ export default function AuthMenu() {
     .map((word: string) => word[0]?.toUpperCase() ?? "")
     .join("")
 
-  const isAdmin = Boolean(profile?.is_admin) || user.email === "redonaroll09@gmail.com"
+  const isAdmin = Boolean(profile?.is_admin)
   const isPremium = Boolean(profile?.is_premium)
   const tier = profile?.subscription_tier as string | undefined
 
