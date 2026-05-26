@@ -55,7 +55,7 @@ export async function createGrant(
 ): Promise<{ data?: Grant; error?: string }> {
   try {
     const { verifyClient, adminClient } = getClients(accessToken)
-    await verifyAdmin(verifyClient)
+    await verifyAdmin(verifyClient, adminClient)
     const { data, error } = await adminClient
       .from("grants")
       .insert({ ...payload, created_at: new Date().toISOString(), updated_at: new Date().toISOString() })
