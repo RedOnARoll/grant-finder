@@ -7,7 +7,7 @@ export async function POST(req: NextRequest) {
   try {
     // Rate limit: 3 delete attempts per hour per IP
     const ip = getClientIp(req)
-    const rl = rateLimit(`delete:${ip}`, 3, 60 * 60 * 1000)
+    const rl = await rateLimit(`delete:${ip}`, 3, 60 * 60 * 1000)
     if (!rl.allowed) return tooManyRequests(rl.resetAt)
 
     const token = req.headers.get("Authorization")?.replace("Bearer ", "") ?? ""
