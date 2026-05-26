@@ -54,21 +54,52 @@ export default function ManageSubscriptionPage() {
 
       if (!mounted) return
 
-      const base: SubInfo = {
-        tier: (profile?.subscription_tier as string) ?? "free",
-        isPremium: Boolean(profile?.is_premium),
-        isAdmin: Boolean(profile?.is_admin),
-        credits: Number(profile?.one_time_credits ?? 0),
-        hasSubscription: Boolean(profile?.stripe_subscription_id),
-        cancelAtPeriodEnd: Boolean(profile?.cancel_at_period_end),
-        periodEnd: profile?.current_period_end
-          ? new Date(profile.current_period_end as string).toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })
-          : null,
-        subscriptionId: (profile?.stripe_subscription_id as string) ?? null,
-        status: null,
+      function buildInfo(raw: typeof profile): SubInfo {
+        return {
+          tier: (raw?.subscription_tier as string) ?? "free",
+          isPremium: Boolean(raw?.is_premium),
+          isAdmin: Boolean(raw?.is_admin),
+          credits: Number(raw?.one_time_credits ?? 0),
+          hasSubscription: Boolean(raw?.stripe_subscription_id),
+          cancelAtPeriodEnd: Boolean(raw?.cancel_at_period_end),
+          periodEnd: raw?.current_period_end
+            ? new Date(raw.current_period_end as string).toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })
+            : null,
+          subscriptionId: (raw?.stripe_subscription_id as string) ?? null,
+          status: null,
+        }
       }
+
+      const base = buildInfo(profile)
       setInfo(base)
       setLoading(false)
+
+      // After payment redirect: poll Supabase until webhook updates the profile
+      const isNewPurchase = new URLSearchParams(window.location.search).get("upgraded") === "true"
+      if (isNewPurchase) {
+        window.history.replaceState({}, "", window.location.pathname)
+        if (base.tier !== "free") {
+          if (mounted) setMessage("Your account has been upgraded!")
+          return
+        }
+        if (mounted) setMessage("Payment received. Activating your account…")
+        for (let i = 0; i < 7; i++) {
+          await new Promise<void>((r) => setTimeout(r, 2000))
+          if (!mounted) return
+          const { data: polled } = await supabase
+            .from("profiles")
+            .select("is_premium, is_admin, subscription_tier, one_time_credits, stripe_subscription_id, cancel_at_period_end, current_period_end")
+            .eq("user_id", user.id)
+            .maybeSingle()
+          const p = polled as typeof profile
+          if (((p as { subscription_tier?: string } | null)?.subscription_tier ?? "free") !== "free") {
+            if (mounted) { setInfo(buildInfo(p)); setMessage("Your account has been upgraded!") }
+            return
+          }
+        }
+        if (mounted) setMessage("Payment received. If your plan hasn't updated yet, click 'Sync account' below.")
+        return
+      }
 
       // 2. Enrich with live Stripe data in the background (fills in hasSubscription if customer ID was missing)
       try {
