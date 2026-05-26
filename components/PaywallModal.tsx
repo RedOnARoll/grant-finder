@@ -163,8 +163,9 @@ export default function PaywallModal({
     setErrors({})
 
     try {
-      const { data: { session } } = await getBrowserSupabase().auth.getSession()
-      const token = session?.access_token ?? ""
+      const supabase = getBrowserSupabase()
+      const { data: { user } } = await supabase.auth.getUser()
+      const token = user ? ((await supabase.auth.getSession()).data.session?.access_token ?? "") : ""
 
       const returnTo = typeof window !== "undefined" ? window.location.pathname : "/account"
 
