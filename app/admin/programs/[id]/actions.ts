@@ -20,9 +20,11 @@ function getClients(accessToken: string): { verifyClient: SupabaseClient<any>; a
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-async function verifyAdmin(verifyClient: SupabaseClient<any>) {
+async function verifyAdmin(verifyClient: SupabaseClient<any>, adminClient: SupabaseClient<any>) {
   const { data: { user }, error } = await verifyClient.auth.getUser()
-  if (error || !user || user.email !== ADMIN_EMAIL) throw new Error("Unauthorized.")
+  if (error || !user) throw new Error("Unauthorized.")
+  const { data: profile } = await adminClient.from("profiles").select("is_admin").eq("user_id", user.id).maybeSingle()
+  if (!profile?.is_admin) throw new Error("Unauthorized.")
 }
 
 export async function updateGrant(
