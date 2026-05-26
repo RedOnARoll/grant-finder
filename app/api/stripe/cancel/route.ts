@@ -25,7 +25,7 @@ export async function POST(req: NextRequest) {
   try {
     // Rate limit: 5 cancel attempts per hour per IP
     const ip = getClientIp(req)
-    const rl = rateLimit(`cancel:${ip}`, 5, 60 * 60 * 1000)
+    const rl = await rateLimit(`cancel:${ip}`, 5, 60 * 60 * 1000)
     if (!rl.allowed) return tooManyRequests(rl.resetAt)
 
     const token = req.headers.get("Authorization")?.replace("Bearer ", "") ?? ""
