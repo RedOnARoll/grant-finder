@@ -81,6 +81,7 @@ export async function POST(request: Request) {
       // ── Authenticated user ──────────────────────────────────────────────────
       const successUrl = new URL(`${BASE_URL}/account/manage-subscription`)
       successUrl.searchParams.set("upgraded", "true")
+      if (safeReturnTo) successUrl.searchParams.set("returnTo", safeReturnTo)
       sessionParams.success_url = successUrl.toString()
       sessionParams.metadata = { userId }
 
