@@ -138,14 +138,15 @@ async function handleCheckoutCompleted(
   supabase: AppSupabaseClient,
   session: Stripe.Checkout.Session
 ) {
-  // Validate that the price paid is one we recognise — prevents a
-  // compromised Stripe key from granting access via a $0.01 test price
-  const fullSession = await stripe.checkout.sessions.retrieve(session.id, {
-    expand: ["line_items"],
-  })
-  const purchasedPriceId = fullSession.line_items?.data[0]?.price?.id
-  if (!purchasedPriceId || !ALLOWED_PRICES.has(purchasedPriceId)) {
-    throw new Error(`Checkout completed with unexpected price: ${purchasedPriceId}`)
+  // Validate that the price paid is one we recognise (only when price ID env vars are configured)
+  if (ALLOWED_PRICES.size > 0) {
+    const fullSession = await stripe.checkout.sessions.retrieve(session.id, {
+      expand: ["line_items"],
+    })
+    const purchasedPriceId = fullSession.line_items?.data[0]?.price?.id
+    if (!purchasedPriceId || !ALLOWED_PRICES.has(purchasedPriceId)) {
+      throw new Error(`Checkout completed with unexpected price: ${purchasedPriceId}`)
+    }
   }
 
   const userId = session.metadata?.userId
