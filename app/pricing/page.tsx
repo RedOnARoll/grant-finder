@@ -110,8 +110,9 @@ export default function PricingPage() {
     setErrors({})
 
     try {
-      const { data: { session } } = await getBrowserSupabase().auth.getSession()
-      const token = session?.access_token ?? ""
+      const supabase = getBrowserSupabase()
+      const { data: { user } } = await supabase.auth.getUser()
+      const token = user ? ((await supabase.auth.getSession()).data.session?.access_token ?? "") : ""
 
       const res = await fetch("/api/stripe/checkout", {
         method: "POST",
