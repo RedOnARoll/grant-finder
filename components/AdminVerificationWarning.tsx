@@ -17,11 +17,12 @@ export default function AdminVerificationWarning({ isVerified, lastVerifiedAt }:
   const [isAdmin, setIsAdmin] = useState(false)
 
   useEffect(() => {
-    getBrowserSupabase()
-      .auth.getUser()
-      .then(({ data: { user } }) => {
-        setIsAdmin(user?.email === ADMIN_EMAIL)
-      })
+    const supabase = getBrowserSupabase()
+    supabase.auth.getUser().then(async ({ data: { user } }) => {
+      if (!user) return
+      const { data } = await supabase.from("profiles").select("is_admin").eq("user_id", user.id).maybeSingle()
+      setIsAdmin(data?.is_admin === true)
+    })
   }, [])
 
   if (!isAdmin) return null
