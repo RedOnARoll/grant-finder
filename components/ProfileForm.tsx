@@ -370,11 +370,10 @@ export default function ProfileForm() {
     try {
       const profileToSave = prepareProfile(nextProfile, completed)
       await upsertProfile(supabase, user.id, profileToSave)
+      // Only update full_name in auth metadata — sensitive profile fields
+      // stay in the profiles table (never in the JWT payload)
       await supabase.auth.updateUser({
-        data: {
-          full_name: profileToSave.full_name,
-          grantfinder_profile: profileToSave,
-        },
+        data: { full_name: profileToSave.full_name },
       })
       setMessage(successMessage)
     } catch (updateError) {
