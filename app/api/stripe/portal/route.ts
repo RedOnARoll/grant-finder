@@ -31,10 +31,10 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "No billing account found. Please subscribe first." }, { status: 400 })
     }
 
-    const origin = req.headers.get("origin") ?? process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000"
+    const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "https://grantway.org"
     const session = await stripe.billingPortal.sessions.create({
       customer: customerId,
-      return_url: `${origin}/account/manage-subscription`,
+      return_url: `${siteUrl}/account/manage-subscription`,
     })
 
     return NextResponse.json({ url: session.url })
