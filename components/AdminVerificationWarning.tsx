@@ -21,7 +21,7 @@ export default function AdminVerificationWarning({ isVerified, lastVerifiedAt }:
     supabase.auth.getUser().then(async ({ data: { user } }) => {
       if (!user) return
       const { data } = await supabase.from("profiles").select("is_admin").eq("user_id", user.id).maybeSingle()
-      setIsAdmin(data?.is_admin === true)
+      setIsAdmin((data as { is_admin?: boolean } | null)?.is_admin === true)
     })
   }, [])
 
