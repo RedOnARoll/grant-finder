@@ -30,7 +30,7 @@ function escapeHtml(value: string) {
 export async function POST(request: Request) {
   // Rate limit: 5 attempts per 15 min per IP
   const ip = getClientIp(request)
-  const rl = rateLimit(`signup:${ip}`, 5, 15 * 60 * 1000)
+  const rl = await rateLimit(`signup:${ip}`, 5, 15 * 60 * 1000)
   if (!rl.allowed) return tooManyRequests(rl.resetAt)
 
   // Payload size limit: 10 KB
