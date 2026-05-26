@@ -124,7 +124,7 @@ export async function POST(req: NextRequest) {
     profileLines.push(`Ownership identities: ${profile.business_ownership_identities.join(", ")}`)
   }
   const profileContext = profileLines.length > 0
-    ? `\n\nApplicant profile:\n${profileLines.map(l => `- ${l}`).join("\n")}`
+    ? `\n\n<applicant_profile>\n${profileLines.map(l => `- ${l}`).join("\n")}\n</applicant_profile>`
     : ""
 
   const systemPrompt = `You are an expert grant writer with 15+ years of experience helping small businesses, nonprofits, and entrepreneurs secure competitive funding. You write compelling, professional, and authentic grant application narratives that clearly communicate the applicant's mission, qualifications, and impact.
