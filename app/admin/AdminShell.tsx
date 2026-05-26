@@ -18,11 +18,12 @@ export default function AdminShell({ children }: { children: ReactNode }) {
   const pathname = usePathname()
 
   useEffect(() => {
-    getBrowserSupabase()
-      .auth.getUser()
-      .then(({ data: { user } }) => {
-        setStatus(user?.email === ADMIN_EMAIL ? "ready" : "unauthorized")
-      })
+    const supabase = getBrowserSupabase()
+    supabase.auth.getUser().then(async ({ data: { user } }) => {
+      if (!user) { setStatus("unauthorized"); return }
+      const { data } = await supabase.from("profiles").select("is_admin").eq("user_id", user.id).maybeSingle()
+      setStatus(data?.is_admin ? "ready" : "unauthorized")
+    })
   }, [])
 
   if (status === "loading") {
