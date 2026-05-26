@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server"
 import { createClient, type SupabaseClient } from "@supabase/supabase-js"
 import type Stripe from "stripe"
-import { stripe } from "@/lib/stripe"
+import { stripe, ALLOWED_PRICES } from "@/lib/stripe"
 
 // App Router: no bodyParser config needed — use request.text() for raw body
 
