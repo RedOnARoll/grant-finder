@@ -17,7 +17,7 @@ export async function POST(request: Request) {
   try {
     // Rate limit: 10 checkout attempts per 15 min per IP
     const ip = getClientIp(request)
-    const rl = rateLimit(`checkout:${ip}`, 10, 15 * 60 * 1000)
+    const rl = await rateLimit(`checkout:${ip}`, 10, 15 * 60 * 1000)
     if (!rl.allowed) return tooManyRequests(rl.resetAt)
 
     // Payload size: 5 KB
