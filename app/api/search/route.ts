@@ -9,7 +9,7 @@ const ALL_TOPICS = [...GRANT_CATEGORIES, ...BENEFIT_SUBCATEGORIES]
 export async function GET(request: Request) {
   // Rate limit: 60 requests per minute per IP
   const ip = getClientIp(request)
-  const rl = rateLimit(`search:${ip}`, 60, 60 * 1000)
+  const rl = await rateLimit(`search:${ip}`, 60, 60 * 1000)
   if (!rl.allowed) return tooManyRequests(rl.resetAt)
 
   const { searchParams } = new URL(request.url)
