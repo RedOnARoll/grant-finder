@@ -1,5 +1,7 @@
 import type { NextConfig } from "next"
 
+const supabaseHost = (process.env.NEXT_PUBLIC_SUPABASE_URL ?? "").replace(/^https?:\/\//, "")
+
 const securityHeaders = [
   // Prevent clickjacking
   { key: "X-Frame-Options", value: "DENY" },
@@ -13,6 +15,21 @@ const securityHeaders = [
   { key: "Permissions-Policy", value: "camera=(), microphone=(), geolocation=(), payment=(self)" },
   // Enforce HTTPS for 1 year
   { key: "Strict-Transport-Security", value: "max-age=31536000; includeSubDomains" },
+  // Content Security Policy — blocks external script injection
+  {
+    key: "Content-Security-Policy",
+    value: [
+      "default-src 'self'",
+      "script-src 'self' 'unsafe-inline'",
+      "style-src 'self' 'unsafe-inline'",
+      "img-src 'self' data: https:",
+      `connect-src 'self' https://${supabaseHost} wss://${supabaseHost} https://api.stripe.com`,
+      "frame-src https://js.stripe.com https://hooks.stripe.com",
+      "font-src 'self' data:",
+      "object-src 'none'",
+      "base-uri 'self'",
+    ].join("; "),
+  },
 ]
 
 const nextConfig: NextConfig = {
