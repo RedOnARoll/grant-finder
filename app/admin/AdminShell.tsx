@@ -22,7 +22,7 @@ export default function AdminShell({ children }: { children: ReactNode }) {
     supabase.auth.getUser().then(async ({ data: { user } }) => {
       if (!user) { setStatus("unauthorized"); return }
       const { data } = await supabase.from("profiles").select("is_admin").eq("user_id", user.id).maybeSingle()
-      setStatus(data?.is_admin ? "ready" : "unauthorized")
+      setStatus((data as { is_admin?: boolean } | null)?.is_admin ? "ready" : "unauthorized")
     })
   }, [])
 
