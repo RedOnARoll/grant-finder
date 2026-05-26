@@ -26,7 +26,7 @@ export const maxDuration = 60
 export async function POST(req: NextRequest) {
   // Rate limit by IP: 30 per hour (before auth check to stop unauthenticated floods)
   const ip = getClientIp(req)
-  const ipRl = rateLimit(`narrative-ip:${ip}`, 30, 60 * 60 * 1000)
+  const ipRl = await rateLimit(`narrative-ip:${ip}`, 30, 60 * 60 * 1000)
   if (!ipRl.allowed) return tooManyRequests(ipRl.resetAt)
 
   // Payload size limit: 50 KB
