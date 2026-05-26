@@ -7,8 +7,6 @@ import { LayoutDashboard, Clock, Database, ExternalLink } from "lucide-react"
 import { getBrowserSupabase } from "@/lib/supabase-browser"
 import { LogoMark } from "@/components/illustrations/GeoShapes"
 
-const ADMIN_EMAIL = "redonaroll09@gmail.com"
-
 const NAV = [
   { label: "Dashboard",       href: "/admin",         icon: LayoutDashboard },
   { label: "Programs",        href: "/admin/programs", icon: Database        },
