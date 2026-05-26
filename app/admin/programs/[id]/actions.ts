@@ -75,7 +75,7 @@ export async function deleteGrant(
 ): Promise<{ error?: string }> {
   try {
     const { verifyClient, adminClient } = getClients(accessToken)
-    await verifyAdmin(verifyClient)
+    await verifyAdmin(verifyClient, adminClient)
     const { error } = await adminClient.from("grants").delete().eq("id", id)
     if (error) return { error: error.message }
     return {}
