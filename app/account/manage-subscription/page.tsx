@@ -75,13 +75,26 @@ export default function ManageSubscriptionPage() {
       setLoading(false)
 
       // After payment redirect: poll Supabase until webhook updates the profile
-      const isNewPurchase = new URLSearchParams(window.location.search).get("upgraded") === "true"
+      const params = new URLSearchParams(window.location.search)
+      const isNewPurchase = params.get("upgraded") === "true"
+      const rawReturnTo = params.get("returnTo") ?? ""
+      const returnTo = rawReturnTo.startsWith("/") && !rawReturnTo.startsWith("//") ? rawReturnTo : ""
       if (isNewPurchase) {
         window.history.replaceState({}, "", window.location.pathname)
-        if (base.tier !== "free") {
-          if (mounted) setMessage("Your account has been upgraded!")
-          return
+
+        function finishUpgrade(updatedInfo?: SubInfo) {
+          if (!mounted) return
+          if (updatedInfo) setInfo(updatedInfo)
+          if (returnTo) {
+            setMessage("Payment confirmed! Sending you back…")
+            setTimeout(() => { if (mounted) window.location.href = returnTo }, 1500)
+          } else {
+            setMessage("Your account has been upgraded!")
+          }
         }
+
+        if (base.tier !== "free") { finishUpgrade(); return }
+
         if (mounted) setMessage("Payment received. Activating your account…")
         for (let i = 0; i < 7; i++) {
           await new Promise<void>((r) => setTimeout(r, 2000))
@@ -93,7 +106,7 @@ export default function ManageSubscriptionPage() {
             .maybeSingle()
           const p = polled as typeof profile
           if (((p as { subscription_tier?: string } | null)?.subscription_tier ?? "free") !== "free") {
-            if (mounted) { setInfo(buildInfo(p)); setMessage("Your account has been upgraded!") }
+            finishUpgrade(buildInfo(p))
             return
           }
         }
