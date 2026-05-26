@@ -34,7 +34,7 @@ export async function updateGrant(
 ): Promise<{ data?: Grant; error?: string }> {
   try {
     const { verifyClient, adminClient } = getClients(accessToken)
-    await verifyAdmin(verifyClient)
+    await verifyAdmin(verifyClient, adminClient)
     const { data, error } = await adminClient
       .from("grants")
       .update({ ...payload, updated_at: new Date().toISOString() })
