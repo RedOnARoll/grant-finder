@@ -173,8 +173,9 @@ async function handleCheckoutCompleted(
       .maybeSingle()
     const credits = Number(profile?.one_time_credits ?? 0)
 
-    // One-time Grant Helper purchase
-    await supabase.from("profiles").update({
+    await supabase.from("profiles").upsert({
+      user_id: userId,
+      stripe_customer_id: customerId ?? null,
       subscription_tier: "grant_helper",
       subscription_status: null,
       one_time_credits: credits + 3,
@@ -182,14 +183,15 @@ async function handleCheckoutCompleted(
       stripe_subscription_id: null,
       cancel_at_period_end: false,
       current_period_end: null,
-    }).eq("user_id", userId)
+    }, { onConflict: "user_id" })
   } else {
-    // Subscription (monthly or annual)
-    await supabase.from("profiles").update({
+    await supabase.from("profiles").upsert({
+      user_id: userId,
+      stripe_customer_id: customerId ?? null,
       subscription_tier: "premium",
       subscription_status: "active",
       is_premium: true,
-    }).eq("user_id", userId)
+    }, { onConflict: "user_id" })
   }
 }
 
