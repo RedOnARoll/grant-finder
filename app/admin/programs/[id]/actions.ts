@@ -3,8 +3,6 @@
 import { createClient, type SupabaseClient } from "@supabase/supabase-js"
 import type { Grant } from "@/lib/types"
 
-const ADMIN_EMAIL = "redonaroll09@gmail.com"
-
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function getClients(accessToken: string): { verifyClient: SupabaseClient<any>; adminClient: SupabaseClient<any> } {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL
