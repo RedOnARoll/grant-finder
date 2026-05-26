@@ -3,8 +3,6 @@
 import { useEffect, useState } from "react"
 import { getBrowserSupabase } from "@/lib/supabase-browser"
 
-const ADMIN_EMAIL = "redonaroll09@gmail.com"
-
 interface Props {
   isVerified?: boolean
   lastVerifiedAt?: string | null
