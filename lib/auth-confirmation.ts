@@ -80,7 +80,8 @@ export function listenForAuthConfirmation(
   if ("BroadcastChannel" in window) {
     channel = new BroadcastChannel(AUTH_CONFIRMATION_EVENT)
     channel.onmessage = (event: MessageEvent<AuthConfirmationPayload>) => {
-      if (event.data?.target) confirmOnce(event.data)
+      const payload = parsePayload(JSON.stringify(event.data ?? {}))
+      if (payload) confirmOnce(payload)
     }
   }
 
