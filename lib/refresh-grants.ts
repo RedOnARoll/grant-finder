@@ -108,6 +108,27 @@ async function searchGrantsGov(grant: Grant): Promise<GrantsGovResult> {
   }
 }
 
+// ── URL safety check ─────────────────────────────────────────────────
+function isSafeUrl(urlString: string): boolean {
+  let url: URL
+  try { url = new URL(urlString) } catch { return false }
+
+  if (url.protocol !== "https:") return false
+
+  const h = url.hostname.toLowerCase()
+
+  // Block bare IP addresses (all ranges — includes 169.254.x.x AWS metadata)
+  if (/^\d{1,3}(\.\d{1,3}){3}$/.test(h)) return false
+  // Block IPv6 addresses
+  if (h.startsWith("[") || /^[0-9a-f:]+$/.test(h)) return false
+  // Block internal hostnames
+  if (h === "localhost" || h.endsWith(".local") || h.endsWith(".internal") || h.endsWith(".localhost")) return false
+  // Must have at least one dot (real TLD)
+  if (!h.includes(".")) return false
+
+  return true
+}
+
 // ── Claude URL extraction ─────────────────────────────────────────────
 interface ExtractedData {
   deadline: string | null
