@@ -102,6 +102,25 @@ function isStateParticipationItem(item: string): boolean {
   )
 }
 
+function isLocalSiteItem(item: string): boolean {
+  const lower = item.toLowerCase()
+  return (
+    lower.includes("distribution site") ||
+    lower.includes("distribution center") ||
+    lower.includes("distribution location") ||
+    (lower.includes("served by a") && (lower.includes("site") || lower.includes("center") || lower.includes("provider") || lower.includes("program"))) ||
+    lower.includes("area served by") ||
+    (lower.includes("reside in an area") && lower.includes("served"))
+  )
+}
+
+function getLocatorUrl(slug: string): string {
+  if (slug.includes("csfp") || slug.includes("commodity-supplemental")) {
+    return "https://www.fns.usda.gov/csfp"
+  }
+  return "https://www.fns.usda.gov/food-finder"
+}
+
 function isOwnRentItem(item: string): boolean {
   const lower = item.toLowerCase()
   return (
@@ -189,6 +208,91 @@ function OwnRentCard({
           This program covers homeowners and renters. If you live in a shelter, group home, or similar arrangement, contact the local weatherization agency to ask about eligibility for your situation.
         </p>
       )}
+    </li>
+  )
+}
+
+// ─── Local distribution site lookup card ─────────────────────────────────────
+
+function LocalSiteCard({ slug }: { slug: string }) {
+  const [zip, setZip] = useState("")
+  const [zipInput, setZipInput] = useState("")
+
+  useEffect(() => {
+    const frame = requestAnimationFrame(() => {
+      const stored = localStorage.getItem("gw_zip") ?? localStorage.getItem("gw_profile_zip")
+      if (stored) { setZip(stored); setZipInput(stored) }
+    })
+    return () => cancelAnimationFrame(frame)
+  }, [])
+
+  useEffect(() => {
+    function onUpdate() {
+      const stored = localStorage.getItem("gw_zip")
+      if (stored) { setZip(stored); setZipInput(stored) }
+    }
+    window.addEventListener("gw:zip-updated", onUpdate)
+    return () => window.removeEventListener("gw:zip-updated", onUpdate)
+  }, [])
+
+  function handleSubmit(e: FormEvent) {
+    e.preventDefault()
+    const clean = zipInput.replace(/\D/g, "").slice(0, 5)
+    if (clean.length !== 5) return
+    setZip(clean)
+    try {
+      localStorage.setItem("gw_zip", clean)
+      window.dispatchEvent(new Event("gw:zip-updated"))
+    } catch { /* ignore */ }
+  }
+
+  const locatorUrl = getLocatorUrl(slug)
+
+  return (
+    <li className={`rounded-lg border p-4 ${zip ? "border-blue-100 bg-blue-50" : "border-slate-200 bg-white"}`}>
+      <div className="flex items-start gap-3">
+        <MapPin className={`mt-0.5 h-5 w-5 shrink-0 ${zip ? "text-blue-600" : "text-slate-500"}`} />
+        <div className="min-w-0 flex-1">
+          <p className="text-sm font-semibold text-slate-900">Is this available near you?</p>
+          {zip ? (
+            <div className="mt-1 space-y-2">
+              <p className="text-xs leading-5 text-blue-900">
+                Using your ZIP code <strong>{zip}</strong> — find local distribution sites near you.
+              </p>
+              <a
+                href={locatorUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1.5 rounded-lg bg-blue-600 px-3 py-1.5 text-xs font-semibold text-white transition-colors hover:bg-blue-700"
+              >
+                Find sites near {zip}
+                <ExternalLink className="h-3.5 w-3.5" />
+              </a>
+            </div>
+          ) : (
+            <div className="mt-2 space-y-2">
+              <p className="text-xs leading-5 text-slate-500">
+                This program is delivered through local distribution sites. Enter your ZIP code to find one near you.
+              </p>
+              <form onSubmit={handleSubmit} className="flex flex-wrap gap-2">
+                <input
+                  type="text"
+                  inputMode="numeric"
+                  maxLength={5}
+                  value={zipInput}
+                  onChange={e => setZipInput(e.target.value.replace(/\D/g, "").slice(0, 5))}
+                  placeholder="ZIP code"
+                  className="h-8 w-24 rounded-lg border border-slate-200 px-2.5 text-sm text-slate-900 placeholder:text-slate-400 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+                />
+                <button type="submit" disabled={zipInput.length !== 5}
+                  className="h-8 rounded-lg bg-blue-600 px-3 text-xs font-semibold text-white hover:bg-blue-700 disabled:opacity-40 disabled:cursor-not-allowed">
+                  Find sites near me
+                </button>
+              </form>
+            </div>
+          )}
+        </div>
+      </div>
     </li>
   )
 }
@@ -581,6 +685,11 @@ export default function BenefitDetailGuide({
                   <span>{item} — but you can still apply even if you don&apos;t fall into those groups.</span>
                 </li>
               )
+            }
+
+            // Local distribution site card
+            if (isLocalSiteItem(item)) {
+              return <LocalSiteCard key={`${item}-${index}`} slug={slug} />
             }
 
             // Own / rent card

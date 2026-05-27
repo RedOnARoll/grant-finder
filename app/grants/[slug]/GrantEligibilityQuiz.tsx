@@ -87,10 +87,30 @@ function isInformational(text: string): boolean {
 
 // ─── String → Question parser ─────────────────────────────────────────────────
 
+function isLocalSiteRequirement(lower: string): boolean {
+  return (
+    lower.includes("distribution site") ||
+    lower.includes("distribution center") ||
+    lower.includes("distribution location") ||
+    (lower.includes("served by a") && (lower.includes("site") || lower.includes("center") || lower.includes("provider") || lower.includes("program"))) ||
+    lower.includes("area served by") ||
+    (lower.includes("reside in an area") && lower.includes("served"))
+  )
+}
+
 function parseStringRequirement(req: string, index: number): Question {
   const id = `req_${index}`
   const lower = req.toLowerCase()
   const failReason = req
+
+  // Local distribution site — guide user to a locator instead of asking a yes/no they can't answer
+  if (isLocalSiteRequirement(lower)) {
+    return {
+      kind: "info",
+      id,
+      text: "This program is delivered through local distribution sites. Use your ZIP code at fns.usda.gov/food-finder to confirm availability near you.",
+    }
+  }
 
   // Informational notes first — render as info cards, not questions
   if (isInformational(req)) {
