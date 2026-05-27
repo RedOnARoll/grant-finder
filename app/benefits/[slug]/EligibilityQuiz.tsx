@@ -1,10 +1,38 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import Link from "next/link"
 import type { EligibilityCriteria } from "@/lib/types"
 import { getIncomeLimit, HOUSEHOLD_SIZES } from "@/lib/poverty-guidelines"
 import { AMI_BY_STATE, US_STATES } from "@/lib/ami-data"
+import { getBrowserSupabase } from "@/lib/supabase-browser"
+
+async function lookupZipAMI(zip: string): Promise<{ stateCode: string; areaIndex: number } | null> {
+  if (!/^\d{5}$/.test(zip)) return null
+  try {
+    const res = await fetch(`https://api.zippopotam.us/us/${zip}`, {
+      signal: AbortSignal.timeout(5000),
+    })
+    if (!res.ok) return null
+    const data = await res.json() as {
+      places: Array<{ "place name": string; "state abbreviation": string }>
+    }
+    const place = data.places?.[0]
+    if (!place) return null
+    const stateCode = place["state abbreviation"]
+    const city = place["place name"].toLowerCase()
+    const areas = AMI_BY_STATE[stateCode]
+    if (!areas?.length) return null
+    let bestIndex = 0
+    for (let i = 1; i < areas.length; i++) {
+      const areaKey = areas[i].name.toLowerCase().replace(/\s+(metro|area|county)$/, "")
+      if (city.includes(areaKey) || areaKey.includes(city)) { bestIndex = i; break }
+    }
+    return { stateCode, areaIndex: bestIndex }
+  } catch {
+    return null
+  }
+}
 
 // ─── Question types ───────────────────────────────────────────────────────────
 
@@ -630,36 +658,55 @@ function PovertyQ({ q, householdSize, answer, onSize, onAnswer }: { q: PovertyQu
   )
 }
 
-function AMIQuestionCard({ q, selectedState, selectedArea, answer, onState, onArea, onAnswer }: { q: AMIQuestion; selectedState: string | null; selectedArea: number | null; answer: "yes" | "no" | null; onState: (s: string) => void; onArea: (i: number) => void; onAnswer: (v: "yes" | "no") => void }) {
+function AMIQuestionCard({ q, selectedState, selectedArea, answer, onState, onArea, onAnswer, zipDetected }: { q: AMIQuestion; selectedState: string | null; selectedArea: number | null; answer: "yes" | "no" | null; onState: (s: string) => void; onArea: (i: number) => void; onAnswer: (v: "yes" | "no") => void; zipDetected?: boolean }) {
+  const [showPicker, setShowPicker] = useState(false)
   const areas = selectedState ? AMI_BY_STATE[selectedState] ?? [] : []
   const areaData = selectedArea !== null ? areas[selectedArea] : null
   const limit = areaData ? Math.round(areaData.ami * q.percent / 100) : null
+  const autoFilled = zipDetected && selectedState && selectedArea !== null && !showPicker
+
   return (
     <div className="border border-zinc-200 rounded-xl p-5">
       <p className="text-sm font-semibold text-zinc-900 mb-1">What is your household income?</p>
-      <p className="text-sm text-zinc-600 leading-6 mb-4">This program uses <span className="font-semibold text-zinc-800">Area Median Income (AMI)</span> — the middle income for your local area — as its benchmark. Your limit is {q.percent}% of your area's AMI, which varies by location. Select your state and area to see your exact limit.</p>
-      <div className="mb-4">
-        <label className="text-xs font-medium text-zinc-500 block mb-1.5">What state do you live in?</label>
-        <select value={selectedState ?? ""} onChange={e => onState(e.target.value)}
-          className="h-10 px-3 rounded-lg border border-zinc-300 text-sm text-zinc-700 bg-white focus:outline-none focus:ring-2 focus:ring-zinc-900 w-full max-w-xs">
-          <option value="">Select a state…</option>
-          {US_STATES.map(s => <option key={s.code} value={s.code}>{s.name}</option>)}
-        </select>
-      </div>
-      {selectedState && areas.length > 0 && (
-        <div className="mb-4">
-          <label className="text-xs font-medium text-zinc-500 block mb-1.5">What's your nearest metro or area?</label>
-          <div className="flex flex-wrap gap-2">
-            {areas.map((area, idx) => (
-              <button key={idx} type="button" onClick={() => onArea(idx)}
-                className={`h-9 px-3 rounded-full text-xs font-medium border transition-colors ${selectedArea === idx ? "bg-zinc-900 text-white border-zinc-900" : "border-zinc-300 text-zinc-700 hover:border-zinc-500"}`}>
-                {area.name}
-              </button>
-            ))}
-          </div>
-          <p className="text-xs text-zinc-400 mt-2">AMI is set by HUD per county. Choose "Statewide average" if you're unsure — actual limits may vary slightly.</p>
+
+      {autoFilled ? (
+        <div className="flex items-center gap-2 mb-4">
+          <span className="inline-flex items-center gap-1.5 text-xs bg-blue-50 text-blue-700 border border-blue-200 rounded-full px-2.5 py-1 font-medium">
+            <svg className="w-3 h-3" fill="none" viewBox="0 0 12 12"><circle cx="6" cy="6" r="5" stroke="currentColor" strokeWidth="1.5"/><path d="M6 4v2.5L7.5 8" stroke="currentColor" strokeWidth="1.25" strokeLinecap="round"/></svg>
+            {areaData?.name}
+          </span>
+          <button type="button" onClick={() => setShowPicker(true)} className="text-xs text-zinc-400 hover:text-zinc-600 underline underline-offset-2">
+            Change location
+          </button>
         </div>
+      ) : (
+        <>
+          <p className="text-sm text-zinc-600 leading-6 mb-4">This program uses <span className="font-semibold text-zinc-800">Area Median Income (AMI)</span> — the middle income for your local area — as its benchmark. Your limit is {q.percent}% of your area&apos;s AMI, which varies by location. Select your state and area to see your exact limit.</p>
+          <div className="mb-4">
+            <label className="text-xs font-medium text-zinc-500 block mb-1.5">What state do you live in?</label>
+            <select value={selectedState ?? ""} onChange={e => onState(e.target.value)}
+              className="h-10 px-3 rounded-lg border border-zinc-300 text-sm text-zinc-700 bg-white focus:outline-none focus:ring-2 focus:ring-zinc-900 w-full max-w-xs">
+              <option value="">Select a state…</option>
+              {US_STATES.map(s => <option key={s.code} value={s.code}>{s.name}</option>)}
+            </select>
+          </div>
+          {selectedState && areas.length > 0 && (
+            <div className="mb-4">
+              <label className="text-xs font-medium text-zinc-500 block mb-1.5">What&apos;s your nearest metro or area?</label>
+              <div className="flex flex-wrap gap-2">
+                {areas.map((area, idx) => (
+                  <button key={idx} type="button" onClick={() => onArea(idx)}
+                    className={`h-9 px-3 rounded-full text-xs font-medium border transition-colors ${selectedArea === idx ? "bg-zinc-900 text-white border-zinc-900" : "border-zinc-300 text-zinc-700 hover:border-zinc-500"}`}>
+                    {area.name}
+                  </button>
+                ))}
+              </div>
+              <p className="text-xs text-zinc-400 mt-2">AMI is set by HUD per county. Choose &quot;Statewide average&quot; if you&apos;re unsure — actual limits may vary slightly.</p>
+            </div>
+          )}
+        </>
       )}
+
       {limit && areaData && (
         <>
           <div className="rounded-lg bg-zinc-50 border border-zinc-200 px-4 py-3 mb-4">
@@ -716,6 +763,29 @@ export default function EligibilityQuiz({ criteria, slug }: { criteria: Eligibil
   const [householdSizes, setHouseholdSizes] = useState<Record<string, number>>({})
   const [selectedStates, setSelectedStates] = useState<Record<string, string>>({})
   const [selectedAreas, setSelectedAreas] = useState<Record<string, number>>({})
+  const [zipDetectedIds, setZipDetectedIds] = useState<Set<string>>(new Set())
+
+  useEffect(() => {
+    const amiQs = questions.filter(q => q.kind === "ami")
+    if (amiQs.length === 0) return
+    const supabase = getBrowserSupabase()
+    supabase.auth.getUser().then(async ({ data }) => {
+      if (!data.user) return
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { data: profile } = await (supabase as any).from("profiles").select("zip_code").eq("id", data.user.id).single() as { data: { zip_code?: string } | null }
+      if (!profile?.zip_code) return
+      const result = await lookupZipAMI(profile.zip_code)
+      if (!result) return
+      const newStates: Record<string, string> = {}
+      const newAreas: Record<string, number> = {}
+      const detected = new Set<string>()
+      for (const q of amiQs) { newStates[q.id] = result.stateCode; newAreas[q.id] = result.areaIndex; detected.add(q.id) }
+      setSelectedStates(prev => ({ ...prev, ...newStates }))
+      setSelectedAreas(prev => ({ ...prev, ...newAreas }))
+      setZipDetectedIds(detected)
+    })
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   if (questions.length === 0) {
     return (
@@ -747,6 +817,7 @@ export default function EligibilityQuiz({ criteria, slug }: { criteria: Eligibil
           if (q.kind === "poverty") return <PovertyQ key={q.id} q={q} householdSize={householdSizes[q.id] ?? null} answer={answers[q.id] ?? null} onSize={n => setHouseholdSizes(p => ({ ...p, [q.id]: n }))} onAnswer={v => setAnswer(q.id, v)} />
           if (q.kind === "ami")     return (
             <AMIQuestionCard key={q.id} q={q} selectedState={selectedStates[q.id] ?? null} selectedArea={selectedAreas[q.id] ?? null} answer={answers[q.id] ?? null}
+              zipDetected={zipDetectedIds.has(q.id)}
               onState={s => { setSelectedStates(p => ({ ...p, [q.id]: s })); setSelectedAreas(p => { const n = {...p}; delete n[q.id]; return n }); setAnswers(p => { const n = {...p}; delete n[q.id]; return n }) }}
               onArea={i => setSelectedAreas(p => ({ ...p, [q.id]: i }))}
               onAnswer={v => setAnswer(q.id, v)} />
