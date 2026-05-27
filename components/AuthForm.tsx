@@ -8,7 +8,7 @@ import { listenForAuthConfirmation, readLatestAuthConfirmation } from "@/lib/aut
 import { profileCompletion, type UserProfile } from "@/lib/profile"
 import { getBrowserSupabase } from "@/lib/supabase-browser"
 
-type AuthMode = "login" | "signup"
+type AuthMode = "login" | "signup" | "forgot"
 type OAuthProvider = "google"
 
 function getSiteOrigin() {
@@ -28,7 +28,7 @@ export default function AuthForm({
   initialMode = "login",
   next = "/account",
 }: {
-  initialMode?: AuthMode
+  initialMode?: "login" | "signup"
   next?: string
 }) {
   const router = useRouter()
@@ -44,6 +44,12 @@ export default function AuthForm({
 
   const safeNext = sanitizeNextPath(next)
   const targetAfterAuth = mode === "signup" && safeNext === "/account" ? "/account/profile" : safeNext
+
+  function switchMode(next: AuthMode) {
+    setMode(next)
+    setError(null)
+    setMessage(null)
+  }
 
   useEffect(() => {
     function openConfirmedTarget(target: string, at?: number) {
@@ -99,9 +105,7 @@ export default function AuthForm({
 
     const { error: oauthError } = await supabase.auth.signInWithOAuth({
       provider,
-      options: {
-        redirectTo: getRedirectUrl(targetAfterAuth),
-      },
+      options: { redirectTo: getRedirectUrl(targetAfterAuth) },
     })
 
     if (oauthError) {
@@ -121,11 +125,7 @@ export default function AuthForm({
       const response = await fetch("/api/auth/signup", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          email: trimmedEmail,
-          password,
-          fullName,
-        }),
+        body: JSON.stringify({ email: trimmedEmail, password, fullName }),
       })
 
       const payload = await response.json().catch(() => null) as { error?: string } | null
@@ -140,11 +140,7 @@ export default function AuthForm({
       return
     }
 
-    const result = await supabase.auth.signInWithPassword({
-      email: trimmedEmail,
-      password,
-    })
-
+    const result = await supabase.auth.signInWithPassword({ email: trimmedEmail, password })
     setPending(false)
 
     if (result.error) {
@@ -157,35 +153,103 @@ export default function AuthForm({
     router.refresh()
   }
 
+  async function submitForgotPassword(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+    setPending(true)
+    setError(null)
+    setMessage(null)
+
+    const { error: resetError } = await supabase.auth.resetPasswordForEmail(email.trim(), {
+      redirectTo: getRedirectUrl("/auth/update-password"),
+    })
+
+    setPending(false)
+
+    if (resetError) {
+      setError(resetError.message)
+      return
+    }
+
+    setMessage("Check your email for a password reset link. It expires in 1 hour.")
+  }
+
+  // ── Forgot password view ─────────────────────────────────────────────────
+  if (mode === "forgot") {
+    return (
+      <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-6">
+        <div className="mb-6">
+          <h2 className="text-base font-semibold text-slate-900">Reset your password</h2>
+          <p className="text-sm text-slate-500 mt-1">
+            Enter your email and we&apos;ll send you a link to set a new password.
+          </p>
+        </div>
+
+        <form onSubmit={submitForgotPassword} className="grid gap-4">
+          <label className="grid gap-1.5">
+            <span className="text-sm font-medium text-slate-700">Email</span>
+            <input
+              type="email"
+              value={email}
+              onChange={e => setEmail(e.target.value)}
+              autoComplete="email"
+              required
+              className="h-11 rounded-lg border border-slate-200 px-3 text-sm text-slate-900 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition"
+            />
+          </label>
+
+          {error && (
+            <div className="rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700">{error}</div>
+          )}
+          {message && (
+            <div className="rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-700">{message}</div>
+          )}
+
+          <button
+            type="submit"
+            disabled={pending}
+            className="h-11 w-full rounded-lg bg-blue-600 px-4 text-sm font-medium text-white hover:bg-blue-700 transition-colors disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            {pending ? "Sending…" : "Send reset link"}
+          </button>
+        </form>
+
+        <button
+          type="button"
+          onClick={() => switchMode("login")}
+          className="mt-4 w-full text-sm text-slate-500 hover:text-slate-900 text-center transition-colors"
+        >
+          ← Back to log in
+        </button>
+      </div>
+    )
+  }
+
+  // ── Login / Signup view ──────────────────────────────────────────────────
   return (
     <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-6">
       {/* Mode toggle */}
       <div className="mb-6 flex rounded-lg bg-slate-100 p-1 gap-1">
         <button
           type="button"
-          onClick={() => setMode("login")}
+          onClick={() => switchMode("login")}
           className={`h-10 flex-1 rounded-lg text-sm font-medium transition-all ${
-            mode === "login"
-              ? "bg-white text-slate-900 shadow-sm"
-              : "text-slate-500 hover:text-slate-700"
+            mode === "login" ? "bg-white text-slate-900 shadow-sm" : "text-slate-500 hover:text-slate-700"
           }`}
         >
           Log in
         </button>
         <button
           type="button"
-          onClick={() => setMode("signup")}
+          onClick={() => switchMode("signup")}
           className={`h-10 flex-1 rounded-lg text-sm font-medium transition-all ${
-            mode === "signup"
-              ? "bg-white text-slate-900 shadow-sm"
-              : "text-slate-500 hover:text-slate-700"
+            mode === "signup" ? "bg-white text-slate-900 shadow-sm" : "text-slate-500 hover:text-slate-700"
           }`}
         >
           Sign up
         </button>
       </div>
 
-      {/* OAuth buttons */}
+      {/* OAuth */}
       <div className="grid gap-3">
         <button
           type="button"
@@ -213,45 +277,54 @@ export default function AuthForm({
             <input
               type="text"
               value={fullName}
-              onChange={(event) => setFullName(event.target.value)}
+              onChange={e => setFullName(e.target.value)}
               autoComplete="name"
               className="h-11 rounded-lg border border-slate-200 px-3 text-sm text-slate-900 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition"
             />
           </label>
         )}
+
         <label className="grid gap-1.5">
           <span className="text-sm font-medium text-slate-700">Email</span>
           <input
             type="email"
             value={email}
-            onChange={(event) => setEmail(event.target.value)}
+            onChange={e => setEmail(e.target.value)}
             autoComplete="email"
             required
             className="h-11 rounded-lg border border-slate-200 px-3 text-sm text-slate-900 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition"
           />
         </label>
-        <label className="grid gap-1.5">
-          <span className="text-sm font-medium text-slate-700">Password</span>
+
+        <div className="grid gap-1.5">
+          <div className="flex items-center justify-between">
+            <span className="text-sm font-medium text-slate-700">Password</span>
+            {mode === "login" && (
+              <button
+                type="button"
+                onClick={() => switchMode("forgot")}
+                className="text-xs text-blue-600 hover:text-blue-700 hover:underline"
+              >
+                Forgot password?
+              </button>
+            )}
+          </div>
           <input
             type="password"
             value={password}
-            onChange={(event) => setPassword(event.target.value)}
+            onChange={e => setPassword(e.target.value)}
             autoComplete={mode === "signup" ? "new-password" : "current-password"}
             minLength={8}
             required
             className="h-11 rounded-lg border border-slate-200 px-3 text-sm text-slate-900 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition"
           />
-        </label>
+        </div>
 
         {error && (
-          <div className="rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700">
-            {error}
-          </div>
+          <div className="rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700">{error}</div>
         )}
         {message && (
-          <div className="rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-700">
-            {message}
-          </div>
+          <div className="rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-700">{message}</div>
         )}
 
         <button
@@ -259,7 +332,7 @@ export default function AuthForm({
           disabled={pending}
           className="mt-1 h-11 w-full rounded-lg bg-blue-600 px-4 text-sm font-medium text-white hover:bg-blue-700 transition-colors disabled:cursor-not-allowed disabled:opacity-60"
         >
-          {pending ? "Please wait..." : mode === "signup" ? "Create account" : "Log in"}
+          {pending ? "Please wait…" : mode === "signup" ? "Create account" : "Log in"}
         </button>
       </form>
     </div>
