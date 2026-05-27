@@ -110,6 +110,15 @@ function isInformational(text: string): boolean {
   if (/^income limits? vary\b/i.test(text)) return true
   if (/^starting january/i.test(text)) return true
 
+  // Advisory consequence notes — describe program mechanics or side effects, not requirements
+  if (/\bmay (affect|impact|reduce|lower|limit|count against|disqualify)\b/i.test(text) && !/\bmust\b/.test(lower)) return true
+  if (/\bwill (affect|impact|reduce|lower|limit)\b/i.test(text) && !/\bmust\b/.test(lower)) return true
+  if (/\bcan (affect|impact|reduce|lower|limit)\b/i.test(text) && !/\byou can\b/i.test(lower) && !/\bmust\b/.test(lower)) return true
+  if (/^(note:|please note|keep in mind)/i.test(text)) return true
+
+  // Heuristic: non-personal subject with no action verb the applicant controls
+  if (!personalSubject && !/\bmust\b/.test(lower) && /\b(balances?|payments?|benefits?|amounts?|credits?)\b/i.test(text) && /\b(above|exceed|over)\b/i.test(text)) return true
+
   return false
 }
 
@@ -812,7 +821,7 @@ export default function EligibilityQuiz({ criteria, slug }: { criteria: Eligibil
 
       <div className="space-y-4">
         {questions.map(q => {
-          if (q.kind === "info")    return <InfoCardQ key={q.id} q={q} />
+          if (q.kind === "info")    return null
           if (q.kind === "yesno")   return <YesNoQ key={q.id} q={q} answer={answers[q.id] ?? null} onAnswer={v => setAnswer(q.id, v)} />
           if (q.kind === "poverty") return <PovertyQ key={q.id} q={q} householdSize={householdSizes[q.id] ?? null} answer={answers[q.id] ?? null} onSize={n => setHouseholdSizes(p => ({ ...p, [q.id]: n }))} onAnswer={v => setAnswer(q.id, v)} />
           if (q.kind === "ami")     return (
