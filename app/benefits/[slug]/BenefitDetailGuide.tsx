@@ -54,8 +54,73 @@ const CATEGORY_COPY: Record<string, { whatYouGet: string; tip: string; office: s
   },
 }
 
+/**
+ * Returns true for strings that describe how the program works rather than
+ * something the user must satisfy. These should be silently removed from the
+ * eligibility checklist — they are not requirements the applicant can act on.
+ */
+function isProgramNote(item: string): boolean {
+  const lower = item.toLowerCase()
+
+  // Definite requirement indicators — never remove these
+  if (/^must\b/i.test(item) || /^required\b/i.test(item)) return false
+  if (/\d+\s*%\s*(of|fpl|ami)/i.test(item)) return false
+  if (lower.includes("must be") || lower.includes("must have") || lower.includes("must meet")) return false
+
+  // Funding / availability notes (the LIHEAP pattern and relatives)
+  if (lower.includes("funds are available")) return true
+  if (lower.includes("run out seasonally") || lower.includes("runs out seasonally")) return true
+  if (lower.includes("subject to funding") || lower.includes("based on available funding")) return true
+  if (lower.includes("benefits are distributed")) return true
+  if (/^program (availability|funds|funding|provides|design)/i.test(item)) return true
+  if (/^(enrollment|participation) may be limited/i.test(item)) return true
+  if (/^benefits? are distributed first.come/i.test(item)) return true
+  if (/^funding (is limited|may be limited|subject to)/i.test(item)) return true
+
+  // Application process descriptions (not eligibility requirements)
+  if (lower.includes("apply through your state") || lower.includes("apply through your local")) return true
+  if (lower.includes("apply through your county") || lower.includes("apply through your tribal")) return true
+  if (/^access is through/i.test(item)) return true
+  if (/^is administered by/i.test(item) || /^is handled by/i.test(item)) return true
+
+  // Automatic enrollment / administrative processes the user doesn't trigger
+  if (lower.includes("automatic enrollment") || lower.includes("automatically enrolled")) return true
+  if (/^automatic eligibility/i.test(item)) return true
+  if (/^(children|adults?) in (foster care|head start|medicaid).*(categorically eligible|may be enrolled)/i.test(item)) return true
+  if (lower.includes("redetermination required") || lower.includes("annually required")) return true
+
+  // Program description / subject is the program, not the applicant
+  if (lower.includes("program provides") && !/\bmust\b/.test(lower)) return true
+  if (lower.includes("do not enroll")) return true
+  if (/^(individual patients|coverage entities|uninsured patients|this program|the program|benefit recipients|recipients automatically)/i.test(item) && !/\bmust\b/.test(lower)) return true
+  if (/^(schools?|sites?|facilities?) are selected/i.test(item)) return true
+  if (/^(congregate meals?|home.delivered meals?|meals?) (are )?available/i.test(item)) return true
+  if (/^(cil|program) (boards?|staff)\b/i.test(item)) return true
+  if (lower.startsWith("services available to")) return true
+  if (/^starting january/i.test(item)) return true
+  if (lower.includes("set their own polic")) return true
+
+  // No-requirement notes (informational, not a user action)
+  if (/^open to all/i.test(item)) return true
+  if (/^available to (renters?|prospective|current|all|individuals)/i.test(item)) return true
+  if (/^no (income|prior|separate|documentation|additional application|individual income)/i.test(item)) return true
+  if (lower.includes("no income requirement")) return true
+  if (lower.includes("income limits vary") || /^income limits? vary\b/i.test(item)) return true
+  if (lower.includes("may not participate in both") || /^households? may not participate in both/i.test(item)) return true
+
+  // Eligibility notes that vary by location / state (informational)
+  if (/^(eligibility criteria|documentation requirements|specific (eligibility|services|criteria)).*vary/i.test(item)) return true
+  if (/^some states? or local/i.test(item)) return true
+  if (/^participation is voluntary/i.test(item)) return true
+
+  // Elderly/senior priority notes
+  if (/^(elderly|seniors?|children|families|spouses?).*(given priority|may also qualify)/i.test(item)) return true
+
+  return false
+}
+
 function criteriaToChecklist(criteria: EligibilityCriteria | string[]) {
-  if (Array.isArray(criteria)) return criteria.filter(Boolean)
+  if (Array.isArray(criteria)) return criteria.filter(Boolean).filter(item => !isProgramNote(item))
 
   const items: string[] = []
   if (criteria.requires_us_citizen) items.push("You are a U.S. citizen or eligible non-citizen.")
