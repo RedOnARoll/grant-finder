@@ -92,6 +92,11 @@ function isLocalSiteRequirement(lower: string): boolean {
     lower.includes("distribution site") ||
     lower.includes("distribution center") ||
     lower.includes("distribution location") ||
+    lower.includes("service area") ||
+    lower.includes("participating local") ||
+    lower.includes("local participating") ||
+    lower.includes("local program") ||
+    lower.includes("local provider") ||
     (lower.includes("served by a") && (lower.includes("site") || lower.includes("center") || lower.includes("provider") || lower.includes("program"))) ||
     lower.includes("area served by") ||
     (lower.includes("reside in an area") && lower.includes("served"))
@@ -145,6 +150,11 @@ function parseStringRequirement(req: string, index: number): Question {
   // General "low-income" without specific %
   if ((lower.includes("low-income") || lower.includes("low income")) && lower.includes("income")) {
     return { kind: "poverty", id, percent: 80, failReason }
+  }
+
+  // Generic income requirement with no threshold — auto-calculate against 130% FPL
+  if (lower.includes("meet the income") || lower.includes("income requirement") || lower.includes("income guidelines") || lower.includes("income eligible")) {
+    return { kind: "poverty", id, percent: 130, failReason }
   }
 
   // Resource / asset limits

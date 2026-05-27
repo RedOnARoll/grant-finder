@@ -108,6 +108,11 @@ function isLocalSiteItem(item: string): boolean {
     lower.includes("distribution site") ||
     lower.includes("distribution center") ||
     lower.includes("distribution location") ||
+    lower.includes("service area") ||
+    lower.includes("participating local") ||
+    lower.includes("local participating") ||
+    lower.includes("local program") ||
+    lower.includes("local provider") ||
     (lower.includes("served by a") && (lower.includes("site") || lower.includes("center") || lower.includes("provider") || lower.includes("program"))) ||
     lower.includes("area served by") ||
     (lower.includes("reside in an area") && lower.includes("served"))
@@ -320,9 +325,24 @@ function IncomeCriteriaCard({
   onAnswer: (v: "yes" | "no") => void
   onSize: (n: number) => void
 }) {
+  const [incomeInput, setIncomeInput] = useState("")
+
   const limit = householdSize && type.kind === "pct"
     ? getIncomeLimit(householdSize, type.percent, stateCode ?? undefined)
     : type.kind === "dollar" ? type.limit : null
+
+  function handleIncomeChange(raw: string) {
+    const digits = raw.replace(/[^0-9]/g, "")
+    setIncomeInput(digits)
+    if (householdSize && digits) {
+      const income = parseInt(digits)
+      const threshold = getIncomeLimit(householdSize, 130)
+      onAnswer(income <= threshold ? "yes" : "no")
+    }
+  }
+
+  const parsedIncome = incomeInput ? parseInt(incomeInput) : null
+  const genericThreshold = (type.kind === "generic" && householdSize) ? getIncomeLimit(householdSize, 130) : null
 
   return (
     <li className={`rounded-lg border p-4 transition-colors ${answer === "yes" ? "border-emerald-100 bg-emerald-50" : answer === "no" ? "border-rose-100 bg-rose-50" : "border-slate-200 bg-white"}`}>
@@ -332,7 +352,7 @@ function IncomeCriteriaCard({
 
       {type.kind === "generic" && (
         <p className="text-xs text-slate-500 mb-3">
-          This program has income limits. Answer a couple of questions so we can check if you qualify.
+          This program has income limits. Tell us your household size and income so we can check for you.
         </p>
       )}
 
@@ -362,7 +382,33 @@ function IncomeCriteriaCard({
         </div>
       )}
 
-      {/* Show limit once household size known */}
+      {/* For generic type: ask for actual income and auto-calculate */}
+      {type.kind === "generic" && householdSize && (
+        <div className="mb-1">
+          <p className="text-xs font-medium text-slate-700 mb-2">What is your annual household income?</p>
+          <div className="flex items-center gap-2 mb-2">
+            <span className="text-slate-400 text-sm font-medium">$</span>
+            <input
+              type="text"
+              inputMode="numeric"
+              value={incomeInput}
+              onChange={e => handleIncomeChange(e.target.value)}
+              placeholder="e.g. 32000"
+              className="h-9 w-36 rounded-lg border border-slate-200 px-3 text-sm text-slate-900 placeholder:text-slate-400 focus:border-blue-500 focus:outline-none"
+            />
+            <span className="text-xs text-slate-400">/year</span>
+          </div>
+          {parsedIncome !== null && genericThreshold !== null && (
+            <div className={`rounded-lg px-3 py-2 text-xs leading-5 ${parsedIncome <= genericThreshold ? "bg-emerald-50 border border-emerald-100 text-emerald-800" : "bg-amber-50 border border-amber-100 text-amber-800"}`}>
+              {parsedIncome <= genericThreshold
+                ? `${fmt(parsedIncome)}/year for a household of ${householdSize} is within common income limits. The local office confirms exact eligibility.`
+                : `${fmt(parsedIncome)}/year may be above typical limits for a household of ${householdSize}. Limits vary by location — it's still worth applying.`}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Show limit once household size known (pct / dollar) */}
       {limit !== null && (
         <div className="rounded-lg bg-slate-50 border border-slate-200 px-3 py-2.5 mb-3">
           <p className="text-xs text-slate-500 mb-0.5">
@@ -375,11 +421,11 @@ function IncomeCriteriaCard({
         </div>
       )}
 
-      {/* Show yes/no once limit is known (or always for dollar type) */}
-      {(limit !== null || (type.kind === "generic" && householdSize)) && (
+      {/* Yes/No only when we have a known dollar limit */}
+      {limit !== null && (
         <div>
           <p className="text-xs font-medium text-slate-700 mb-2">
-            {limit ? `Is your household income at or below ${fmt(limit)}/year?` : "Does your household meet the income requirement?"}
+            Is your household income at or below {fmt(limit)}/year?
           </p>
           <div className="flex gap-2">
             {(["yes", "no"] as const).map(val => (
