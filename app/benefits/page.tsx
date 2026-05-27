@@ -67,6 +67,16 @@ const SUBCATEGORY_LABELS: Record<string, string> = {
   reentry:    "Reentry & Recovery",
 }
 
+const WHAT_YOU_GET: Record<string, string> = {
+  food:       "Help paying for groceries and nutrition support, usually through a card, meal program, or local provider.",
+  housing:    "Help with rent, housing costs, or finding stable housing through a local housing agency or approved provider.",
+  energy:     "Help paying heating, cooling, or past-due utility bills, often paid directly to the utility company.",
+  health:     "Help paying for healthcare, prescriptions, coverage, or care services through a public program or approved provider.",
+  childcare:  "Help paying for child care, meals, or services so parents and caregivers can work, study, or stabilize care.",
+  disability: "Support for disability-related income, healthcare, services, equipment, or independent living needs.",
+  education:  "Help paying for school, training, meals, or education-related services.",
+}
+
 const SOURCE_LABELS: Record<string, string> = {
   federal: "Federal",
   state:   "State",
@@ -132,9 +142,9 @@ function BenefitRow({ benefit }: { benefit: Grant }) {
         )}
       </div>
 
-      {/* Description as main body */}
+      {/* What you get — short scannable summary */}
       <p className="text-base text-slate-700 leading-relaxed mb-5">
-        {benefit.description}
+        {WHAT_YOU_GET[benefit.subcategory ?? ""] ?? benefit.description}
       </p>
 
       {/* Footer row */}

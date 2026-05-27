@@ -745,7 +745,10 @@ export default function BenefitDetailGuide({
     <div className="space-y-6">
       <section className="rounded-xl border border-amber-200 bg-white p-6 shadow-sm sm:p-8">
         <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">What you get</p>
-        <p className="mt-3 text-lg leading-8 text-slate-800">{category?.whatYouGet ?? description}</p>
+        <p className="mt-3 text-lg leading-8 text-slate-800">{description}</p>
+        {category?.whatYouGet && (
+          <p className="mt-3 text-sm leading-7 text-slate-500">{category.whatYouGet}</p>
+        )}
         <div className="mt-5 rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm leading-6 text-amber-900">
           {category?.tip ?? "Apply even if you are unsure. The agency or caseworker makes the final eligibility decision."}
         </div>
