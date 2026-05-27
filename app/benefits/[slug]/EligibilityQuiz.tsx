@@ -40,8 +40,8 @@ type YesNoQuestion = {
   kind: "yesno"
   id: string
   label: string
-  meaning: string       // plain-language explanation of what the requirement means
-  proof?: string        // what document/info proves you meet it
+  meaning: string
+  proof?: string
   qualifyingAnswer: "yes" | "no"
   failReason: string
 }
@@ -57,12 +57,10 @@ type Question = YesNoQuestion | PovertyQuestion | AMIQuestion | DollarQuestion |
 
 function isInformational(text: string): boolean {
   const lower = text.toLowerCase()
-  // Definite requirement indicators → never informational
   if (/^must\b/i.test(text) || /^required\b/i.test(text)) return false
   if (/\d+\s*%\s*(of|fpl|ami)/i.test(text)) return false
   if (lower.includes("must be") || lower.includes("must have") || lower.includes("must meet")) return false
 
-  // Informational patterns
   if (lower.includes("do not enroll")) return true
   if (lower.includes("access is through")) return true
   if (lower.includes("set their own polic")) return true
@@ -74,18 +72,15 @@ function isInformational(text: string): boolean {
   if (lower.includes("benefit most from") && !/\byou\b/.test(lower)) return true
   if (lower.includes("program provides") && !/\bmust\b/.test(lower)) return true
 
-  // Heuristic: starts with a subject that is the program/entity, not the applicant
   const personalSubject = /\b(you|your|applicant|household|family|individual applicant)\b/i.test(text)
   const programSubject = /^(individual patients|coverage entities|uninsured patients|this program|the program|benefit recipients|recipients automatically|annual|enrollment|access)/i.test(text)
   if (programSubject && !personalSubject && !/\bmust\b/.test(lower)) return true
 
-  // Priority/availability notes
   if (/^priority (given|is given) to/i.test(text)) return true
   if (/\bgiven priority\b/i.test(text) && !/^must\b/i.test(text)) return true
   if (/^benefits? are distributed first.come/i.test(text)) return true
   if (/^(enrollment|participation) may be limited/i.test(text)) return true
 
-  // Open/no-requirement notes
   if (/^open to all/i.test(text)) return true
   if (/^available to (renters?|prospective|current|all|individuals)/i.test(text)) return true
   if (/^no (income|prior|separate|documentation|additional application|individual income)/i.test(text)) return true
@@ -93,7 +88,6 @@ function isInformational(text: string): boolean {
   if (lower.includes("income limits vary")) return true
   if (lower.includes("may not participate in both")) return true
 
-  // Informational program notes
   if (/^(eligibility criteria|documentation requirements|specific (eligibility|services|criteria)).*vary/i.test(text)) return true
   if (/^some states? or local/i.test(text)) return true
   if (/^participation is voluntary/i.test(text)) return true
@@ -145,7 +139,6 @@ function parseStringRequirement(req: string, index: number): Question {
   const lower = req.toLowerCase()
   const failReason = req
 
-  // Local distribution site — guide user to a locator instead of asking a yes/no they can't answer
   if (isLocalSiteRequirement(lower)) {
     return {
       kind: "info",
@@ -154,12 +147,10 @@ function parseStringRequirement(req: string, index: number): Question {
     }
   }
 
-  // Informational notes first — render as info cards, not questions
   if (isInformational(req)) {
     return { kind: "info", id, text: req }
   }
 
-  // "Specific categories include X, Y, Z" — check early before sub-keywords fire
   if (lower.startsWith("specific categor") || lower.includes("qualifying categor")) {
     const cats = req.replace(/^specific categories include\s*/i, "").replace(/\.$/, "")
     return {
@@ -170,31 +161,25 @@ function parseStringRequirement(req: string, index: number): Question {
     }
   }
 
-  // AMI income limit
   const amiMatch = req.match(/(\d+)\s*%\s*of\s*(?:the\s*)?(?:area\s*median\s*income|ami)/i)
   if (amiMatch) return { kind: "ami", id, percent: parseInt(amiMatch[1]), failReason }
 
-  // Federal poverty level income limit
   const povertyMatch = req.match(/(\d+)\s*%\s*(?:fpl|of\s*(?:the\s*)?(?:federal\s*poverty(?:\s*level)?|fpl))/i)
   if (povertyMatch) return { kind: "poverty", id, percent: parseInt(povertyMatch[1]), failReason }
 
-  // Dollar income limit
   const dollarMatch = req.match(/\$([0-9,]+)/)
   if (dollarMatch && (lower.includes("income") || lower.includes("earn") || lower.includes("wages"))) {
     return { kind: "dollar", id, limit: parseInt(dollarMatch[1].replace(/,/g, "")), failReason }
   }
 
-  // General "low-income" without specific %
   if ((lower.includes("low-income") || lower.includes("low income")) && lower.includes("income")) {
     return { kind: "poverty", id, percent: 80, failReason }
   }
 
-  // Generic income requirement with no threshold — auto-calculate against 130% FPL
   if (lower.includes("meet the income") || lower.includes("income requirement") || lower.includes("income guidelines") || lower.includes("income eligible")) {
     return { kind: "poverty", id, percent: 130, failReason }
   }
 
-  // Resource / asset limits
   if (lower.includes("resource limit") || lower.includes("asset limit")) {
     return {
       kind: "yesno", id, qualifyingAnswer: "yes", failReason,
@@ -204,7 +189,6 @@ function parseStringRequirement(req: string, index: number): Question {
     }
   }
 
-  // Citizenship / qualifying non-citizen
   if (lower.includes("citizen") || lower.includes("qualifying non-citizen") || lower.includes("immigration status")) {
     return {
       kind: "yesno", id, qualifyingAnswer: "yes", failReason,
@@ -214,7 +198,6 @@ function parseStringRequirement(req: string, index: number): Question {
     }
   }
 
-  // State residency
   if (lower.includes("resident of the state") || lower.includes("reside in the state") || lower.includes("live in the state")) {
     return {
       kind: "yesno", id, qualifyingAnswer: "yes", failReason,
@@ -224,7 +207,6 @@ function parseStringRequirement(req: string, index: number): Question {
     }
   }
 
-  // School/facility enrollment (check before residency — "residential care institution" contains "resident")
   if ((lower.includes("enrolled") || lower.includes("enrollment")) &&
       (lower.includes("school") || lower.includes("care") || lower.includes("facility") || lower.includes("institution"))) {
     return {
@@ -235,7 +217,6 @@ function parseStringRequirement(req: string, index: number): Question {
     }
   }
 
-  // General US residency — exclude "residential care" which matches "resident" spuriously
   if ((lower.includes("resident") || lower.includes("residency") || lower.includes("reside in")) &&
       !lower.includes("residential care") && !lower.includes("residential facility")) {
     return {
@@ -246,7 +227,6 @@ function parseStringRequirement(req: string, index: number): Question {
     }
   }
 
-  // Medicare Part A/B enrollment
   if (lower.includes("medicare part")) {
     const parts = req.match(/part\s+([a-d](?:\s*(?:and|\/|or)\s*[a-d])*)/i)?.[1]?.toUpperCase() ?? "A and/or B"
     return {
@@ -257,7 +237,6 @@ function parseStringRequirement(req: string, index: number): Question {
     }
   }
 
-  // Receiving another benefit
   const receivingMatch = req.match(/receiving\s+(.+?)(?:\s+benefits?|\s+program|\s+assistance)?(?:\s+to\s+qualify|,|$)/i)
   if (receivingMatch || lower.includes("must be receiving") || lower.includes("must currently receive")) {
     const benefit = receivingMatch ? receivingMatch[1].trim() : "the qualifying program"
@@ -269,7 +248,6 @@ function parseStringRequirement(req: string, index: number): Question {
     }
   }
 
-  // Pregnancy / breastfeeding / postpartum
   if (lower.includes("pregnant") || lower.includes("breastfeed") || lower.includes("postpartum") || lower.includes("recently gave birth") || lower.includes("nursing")) {
     return {
       kind: "yesno", id, qualifyingAnswer: "yes", failReason,
@@ -279,7 +257,6 @@ function parseStringRequirement(req: string, index: number): Question {
     }
   }
 
-  // Children — age-specific max
   const childMaxAgeMatch = req.match(/(?:child(?:ren)?|infant|toddler|baby).*?(?:under|below|younger than)\s+age\s*(\d+)/i)
     || req.match(/(?:under|below|younger than)\s+age\s*(\d+).*?(?:child|infant|toddler)/i)
     || req.match(/age\s+(\d+)\s+(?:or\s+)?(?:younger|under|below)/i)
@@ -293,7 +270,6 @@ function parseStringRequirement(req: string, index: number): Question {
     }
   }
 
-  // Children generally qualifying
   if (lower.includes("children") && lower.includes("qualify")) {
     return {
       kind: "yesno", id, qualifyingAnswer: "yes", failReason,
@@ -303,7 +279,6 @@ function parseStringRequirement(req: string, index: number): Question {
     }
   }
 
-  // Age minimum
   const ageMinMatch = req.match(/(?:be\s+|age\s+|least\s+)(\d+)\s*(?:or\s*)?(?:older|over|above|\+)/i)
   if (ageMinMatch) {
     const age = ageMinMatch[1]
@@ -315,7 +290,6 @@ function parseStringRequirement(req: string, index: number): Question {
     }
   }
 
-  // Age maximum
   const ageMaxMatch = req.match(/(?:under|below|younger than)\s+(?:age\s+)?(\d+)/i)
   if (ageMaxMatch && lower.includes("age")) {
     const age = ageMaxMatch[1]
@@ -327,7 +301,6 @@ function parseStringRequirement(req: string, index: number): Question {
     }
   }
 
-  // Disability
   if (lower.includes("disabilit") || lower.includes("disabled")) {
     return {
       kind: "yesno", id, qualifyingAnswer: "yes", failReason,
@@ -337,7 +310,6 @@ function parseStringRequirement(req: string, index: number): Question {
     }
   }
 
-  // Veteran / military
   if (lower.includes("veteran") || lower.includes("military service") || lower.includes("dd-214") || lower.includes("armed forces")) {
     return {
       kind: "yesno", id, qualifyingAnswer: "yes", failReason,
@@ -347,7 +319,6 @@ function parseStringRequirement(req: string, index: number): Question {
     }
   }
 
-  // Student enrollment
   if (lower.includes("student") || (lower.includes("enrolled") && lower.includes("school"))) {
     return {
       kind: "yesno", id, qualifyingAnswer: "yes", failReason,
@@ -357,7 +328,6 @@ function parseStringRequirement(req: string, index: number): Question {
     }
   }
 
-  // Rural
   if (lower.includes("rural")) {
     return {
       kind: "yesno", id, qualifyingAnswer: "yes", failReason,
@@ -367,7 +337,6 @@ function parseStringRequirement(req: string, index: number): Question {
     }
   }
 
-  // Professional employment requirement
   if (lower.includes("must be employed") || lower.includes("employed full-time as") || lower.includes("employed by an agency")) {
     const profMatch = req.match(/(?:employed(?:\s+full-time)?\s+as\s+(?:a|an)\s+)(.+?)(?:\s*,|\s+or\b|$)/i)
     const profession = profMatch ? profMatch[1].trim() : "an eligible profession for this program"
@@ -419,7 +388,6 @@ function parseStringRequirement(req: string, index: number): Question {
     }
   }
 
-  // Occupancy commitment
   if (lower.includes("must commit to occupying") || lower.includes("sole residence for at least") || lower.includes("commit to living")) {
     const monthsMatch = req.match(/(\d+)\s*months/i)
     const months = monthsMatch ? monthsMatch[1] : "36"
@@ -431,7 +399,6 @@ function parseStringRequirement(req: string, index: number): Question {
     }
   }
 
-  // Financing/purchase readiness
   if (lower.includes("obtain financing") || lower.includes("pay cash at the time") || lower.includes("proof of cash financing") || lower.includes("mortgage pre-approval")) {
     return {
       kind: "yesno", id, qualifyingAnswer: "yes", failReason,
@@ -441,7 +408,6 @@ function parseStringRequirement(req: string, index: number): Question {
     }
   }
 
-  // Wartime military service
   if (lower.includes("wartime period") || lower.includes("active duty with at least one day during")) {
     return {
       kind: "yesno", id, qualifyingAnswer: "yes", failReason,
@@ -451,7 +417,6 @@ function parseStringRequirement(req: string, index: number): Question {
     }
   }
 
-  // Service-connected disability
   if ((lower.includes("connection between") && lower.includes("military service")) || lower.includes("service-connected") || lower.includes("in-service event")) {
     return {
       kind: "yesno", id, qualifyingAnswer: "yes", failReason,
@@ -461,7 +426,6 @@ function parseStringRequirement(req: string, index: number): Question {
     }
   }
 
-  // Net worth / asset limit
   if ((lower.includes("net worth") || lower.includes("net worth limit")) && (lower.includes("must meet") || lower.includes("must not exceed"))) {
     const limitMatch = req.match(/\$([0-9,]+)/)
     const limit = limitMatch ? `$${limitMatch[1]}` : "the program limit"
@@ -473,7 +437,6 @@ function parseStringRequirement(req: string, index: number): Question {
     }
   }
 
-  // Fallback: convert statement to question
   return {
     kind: "yesno", id, qualifyingAnswer: "yes", failReason,
     label: statementToQuestion(req),
@@ -558,7 +521,6 @@ function buildFromObject(c: EligibilityCriteria): Question[] {
 function buildQuestions(criteria: EligibilityCriteria | string[]): Question[] {
   const raw = Array.isArray(criteria) ? criteria.map((req, i) => parseStringRequirement(req, i)) : buildFromObject(criteria)
 
-  // Deduplicate: keep only one income question per type (highest limit = most inclusive)
   const seen = new Set<string>()
   const deduped: Question[] = []
   let maxPovertyPct = 0, maxAmiPct = 0, maxDollar = 0
@@ -577,7 +539,6 @@ function buildQuestions(criteria: EligibilityCriteria | string[]): Question[] {
       if (q.limit > maxDollar) { maxDollar = q.limit; if (dollarIdx >= 0) deduped[dollarIdx] = q; else { dollarIdx = deduped.length; deduped.push(q) } }
       continue
     }
-    // Deduplicate yesno by label similarity
     const key = q.kind === "yesno" ? q.label.toLowerCase().slice(0, 40) : q.id
     if (!seen.has(key)) { seen.add(key); deduped.push(q) }
   }
@@ -604,203 +565,301 @@ function passed(q: Question, answers: Record<string, "yes" | "no">): boolean {
   return answers[q.id] === "yes"
 }
 
+// ─── Shared styles ────────────────────────────────────────────────────────────
+
+function cardClass(answeredPassed: boolean | null) {
+  if (answeredPassed === true)  return "border-emerald-200 bg-emerald-50"
+  if (answeredPassed === false) return "border-rose-200 bg-rose-50"
+  return "border-zinc-200 bg-white"
+}
+
+function yesBtn(active: boolean) {
+  return active
+    ? "bg-emerald-600 border-emerald-600 text-white shadow-sm"
+    : "bg-emerald-50 border-emerald-200 text-emerald-900 hover:bg-emerald-100"
+}
+
+function noBtn(active: boolean) {
+  return active
+    ? "bg-rose-600 border-rose-600 text-white shadow-sm"
+    : "bg-rose-50 border-rose-200 text-rose-900 hover:bg-rose-100"
+}
+
+function StepBadge({ n }: { n: number }) {
+  return (
+    <span className="flex-none mt-0.5 h-5 w-5 rounded-full bg-zinc-100 text-zinc-500 text-[11px] font-bold flex items-center justify-center">
+      {n}
+    </span>
+  )
+}
+
+function StatusIcon({ ok }: { ok: boolean }) {
+  return ok ? (
+    <svg className="flex-none mt-0.5 h-4 w-4 text-emerald-500" fill="none" viewBox="0 0 16 16">
+      <circle cx="8" cy="8" r="7" fill="#d1fae5" stroke="#10b981" strokeWidth="1.5"/>
+      <path d="M5 8.5l2 2 4-3.5" stroke="#10b981" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+    </svg>
+  ) : (
+    <svg className="flex-none mt-0.5 h-4 w-4 text-rose-500" fill="none" viewBox="0 0 16 16">
+      <circle cx="8" cy="8" r="7" fill="#fee2e2" stroke="#f43f5e" strokeWidth="1.5"/>
+      <path d="M5.5 5.5l5 5M10.5 5.5l-5 5" stroke="#f43f5e" strokeWidth="1.5" strokeLinecap="round"/>
+    </svg>
+  )
+}
+
 // ─── Sub-components ───────────────────────────────────────────────────────────
 
 function InfoCardQ({ q }: { q: InfoCard }) {
   return (
-    <div className="rounded-xl bg-blue-50 border border-blue-100 px-5 py-4 flex gap-3">
-      <svg className="w-4 h-4 text-blue-500 shrink-0 mt-0.5" fill="none" viewBox="0 0 16 16">
-        <circle cx="8" cy="8" r="7" stroke="currentColor" strokeWidth="1.5" />
-        <path d="M8 7v4M8 5.5v.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+    <div className="flex gap-3 rounded-xl border border-sky-100 bg-sky-50 px-4 py-3.5">
+      <svg className="mt-0.5 h-4 w-4 shrink-0 text-sky-500" fill="none" viewBox="0 0 16 16">
+        <circle cx="8" cy="8" r="7" stroke="currentColor" strokeWidth="1.5"/>
+        <path d="M8 7v4M8 5v.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
       </svg>
-      <p className="text-sm text-blue-800 leading-6">{q.text}</p>
+      <p className="text-sm leading-6 text-sky-900">{q.text}</p>
     </div>
   )
 }
 
-function YesNoQ({ q, answer, onAnswer }: { q: YesNoQuestion; answer: "yes" | "no" | null; onAnswer: (v: "yes" | "no") => void }) {
-  const [open, setOpen] = useState(false)
-  const hasFailed = answer === (q.qualifyingAnswer === "yes" ? "no" : "yes")
+function YesNoQ({ q, answer, onAnswer, stepNum }: { q: YesNoQuestion; answer: "yes" | "no" | null; onAnswer: (v: "yes" | "no") => void; stepNum: number }) {
+  const [showDetail, setShowDetail] = useState(false)
+  const isPassed = answer === q.qualifyingAnswer
+  const isFailed = answer !== null && !isPassed
+  const answeredState = answer === null ? null : isPassed
 
   return (
-    <div className={`border rounded-xl p-5 transition-colors ${hasFailed ? "border-red-200 bg-red-50" : "border-zinc-200 bg-white"}`}>
-      <p className="text-sm font-semibold text-zinc-900 mb-3">{q.label}</p>
-
-      <button type="button" onClick={() => setOpen(o => !o)}
-        className="text-xs text-blue-600 hover:text-blue-800 flex items-center gap-1 mb-3">
-        {open ? "Hide details" : "What does this mean?"}
-        <svg className={`w-3 h-3 transition-transform ${open ? "rotate-180" : ""}`} fill="none" viewBox="0 0 12 12">
-          <path d="M2 4l4 4 4-4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-        </svg>
-      </button>
-
-      {open && (
-        <div className="rounded-lg border border-zinc-100 bg-zinc-50 px-4 py-3 mb-4 space-y-3">
-          <div>
-            <p className="text-xs font-semibold text-zinc-400 uppercase tracking-wide mb-1">What this means</p>
-            <p className="text-sm text-zinc-700 leading-6">{q.meaning}</p>
-          </div>
-          {q.proof && (
-            <div className="border-t border-zinc-200 pt-3">
-              <p className="text-xs font-semibold text-zinc-400 uppercase tracking-wide mb-1">What you'll need to prove it</p>
-              <p className="text-sm text-zinc-700 leading-6">{q.proof}</p>
-            </div>
-          )}
+    <div className={`rounded-xl border transition-colors ${cardClass(answeredState)}`}>
+      <div className="p-5">
+        <div className="flex items-start gap-3 mb-4">
+          <StepBadge n={stepNum} />
+          <p className="flex-1 text-sm font-semibold text-zinc-900 leading-6">{q.label}</p>
+          {answer !== null && <StatusIcon ok={isPassed} />}
         </div>
-      )}
 
-      <div className="flex gap-3">
-        {(["yes", "no"] as const).map(val => (
-          <button key={val} type="button" onClick={() => onAnswer(val)}
-            className={`h-9 px-6 rounded-full text-sm font-medium border transition-colors ${
-              answer === val
-                ? val === "yes" ? "bg-green-600 text-white border-green-600" : "bg-red-500 text-white border-red-500"
-                : "border-zinc-300 text-zinc-700 hover:border-zinc-500"
-            }`}>
-            {val === "yes" ? "Yes" : "No"}
+        <div className="flex gap-2 mb-3">
+          <button type="button" onClick={() => onAnswer("yes")}
+            className={`flex-1 h-10 rounded-lg text-sm font-semibold border transition-all ${yesBtn(answer === "yes")}`}>
+            Yes
           </button>
-        ))}
+          <button type="button" onClick={() => onAnswer("no")}
+            className={`flex-1 h-10 rounded-lg text-sm font-semibold border transition-all ${noBtn(answer === "no")}`}>
+            No
+          </button>
+        </div>
+
+        <button type="button" onClick={() => setShowDetail(d => !d)}
+          className="flex items-center gap-1.5 text-xs text-zinc-400 hover:text-zinc-600 transition-colors">
+          <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 14 14">
+            <circle cx="7" cy="7" r="6" stroke="currentColor" strokeWidth="1.25"/>
+            <path d="M7 6v3M7 4.5v.5" stroke="currentColor" strokeWidth="1.25" strokeLinecap="round"/>
+          </svg>
+          {showDetail ? "Hide details" : "What does this mean?"}
+          <svg className={`w-3 h-3 transition-transform ${showDetail ? "rotate-180" : ""}`} fill="none" viewBox="0 0 10 10">
+            <path d="M2 3.5l3 3 3-3" stroke="currentColor" strokeWidth="1.25" strokeLinecap="round" strokeLinejoin="round"/>
+          </svg>
+        </button>
+
+        {showDetail && (
+          <div className="mt-3 rounded-lg border border-zinc-100 bg-zinc-50 p-3.5 space-y-2.5">
+            <p className="text-xs leading-5 text-zinc-600">{q.meaning}</p>
+            {q.proof && (
+              <div className="pt-2.5 border-t border-zinc-200">
+                <p className="text-[10px] font-semibold text-zinc-400 uppercase tracking-wider mb-1">What you&apos;ll need</p>
+                <p className="text-xs leading-5 text-zinc-600">{q.proof}</p>
+              </div>
+            )}
+          </div>
+        )}
+
+        {isFailed && (
+          <p className="mt-2.5 text-xs text-rose-700 font-medium">
+            This requirement is not met based on your answer.
+          </p>
+        )}
       </div>
     </div>
   )
 }
 
-function PovertyQ({ q, householdSize, answer, onSize, onAnswer }: { q: PovertyQuestion; householdSize: number | null; answer: "yes" | "no" | null; onSize: (n: number) => void; onAnswer: (v: "yes" | "no") => void }) {
+function PovertyQ({ q, householdSize, answer, onSize, onAnswer, stepNum }: { q: PovertyQuestion; householdSize: number | null; answer: "yes" | "no" | null; onSize: (n: number) => void; onAnswer: (v: "yes" | "no") => void; stepNum: number }) {
   const limit = householdSize ? getIncomeLimit(householdSize, q.percent) : null
+  const answeredState = answer === null ? null : answer === "yes"
+
   return (
-    <div className="border border-zinc-200 rounded-xl p-5">
-      <p className="text-sm font-semibold text-zinc-900 mb-1">What is your household income?</p>
-      <p className="text-sm text-zinc-600 leading-6 mb-4">This program requires income at or below <span className="font-semibold text-zinc-800">{q.percent}% of the Federal Poverty Level</span> — that's the government's measure of what it costs to meet basic needs. Select your household size to see your exact dollar limit.</p>
-      <div className="mb-4">
-        <label className="text-xs font-medium text-zinc-500 block mb-2">How many people are in your household?</label>
-        <div className="flex flex-wrap gap-2">
-          {HOUSEHOLD_SIZES.map(n => (
-            <button key={n} type="button" onClick={() => onSize(n)}
-              className={`w-10 h-10 rounded-full text-sm font-medium border transition-colors ${householdSize === n ? "bg-zinc-900 text-white border-zinc-900" : "border-zinc-300 text-zinc-700 hover:border-zinc-500"}`}>
-              {n}
-            </button>
-          ))}
-          <button type="button" onClick={() => onSize(9)}
-            className={`h-10 px-3 rounded-full text-sm font-medium border transition-colors ${householdSize === 9 ? "bg-zinc-900 text-white border-zinc-900" : "border-zinc-300 text-zinc-700 hover:border-zinc-500"}`}>
-            9+
-          </button>
-        </div>
-        <p className="text-xs text-zinc-400 mt-2">Count everyone who lives and eats with you — yourself, spouse/partner, children, and any dependents. Count a pregnant woman as 2.</p>
-      </div>
-      {limit && (
-        <>
-          <div className="rounded-lg bg-zinc-50 border border-zinc-200 px-4 py-3 mb-4">
-            <p className="text-xs text-zinc-500 mb-1">For a household of {householdSize}, your income limit is:</p>
-            <p className="text-2xl font-bold text-zinc-900">{fmt(limit)}<span className="text-base font-normal text-zinc-500">/year</span></p>
-            <p className="text-sm text-zinc-500 mt-0.5">{fmt(Math.round(limit / 12))}/month &nbsp;·&nbsp; {fmt(Math.round(limit / 52))}/week</p>
-            <p className="text-xs text-zinc-400 mt-2">Counts wages, self-employment, Social Security, child support, alimony, and rental income. Many programs allow deductions for rent, childcare, and medical costs — your actual limit may be higher.</p>
+    <div className={`rounded-xl border transition-colors ${cardClass(answeredState)}`}>
+      <div className="p-5">
+        <div className="flex items-start gap-3 mb-4">
+          <StepBadge n={stepNum} />
+          <div className="flex-1">
+            <p className="text-sm font-semibold text-zinc-900 leading-6">Does your household income qualify?</p>
+            <p className="text-xs text-zinc-500 mt-0.5">Limit: {q.percent}% of the Federal Poverty Level — based on your household size</p>
           </div>
-          <p className="text-sm font-semibold text-zinc-900 mb-2">Is your household income at or below {fmt(limit)}/year?</p>
-          <div className="flex gap-3">
-            {(["yes", "no"] as const).map(val => (
-              <button key={val} type="button" onClick={() => onAnswer(val)}
-                className={`h-9 px-6 rounded-full text-sm font-medium border transition-colors ${answer === val ? val === "yes" ? "bg-green-600 text-white border-green-600" : "bg-red-500 text-white border-red-500" : "border-zinc-300 text-zinc-700 hover:border-zinc-500"}`}>
-                {val === "yes" ? "Yes" : "No"}
+          {answer !== null && <StatusIcon ok={answer === "yes"} />}
+        </div>
+
+        <div className="mb-4">
+          <p className="text-xs font-medium text-zinc-500 mb-2">How many people are in your household?</p>
+          <div className="flex flex-wrap gap-1.5">
+            {HOUSEHOLD_SIZES.map(n => (
+              <button key={n} type="button" onClick={() => onSize(n)}
+                className={`w-9 h-9 rounded-lg text-sm font-semibold border transition-colors ${
+                  householdSize === n
+                    ? "bg-zinc-900 text-white border-zinc-900"
+                    : "border-zinc-200 text-zinc-700 bg-white hover:border-zinc-400"
+                }`}>
+                {n}
               </button>
             ))}
+            <button type="button" onClick={() => onSize(9)}
+              className={`h-9 px-2.5 rounded-lg text-sm font-semibold border transition-colors ${
+                householdSize === 9
+                  ? "bg-zinc-900 text-white border-zinc-900"
+                  : "border-zinc-200 text-zinc-700 bg-white hover:border-zinc-400"
+              }`}>
+              9+
+            </button>
           </div>
-        </>
-      )}
+          <p className="text-xs text-zinc-400 mt-1.5">Include yourself, spouse/partner, children, and dependents.</p>
+        </div>
+
+        {limit && (
+          <>
+            <div className="rounded-lg border border-zinc-200 bg-zinc-50 px-4 py-3 mb-4">
+              <p className="text-xs text-zinc-500 mb-1">Your income limit — household of {householdSize}:</p>
+              <p className="text-2xl font-bold text-zinc-900 tabular-nums">{fmt(limit)}<span className="text-sm font-normal text-zinc-500">/yr</span></p>
+              <p className="text-xs text-zinc-500 mt-0.5 tabular-nums">{fmt(Math.round(limit / 12))}/mo &nbsp;·&nbsp; {fmt(Math.round(limit / 52))}/wk</p>
+            </div>
+
+            <div className="flex gap-2">
+              <button type="button" onClick={() => onAnswer("yes")}
+                className={`flex-1 h-10 rounded-lg text-sm font-semibold border transition-all ${yesBtn(answer === "yes")}`}>
+                Yes, within the limit
+              </button>
+              <button type="button" onClick={() => onAnswer("no")}
+                className={`flex-1 h-10 rounded-lg text-sm font-semibold border transition-all ${noBtn(answer === "no")}`}>
+                No, above the limit
+              </button>
+            </div>
+          </>
+        )}
+      </div>
     </div>
   )
 }
 
-function AMIQuestionCard({ q, selectedState, selectedArea, answer, onState, onArea, onAnswer, zipDetected }: { q: AMIQuestion; selectedState: string | null; selectedArea: number | null; answer: "yes" | "no" | null; onState: (s: string) => void; onArea: (i: number) => void; onAnswer: (v: "yes" | "no") => void; zipDetected?: boolean }) {
+function AMIQuestionCard({ q, selectedState, selectedArea, answer, onState, onArea, onAnswer, zipDetected, stepNum }: { q: AMIQuestion; selectedState: string | null; selectedArea: number | null; answer: "yes" | "no" | null; onState: (s: string) => void; onArea: (i: number) => void; onAnswer: (v: "yes" | "no") => void; zipDetected?: boolean; stepNum: number }) {
   const [showPicker, setShowPicker] = useState(false)
   const areas = selectedState ? AMI_BY_STATE[selectedState] ?? [] : []
   const areaData = selectedArea !== null ? areas[selectedArea] : null
   const limit = areaData ? Math.round(areaData.ami * q.percent / 100) : null
   const autoFilled = zipDetected && selectedState && selectedArea !== null && !showPicker
+  const answeredState = answer === null ? null : answer === "yes"
 
   return (
-    <div className="border border-zinc-200 rounded-xl p-5">
-      <p className="text-sm font-semibold text-zinc-900 mb-1">What is your household income?</p>
-
-      {autoFilled ? (
-        <div className="flex items-center gap-2 mb-4">
-          <span className="inline-flex items-center gap-1.5 text-xs bg-blue-50 text-blue-700 border border-blue-200 rounded-full px-2.5 py-1 font-medium">
-            <svg className="w-3 h-3" fill="none" viewBox="0 0 12 12"><circle cx="6" cy="6" r="5" stroke="currentColor" strokeWidth="1.5"/><path d="M6 4v2.5L7.5 8" stroke="currentColor" strokeWidth="1.25" strokeLinecap="round"/></svg>
-            {areaData?.name}
-          </span>
-          <button type="button" onClick={() => setShowPicker(true)} className="text-xs text-zinc-400 hover:text-zinc-600 underline underline-offset-2">
-            Change location
-          </button>
+    <div className={`rounded-xl border transition-colors ${cardClass(answeredState)}`}>
+      <div className="p-5">
+        <div className="flex items-start gap-3 mb-4">
+          <StepBadge n={stepNum} />
+          <div className="flex-1">
+            <p className="text-sm font-semibold text-zinc-900 leading-6">Does your household income qualify?</p>
+            <p className="text-xs text-zinc-500 mt-0.5">Limit: {q.percent}% of Area Median Income for your location</p>
+          </div>
+          {answer !== null && <StatusIcon ok={answer === "yes"} />}
         </div>
-      ) : (
-        <>
-          <p className="text-sm text-zinc-600 leading-6 mb-4">This program uses <span className="font-semibold text-zinc-800">Area Median Income (AMI)</span> — the middle income for your local area — as its benchmark. Your limit is {q.percent}% of your area&apos;s AMI, which varies by location. Select your state and area to see your exact limit.</p>
-          <div className="mb-4">
-            <label className="text-xs font-medium text-zinc-500 block mb-1.5">What state do you live in?</label>
-            <select value={selectedState ?? ""} onChange={e => onState(e.target.value)}
-              className="h-10 px-3 rounded-lg border border-zinc-300 text-sm text-zinc-700 bg-white focus:outline-none focus:ring-2 focus:ring-zinc-900 w-full max-w-xs">
-              <option value="">Select a state…</option>
-              {US_STATES.map(s => <option key={s.code} value={s.code}>{s.name}</option>)}
-            </select>
-          </div>
-          {selectedState && areas.length > 0 && (
-            <div className="mb-4">
-              <label className="text-xs font-medium text-zinc-500 block mb-1.5">What&apos;s your nearest metro or area?</label>
-              <div className="flex flex-wrap gap-2">
-                {areas.map((area, idx) => (
-                  <button key={idx} type="button" onClick={() => onArea(idx)}
-                    className={`h-9 px-3 rounded-full text-xs font-medium border transition-colors ${selectedArea === idx ? "bg-zinc-900 text-white border-zinc-900" : "border-zinc-300 text-zinc-700 hover:border-zinc-500"}`}>
-                    {area.name}
-                  </button>
-                ))}
-              </div>
-              <p className="text-xs text-zinc-400 mt-2">AMI is set by HUD per county. Choose &quot;Statewide average&quot; if you&apos;re unsure — actual limits may vary slightly.</p>
-            </div>
-          )}
-        </>
-      )}
 
-      {limit && areaData && (
-        <>
-          <div className="rounded-lg bg-zinc-50 border border-zinc-200 px-4 py-3 mb-4">
-            <p className="text-xs text-zinc-500 mb-1">Area Median Income for {areaData.name}: <span className="font-medium text-zinc-700">{fmt(areaData.ami)}/year</span></p>
-            <p className="text-xs text-zinc-500 mb-2">{q.percent}% of that is your income limit:</p>
-            <p className="text-2xl font-bold text-zinc-900">{fmt(limit)}<span className="text-base font-normal text-zinc-500">/year</span></p>
-            <p className="text-sm text-zinc-500 mt-0.5">{fmt(Math.round(limit / 12))}/month &nbsp;·&nbsp; {fmt(Math.round(limit / 52))}/week</p>
-            <p className="text-xs text-zinc-400 mt-2">Based on 2024 HUD income limits. Limits may vary by county.</p>
+        {autoFilled ? (
+          <div className="flex items-center gap-2 mb-4">
+            <span className="inline-flex items-center gap-1.5 text-xs bg-blue-50 text-blue-700 border border-blue-200 rounded-full px-2.5 py-1 font-medium">
+              <svg className="w-3 h-3" fill="none" viewBox="0 0 12 12"><circle cx="6" cy="6" r="5" stroke="currentColor" strokeWidth="1.5"/><path d="M6 4v2.5L7.5 8" stroke="currentColor" strokeWidth="1.25" strokeLinecap="round"/></svg>
+              {areaData?.name}
+            </span>
+            <button type="button" onClick={() => setShowPicker(true)} className="text-xs text-zinc-400 hover:text-zinc-600 underline underline-offset-2">
+              Change
+            </button>
           </div>
-          <p className="text-sm font-semibold text-zinc-900 mb-2">Is your household income at or below {fmt(limit)}/year?</p>
-          <div className="flex gap-3">
-            {(["yes", "no"] as const).map(val => (
-              <button key={val} type="button" onClick={() => onAnswer(val)}
-                className={`h-9 px-6 rounded-full text-sm font-medium border transition-colors ${answer === val ? val === "yes" ? "bg-green-600 text-white border-green-600" : "bg-red-500 text-white border-red-500" : "border-zinc-300 text-zinc-700 hover:border-zinc-500"}`}>
-                {val === "yes" ? "Yes" : "No"}
+        ) : (
+          <>
+            <div className="mb-4">
+              <label className="text-xs font-medium text-zinc-500 block mb-1.5">What state do you live in?</label>
+              <select value={selectedState ?? ""} onChange={e => onState(e.target.value)}
+                className="h-10 px-3 rounded-lg border border-zinc-200 text-sm text-zinc-700 bg-white focus:outline-none focus:ring-2 focus:ring-zinc-900 w-full max-w-xs">
+                <option value="">Select a state…</option>
+                {US_STATES.map(s => <option key={s.code} value={s.code}>{s.name}</option>)}
+              </select>
+            </div>
+            {selectedState && areas.length > 0 && (
+              <div className="mb-4">
+                <label className="text-xs font-medium text-zinc-500 block mb-1.5">Nearest metro or county area:</label>
+                <div className="flex flex-wrap gap-1.5">
+                  {areas.map((area, idx) => (
+                    <button key={idx} type="button" onClick={() => onArea(idx)}
+                      className={`h-8 px-3 rounded-lg text-xs font-medium border transition-colors ${
+                        selectedArea === idx
+                          ? "bg-zinc-900 text-white border-zinc-900"
+                          : "border-zinc-200 text-zinc-700 bg-white hover:border-zinc-400"
+                      }`}>
+                      {area.name}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+          </>
+        )}
+
+        {limit && areaData && (
+          <>
+            <div className="rounded-lg border border-zinc-200 bg-zinc-50 px-4 py-3 mb-4">
+              <p className="text-xs text-zinc-500 mb-1">Your income limit — {areaData.name}:</p>
+              <p className="text-2xl font-bold text-zinc-900 tabular-nums">{fmt(limit)}<span className="text-sm font-normal text-zinc-500">/yr</span></p>
+              <p className="text-xs text-zinc-500 mt-0.5 tabular-nums">{fmt(Math.round(limit / 12))}/mo &nbsp;·&nbsp; {fmt(Math.round(limit / 52))}/wk</p>
+            </div>
+
+            <div className="flex gap-2">
+              <button type="button" onClick={() => onAnswer("yes")}
+                className={`flex-1 h-10 rounded-lg text-sm font-semibold border transition-all ${yesBtn(answer === "yes")}`}>
+                Yes, within the limit
               </button>
-            ))}
-          </div>
-        </>
-      )}
+              <button type="button" onClick={() => onAnswer("no")}
+                className={`flex-1 h-10 rounded-lg text-sm font-semibold border transition-all ${noBtn(answer === "no")}`}>
+                No, above the limit
+              </button>
+            </div>
+          </>
+        )}
+      </div>
     </div>
   )
 }
 
-function DollarQ({ q, answer, onAnswer }: { q: DollarQuestion; answer: "yes" | "no" | null; onAnswer: (v: "yes" | "no") => void }) {
+function DollarQ({ q, answer, onAnswer, stepNum }: { q: DollarQuestion; answer: "yes" | "no" | null; onAnswer: (v: "yes" | "no") => void; stepNum: number }) {
+  const answeredState = answer === null ? null : answer === "yes"
+
   return (
-    <div className="border border-zinc-200 rounded-xl p-5">
-      <p className="text-sm font-semibold text-zinc-900 mb-1">What is your household income?</p>
-      <p className="text-sm text-zinc-600 leading-6 mb-3">This program has a fixed annual income limit. Count income from all sources — wages, self-employment, Social Security, pensions, and any other regular payments.</p>
-      <div className="rounded-lg bg-zinc-50 border border-zinc-200 px-4 py-3 mb-4">
-        <p className="text-xs text-zinc-500 mb-1">Your household income must be at or below:</p>
-        <p className="text-2xl font-bold text-zinc-900">{fmt(q.limit)}<span className="text-base font-normal text-zinc-500">/year</span></p>
-        <p className="text-sm text-zinc-500 mt-0.5">{fmt(Math.round(q.limit / 12))}/month &nbsp;·&nbsp; {fmt(Math.round(q.limit / 52))}/week</p>
-      </div>
-      <p className="text-sm font-semibold text-zinc-900 mb-2">Is your annual household income below {fmt(q.limit)}?</p>
-      <div className="flex gap-3">
-        {(["yes", "no"] as const).map(val => (
-          <button key={val} type="button" onClick={() => onAnswer(val)}
-            className={`h-9 px-6 rounded-full text-sm font-medium border transition-colors ${answer === val ? val === "yes" ? "bg-green-600 text-white border-green-600" : "bg-red-500 text-white border-red-500" : "border-zinc-300 text-zinc-700 hover:border-zinc-500"}`}>
-            {val === "yes" ? "Yes" : "No"}
+    <div className={`rounded-xl border transition-colors ${cardClass(answeredState)}`}>
+      <div className="p-5">
+        <div className="flex items-start gap-3 mb-4">
+          <StepBadge n={stepNum} />
+          <p className="flex-1 text-sm font-semibold text-zinc-900 leading-6">Does your household income qualify?</p>
+          {answer !== null && <StatusIcon ok={answer === "yes"} />}
+        </div>
+
+        <div className="rounded-lg border border-zinc-200 bg-zinc-50 px-4 py-3 mb-4">
+          <p className="text-xs text-zinc-500 mb-1">Income must be at or below:</p>
+          <p className="text-2xl font-bold text-zinc-900 tabular-nums">{fmt(q.limit)}<span className="text-sm font-normal text-zinc-500">/yr</span></p>
+          <p className="text-xs text-zinc-500 mt-0.5 tabular-nums">{fmt(Math.round(q.limit / 12))}/mo &nbsp;·&nbsp; {fmt(Math.round(q.limit / 52))}/wk</p>
+        </div>
+
+        <div className="flex gap-2">
+          <button type="button" onClick={() => onAnswer("yes")}
+            className={`flex-1 h-10 rounded-lg text-sm font-semibold border transition-all ${yesBtn(answer === "yes")}`}>
+            Yes, within the limit
           </button>
-        ))}
+          <button type="button" onClick={() => onAnswer("no")}
+            className={`flex-1 h-10 rounded-lg text-sm font-semibold border transition-all ${noBtn(answer === "no")}`}>
+            No, above the limit
+          </button>
+        </div>
       </div>
     </div>
   )
@@ -841,15 +900,19 @@ export default function EligibilityQuiz({ criteria, slug }: { criteria: Eligibil
 
   if (questions.length === 0) {
     return (
-      <div className="rounded-xl border border-zinc-200 p-6">
-        <h2 className="text-xl font-semibold text-zinc-900 mb-2">Eligibility</h2>
-        <p className="text-sm text-zinc-500 mb-4">No specific eligibility criteria on file. Review the program's official requirements before applying.</p>
-        <Link href={`/benefits/${slug}/apply`} className="inline-flex items-center h-11 px-6 rounded-full bg-zinc-900 text-white text-sm font-medium hover:bg-zinc-700 transition-colors">Start Application →</Link>
+      <div className="rounded-xl border border-zinc-200 bg-white p-6">
+        <h2 className="text-xl font-semibold text-zinc-900 mb-2">Am I Eligible?</h2>
+        <p className="text-sm text-zinc-500 mb-4">No specific eligibility criteria on file. Review the program&apos;s official requirements before applying.</p>
+        <Link href={`/benefits/${slug}/apply`} className="inline-flex items-center h-11 px-6 rounded-full bg-zinc-900 text-white text-sm font-semibold hover:bg-zinc-700 transition-colors">
+          Start Application →
+        </Link>
       </div>
     )
   }
 
-  const allAnswered = answerableQs.every(q => isAnswered(q, answers, householdSizes, selectedStates, selectedAreas))
+  const answeredCount = answerableQs.filter(q => isAnswered(q, answers, householdSizes, selectedStates, selectedAreas)).length
+  const totalQ = answerableQs.length
+  const allAnswered = answeredCount === totalQ
   const failedQs = answerableQs.filter(q => answers[q.id] && !passed(q, answers))
   const isEligible = allAnswered && failedQs.length === 0
 
@@ -857,45 +920,97 @@ export default function EligibilityQuiz({ criteria, slug }: { criteria: Eligibil
     setAnswers(prev => ({ ...prev, [id]: val }))
   }
 
+  // Assign sequential step numbers (skipping info cards)
+  const stepNums = new Map<string, number>()
+  let sn = 0
+  for (const q of questions) {
+    if (q.kind !== "info") stepNums.set(q.id, ++sn)
+  }
+
   return (
     <div>
-      <h2 className="text-xl font-semibold text-zinc-900 mb-1">Am I Eligible?</h2>
-      <p className="text-sm text-zinc-500 mb-5">Answer each question — we'll show you exactly what applies to your situation.</p>
+      {/* Header + progress */}
+      <div className="mb-5">
+        <div className="flex items-center justify-between mb-2">
+          <h2 className="text-xl font-semibold text-zinc-900">Am I Eligible?</h2>
+          {totalQ > 0 && (
+            <span className={`text-xs font-medium tabular-nums ${allAnswered ? "text-emerald-600" : "text-zinc-400"}`}>
+              {answeredCount} / {totalQ} answered
+            </span>
+          )}
+        </div>
+        {totalQ > 0 && (
+          <div className="h-1 rounded-full bg-zinc-100 overflow-hidden">
+            <div
+              className={`h-1 rounded-full transition-all duration-500 ${isEligible && allAnswered ? "bg-emerald-500" : failedQs.length > 0 ? "bg-rose-400" : "bg-zinc-900"}`}
+              style={{ width: `${totalQ > 0 ? Math.round(answeredCount / totalQ * 100) : 0}%` }}
+            />
+          </div>
+        )}
+      </div>
 
-      <div className="space-y-4">
+      <div className="space-y-3">
         {questions.map(q => {
-          if (q.kind === "info")    return null
-          if (q.kind === "yesno")   return <YesNoQ key={q.id} q={q} answer={answers[q.id] ?? null} onAnswer={v => setAnswer(q.id, v)} />
-          if (q.kind === "poverty") return <PovertyQ key={q.id} q={q} householdSize={householdSizes[q.id] ?? null} answer={answers[q.id] ?? null} onSize={n => setHouseholdSizes(p => ({ ...p, [q.id]: n }))} onAnswer={v => setAnswer(q.id, v)} />
+          const num = stepNums.get(q.id) ?? 0
+          if (q.kind === "info")    return <InfoCardQ key={q.id} q={q} />
+          if (q.kind === "yesno")   return <YesNoQ   key={q.id} q={q} stepNum={num} answer={answers[q.id] ?? null} onAnswer={v => setAnswer(q.id, v)} />
+          if (q.kind === "poverty") return <PovertyQ  key={q.id} q={q} stepNum={num} householdSize={householdSizes[q.id] ?? null} answer={answers[q.id] ?? null} onSize={n => setHouseholdSizes(p => ({ ...p, [q.id]: n }))} onAnswer={v => setAnswer(q.id, v)} />
           if (q.kind === "ami")     return (
-            <AMIQuestionCard key={q.id} q={q} selectedState={selectedStates[q.id] ?? null} selectedArea={selectedAreas[q.id] ?? null} answer={answers[q.id] ?? null}
+            <AMIQuestionCard key={q.id} q={q} stepNum={num}
+              selectedState={selectedStates[q.id] ?? null}
+              selectedArea={selectedAreas[q.id] ?? null}
+              answer={answers[q.id] ?? null}
               zipDetected={zipDetectedIds.has(q.id)}
               onState={s => { setSelectedStates(p => ({ ...p, [q.id]: s })); setSelectedAreas(p => { const n = {...p}; delete n[q.id]; return n }); setAnswers(p => { const n = {...p}; delete n[q.id]; return n }) }}
               onArea={i => setSelectedAreas(p => ({ ...p, [q.id]: i }))}
               onAnswer={v => setAnswer(q.id, v)} />
           )
-          if (q.kind === "dollar")  return <DollarQ key={q.id} q={q} answer={answers[q.id] ?? null} onAnswer={v => setAnswer(q.id, v)} />
+          if (q.kind === "dollar")  return <DollarQ  key={q.id} q={q} stepNum={num} answer={answers[q.id] ?? null} onAnswer={v => setAnswer(q.id, v)} />
           return null
         })}
       </div>
 
-      {allAnswered && answerableQs.length > 0 && (
-        <div className="mt-6">
+      {/* Result */}
+      {allAnswered && totalQ > 0 && (
+        <div className="mt-5">
           {isEligible ? (
-            <div className="rounded-xl bg-green-50 border border-green-200 p-5 mb-4">
-              <p className="font-semibold text-green-800 mb-1">Likely eligible based on these answers</p>
-              <p className="text-sm text-green-700">Your answers match the criteria we checked. The agency may verify additional rules or documents.</p>
+            <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-5 mb-4">
+              <div className="flex items-start gap-3">
+                <svg className="mt-0.5 h-5 w-5 shrink-0 text-emerald-600" fill="none" viewBox="0 0 20 20">
+                  <circle cx="10" cy="10" r="9" fill="#d1fae5" stroke="#10b981" strokeWidth="1.5"/>
+                  <path d="M6.5 10.5l2.5 2.5 5-5" stroke="#10b981" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round"/>
+                </svg>
+                <div>
+                  <p className="font-semibold text-emerald-900">You appear to be eligible</p>
+                  <p className="text-sm text-emerald-800 mt-0.5 leading-5">Your answers match all the criteria we checked. The agency may verify your answers with documentation when you apply.</p>
+                </div>
+              </div>
             </div>
           ) : (
-            <div className="rounded-xl bg-amber-50 border border-amber-200 p-5 mb-4">
-              <p className="font-semibold text-amber-800 mb-2">You may not qualify based on your answers</p>
-              <ul className="text-sm text-amber-700 space-y-1 mb-3">
-                {failedQs.map(q => <li key={q.id} className="flex items-start gap-2"><span className="mt-1 shrink-0">•</span><span>{q.failReason}</span></li>)}
-              </ul>
-              <p className="text-xs text-amber-600">Eligibility rules can have exceptions. You may still want to apply or speak with a local benefits counselor.</p>
+            <div className="rounded-xl border border-rose-200 bg-rose-50 p-5 mb-4">
+              <div className="flex items-start gap-3">
+                <svg className="mt-0.5 h-5 w-5 shrink-0 text-rose-500" fill="none" viewBox="0 0 20 20">
+                  <circle cx="10" cy="10" r="9" fill="#fee2e2" stroke="#f43f5e" strokeWidth="1.5"/>
+                  <path d="M7 7l6 6M13 7l-6 6" stroke="#f43f5e" strokeWidth="1.75" strokeLinecap="round"/>
+                </svg>
+                <div>
+                  <p className="font-semibold text-rose-900 mb-1.5">You may not qualify based on your answers</p>
+                  <ul className="space-y-1 mb-2">
+                    {failedQs.map(q => (
+                      <li key={q.id} className="text-sm text-rose-800 flex items-start gap-2">
+                        <span className="mt-1.5 h-1.5 w-1.5 rounded-full bg-rose-400 shrink-0" />
+                        {q.failReason}
+                      </li>
+                    ))}
+                  </ul>
+                  <p className="text-xs text-rose-700">Eligibility rules can have exceptions. It&apos;s still worth applying or speaking with a local benefits counselor.</p>
+                </div>
+              </div>
             </div>
           )}
-          <Link href={`/benefits/${slug}/apply`} className="inline-flex items-center h-11 px-6 rounded-full bg-zinc-900 text-white text-sm font-medium hover:bg-zinc-700 transition-colors">Start Application →</Link>
+          <Link href={`/benefits/${slug}/apply`} className="inline-flex items-center h-11 px-6 rounded-full bg-zinc-900 text-white text-sm font-semibold hover:bg-zinc-700 transition-colors">
+            Start Application →
+          </Link>
         </div>
       )}
     </div>
