@@ -9,6 +9,7 @@ import type { Grant } from "@/lib/types"
 // ── Constants ────────────────────────────────────────────────────────
 const CATEGORY_LABELS: Record<string, string> = {
   small_business: "Small Business",
+  nonprofit:      "Nonprofit",
   individual:     "Individual",
   agricultural:   "Agricultural",
   research:       "Research",

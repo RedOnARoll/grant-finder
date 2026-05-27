@@ -10,6 +10,7 @@ export const dynamic = "force-dynamic"
 
 const GRANT_CATEGORIES: Record<string, { label: string; description: string; accent: string }> = {
   small_business: { label: "Small Business",  description: "Grants for entrepreneurs, startups, and growing businesses.", accent: "bg-blue-100"   },
+  nonprofit:      { label: "Nonprofit",       description: "Foundation, federal, and community grants for nonprofit organizations.", accent: "bg-violet-100" },
   agricultural:   { label: "Agricultural",    description: "Funding for farmers, ranchers, and agricultural producers.", accent: "bg-emerald-100" },
   research:       { label: "Research",        description: "Grants for scientific research and innovation projects.",    accent: "bg-indigo-100"  },
   veterans:       { label: "Veterans",        description: "Scholarships and grants for veterans and military families.", accent: "bg-amber-100"  },
@@ -36,7 +37,7 @@ const HOW_IT_WORKS = [
   {
     step: 2,
     title: "Get Matched",
-    description: "We compare your profile against 500+ programs to surface the grants and benefits most relevant to you.",
+    description: "We compare your profile against hundreds of programs to surface the grants and benefits most relevant to you.",
   },
   {
     step: 3,
@@ -106,17 +107,17 @@ export default async function HomePage() {
             <div className="flex flex-wrap justify-center gap-x-6 gap-y-2 mb-8 text-xs text-slate-400">
               <span className="flex items-center gap-1.5"><span className="text-emerald-400">✓</span> 100% free to use</span>
               <span className="flex items-center gap-1.5"><span className="text-emerald-400">✓</span> No account needed to browse</span>
-              <span className="flex items-center gap-1.5"><span className="text-emerald-400">✓</span> 500+ programs indexed</span>
+              <span className="flex items-center gap-1.5"><span className="text-emerald-400">✓</span> {grants.length + benefits.length}+ programs indexed</span>
               <span className="flex items-center gap-1.5"><span className="text-emerald-400">✓</span> Federal, state &amp; private</span>
             </div>
 
             {/* Headline */}
             <div className="text-center max-w-3xl mx-auto mb-14">
               <h1 className="text-5xl sm:text-6xl font-bold text-white leading-[1.08] tracking-tight mb-4">
-                Find grants and benefits you qualify for — free.
+                Billions in grants and benefits go unclaimed every year. Find what&apos;s yours — free.
               </h1>
               <p className="text-lg text-slate-300 leading-relaxed">
-                Browse 500+ federal, state, and private programs. No account needed to start.
+                Browse {grants.length + benefits.length}+ federal, state, and private programs. No account needed to start.
               </p>
             </div>
 

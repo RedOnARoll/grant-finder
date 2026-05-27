@@ -97,9 +97,9 @@ export default function SaveInterestButton({ slug, type, label = "full" }: SaveI
     setPending(false)
   }
 
-  const text = saved ? "Saved" : "Interested"
+  const text = saved ? "Saved" : "Save & Track"
   const symbol = saved ? "★" : "☆"
-  const title = saved ? "Remove from dashboard" : "Save as interested"
+  const title = saved ? "Remove from dashboard" : "Save to dashboard and get deadline reminders"
 
   return (
     <button

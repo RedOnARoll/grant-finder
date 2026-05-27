@@ -4,6 +4,7 @@ import { getBenefits } from "@/lib/supabase"
 import type { Grant } from "@/lib/types"
 import SiteNav from "@/components/SiteNav"
 import SmartSearchBar from "@/components/SmartSearchBar"
+import BenefitsStateFilter from "@/components/BenefitsStateFilter"
 import { StatusBadge } from "@/components/ui/Badge"
 
 const AGENCY_STATES: Record<string, string[]> = {
@@ -24,6 +25,8 @@ const SUBCATEGORY_PRIORITY: Record<string, number> = {
   disability: 5,
   childcare:  6,
   education:  7,
+  veterans:   8,
+  reentry:    9,
 }
 
 function sortBenefits(benefits: Grant[], sort: BenefitSort | undefined): Grant[] {
@@ -52,6 +55,8 @@ const SUBCATEGORY_LABELS: Record<string, string> = {
   childcare:  "Childcare",
   energy:     "Energy",
   health:     "Healthcare",
+  veterans:   "Veterans",
+  reentry:    "Reentry & Recovery",
 }
 
 const SOURCE_LABELS: Record<string, string> = {
@@ -85,11 +90,13 @@ function toggleSubcat(selected: Set<string>, cat: string): Set<string> {
 const SITUATIONS = [
   { key: "housing",   label: "Housing",    Icon: () => <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor"><polygon points="2,11 12,3 22,11"/><rect x="6" y="11" width="12" height="10" rx="1" opacity="0.6"/></svg> },
   { key: "food",      label: "Food",       Icon: () => <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor"><circle cx="12" cy="13" r="8"/><rect x="11" y="3" width="2" height="6" rx="1" opacity="0.6"/></svg> },
-  { key: "childcare", label: "Childcare",  Icon: () => <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor"><circle cx="12" cy="9" r="4"/><path d="M5 20c0-3.5 3-6 7-6s7 2.5 7 6" opacity="0.6"/></svg> },
   { key: "health",    label: "Healthcare", Icon: () => <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor"><rect x="10" y="4" width="4" height="16"/><rect x="4" y="10" width="16" height="4"/></svg> },
   { key: "energy",    label: "Utilities",  Icon: () => <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor"><polygon points="13,2 6,14 12,14 11,22 18,10 12,10"/></svg> },
-  { key: "education", label: "Education",  Icon: () => <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor"><polygon points="2,8 12,3 22,8 12,13"/><polygon points="6,11 6,17 12,20 18,17 18,11 12,14" opacity="0.6"/></svg> },
+  { key: "childcare", label: "Childcare",  Icon: () => <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor"><circle cx="12" cy="9" r="4"/><path d="M5 20c0-3.5 3-6 7-6s7 2.5 7 6" opacity="0.6"/></svg> },
   { key: "disability",label: "Disability", Icon: () => <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="5" r="2"/><path d="M12 8v6l3 4M7 9h10"/></svg> },
+  { key: "education", label: "Education",  Icon: () => <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor"><polygon points="2,8 12,3 22,8 12,13"/><polygon points="6,11 6,17 12,20 18,17 18,11 12,14" opacity="0.6"/></svg> },
+  { key: "veterans",  label: "Veterans",   Icon: () => <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor"><polygon points="12,2 15,9 22,9 16.5,14 18.5,21 12,17 5.5,21 7.5,14 2,9 9,9" opacity="0.85"/></svg> },
+  { key: "reentry",   label: "Reentry",    Icon: () => <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 22c5.5 0 10-4.5 10-10S17.5 2 12 2"/><polyline points="8,6 2,12 8,18"/><line x1="2" y1="12" x2="14" y2="12"/></svg> },
 ]
 
 function BenefitRow({ benefit }: { benefit: Grant }) {
@@ -311,14 +318,18 @@ export default async function BenefitsPage({
 
             {/* Main list */}
             <div className="flex-1 min-w-0">
-              {/* Count + source filter */}
-              <div className="flex items-center justify-between mb-5 gap-4 flex-wrap">
-                <p className="text-sm text-slate-600">
-                  <span className="font-semibold text-slate-900">{benefits.length}</span>{" "}
-                  {benefits.length === 1 ? "benefit" : "benefits"} shown
-                </p>
+              {/* State + source filter row */}
+              <div className="flex flex-wrap items-center gap-3 mb-5">
+                {/* State selector */}
+                <BenefitsStateFilter
+                  currentState={state}
+                  currentSubcategory={subcategory}
+                  currentSource={source}
+                  currentQ={q}
+                  currentSort={sort}
+                />
                 {/* Source pills — compact */}
-                <div className="flex items-center gap-1.5 overflow-x-auto">
+                <div className="flex items-center gap-1.5 overflow-x-auto flex-1">
                   <span className="text-xs text-slate-400 font-medium uppercase tracking-wider shrink-0 mr-1">Source</span>
                   {Object.entries(SOURCE_LABELS).map(([key, label]) => (
                     <Link
@@ -339,6 +350,10 @@ export default async function BenefitsPage({
                     </Link>
                   )}
                 </div>
+                <p className="text-sm text-slate-600 ml-auto whitespace-nowrap">
+                  <span className="font-semibold text-slate-900">{benefits.length}</span>{" "}
+                  {benefits.length === 1 ? "benefit" : "benefits"} shown
+                </p>
               </div>
 
               {/* Vertical list */}

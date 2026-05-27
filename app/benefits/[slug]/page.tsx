@@ -60,6 +60,8 @@ const SUBCATEGORY_LABELS: Record<string, string> = {
   childcare: "Childcare",
   energy: "Energy Assistance",
   health: "Healthcare",
+  veterans: "Veterans Benefits",
+  reentry: "Reentry & Recovery",
 }
 
 function formatAmount(amount: number | null) {
