@@ -219,9 +219,15 @@ function OwnRentCard({
 
 // ─── Local distribution site lookup card ─────────────────────────────────────
 
+type SiteLookup =
+  | { status: "idle" | "loading" | "error" }
+  | { status: "found"; sites: { name: string; address: string; type: string }[]; hasMore: boolean }
+  | { status: "none" }
+
 function LocalSiteCard({ slug }: { slug: string }) {
   const [zip, setZip] = useState("")
   const [zipInput, setZipInput] = useState("")
+  const [lookup, setLookup] = useState<SiteLookup>({ status: "idle" })
 
   useEffect(() => {
     const frame = requestAnimationFrame(() => {
@@ -240,6 +246,21 @@ function LocalSiteCard({ slug }: { slug: string }) {
     return () => window.removeEventListener("gw:zip-updated", onUpdate)
   }, [])
 
+  useEffect(() => {
+    if (!zip) { setLookup({ status: "idle" }); return }
+    setLookup({ status: "loading" })
+    fetch(`/api/snap-sites?zip=${zip}`)
+      .then(r => r.json())
+      .then((data: { found: boolean; sites: { name: string; address: string; type: string }[]; hasMore: boolean }) => {
+        if (data.found) {
+          setLookup({ status: "found", sites: data.sites, hasMore: data.hasMore })
+        } else {
+          setLookup({ status: "none" })
+        }
+      })
+      .catch(() => setLookup({ status: "error" }))
+  }, [zip])
+
   function handleSubmit(e: FormEvent) {
     e.preventDefault()
     const clean = zipInput.replace(/\D/g, "").slice(0, 5)
@@ -252,32 +273,76 @@ function LocalSiteCard({ slug }: { slug: string }) {
   }
 
   const locatorUrl = getLocatorUrl(slug)
+  const borderClass =
+    lookup.status === "found" ? "border-emerald-100 bg-emerald-50" :
+    lookup.status === "none"  ? "border-amber-100 bg-amber-50" :
+    zip ? "border-blue-100 bg-blue-50" : "border-slate-200 bg-white"
+  const pinClass =
+    lookup.status === "found" ? "text-emerald-600" :
+    lookup.status === "none"  ? "text-amber-500" :
+    zip ? "text-blue-600" : "text-slate-400"
 
   return (
-    <li className={`rounded-lg border p-4 ${zip ? "border-blue-100 bg-blue-50" : "border-slate-200 bg-white"}`}>
+    <li className={`rounded-lg border p-4 ${borderClass}`}>
       <div className="flex items-start gap-3">
-        <MapPin className={`mt-0.5 h-5 w-5 shrink-0 ${zip ? "text-blue-600" : "text-slate-500"}`} />
+        <MapPin className={`mt-0.5 h-5 w-5 shrink-0 ${pinClass}`} />
         <div className="min-w-0 flex-1">
           <p className="text-sm font-semibold text-slate-900">Is this available near you?</p>
-          {zip ? (
+
+          {lookup.status === "loading" && (
+            <p className="mt-1 text-xs text-slate-500">Checking near {zip}…</p>
+          )}
+
+          {lookup.status === "found" && (
             <div className="mt-1 space-y-2">
-              <p className="text-xs leading-5 text-blue-900">
-                Using your ZIP code <strong>{zip}</strong> — find local distribution sites near you.
+              <p className="text-xs leading-5 text-emerald-800 font-medium">
+                Yes — {lookup.sites.length}{lookup.hasMore ? "+" : ""} SNAP-authorized {lookup.sites.length === 1 && !lookup.hasMore ? "location" : "locations"} near {zip}
               </p>
-              <a
-                href={locatorUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex items-center gap-1.5 rounded-lg bg-blue-600 px-3 py-1.5 text-xs font-semibold text-white transition-colors hover:bg-blue-700"
-              >
-                Find sites near {zip}
-                <ExternalLink className="h-3.5 w-3.5" />
-              </a>
+              <ul className="space-y-0.5">
+                {lookup.sites.slice(0, 3).map((s, i) => (
+                  <li key={i} className="text-xs text-emerald-800 flex items-baseline gap-1.5">
+                    <span className="shrink-0 text-emerald-500">•</span>
+                    <span><strong>{s.name}</strong>{s.address ? ` — ${s.address}` : ""}</span>
+                  </li>
+                ))}
+              </ul>
+              <div className="flex items-center gap-3">
+                <a href={locatorUrl} target="_blank" rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1 text-xs text-emerald-700 underline underline-offset-2 hover:text-emerald-900">
+                  See all near {zip} <ExternalLink className="h-3 w-3" />
+                </a>
+                <button type="button" onClick={() => { setZip(""); setZipInput(""); setLookup({ status: "idle" }) }}
+                  className="text-xs text-slate-400 hover:text-slate-600">
+                  Change ZIP
+                </button>
+              </div>
             </div>
-          ) : (
+          )}
+
+          {lookup.status === "none" && (
+            <div className="mt-1 space-y-2">
+              <p className="text-xs leading-5 text-amber-800">
+                No SNAP-authorized locations found in ZIP {zip}. Try a nearby ZIP or search the full locator.
+              </p>
+              <div className="flex items-center gap-3">
+                <a href={locatorUrl} target="_blank" rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1 text-xs text-amber-700 underline underline-offset-2 hover:text-amber-900">
+                  Search by address <ExternalLink className="h-3 w-3" />
+                </a>
+                <button type="button" onClick={() => { setZip(""); setZipInput(""); setLookup({ status: "idle" }) }}
+                  className="text-xs text-slate-400 hover:text-slate-600">
+                  Try different ZIP
+                </button>
+              </div>
+            </div>
+          )}
+
+          {(lookup.status === "idle" || lookup.status === "error") && (
             <div className="mt-2 space-y-2">
               <p className="text-xs leading-5 text-slate-500">
-                This program is delivered through local distribution sites. Enter your ZIP code to find one near you.
+                {lookup.status === "error"
+                  ? "Couldn't load results. Enter your ZIP to check availability."
+                  : "This program is delivered through local distribution sites. Enter your ZIP code to check availability near you."}
               </p>
               <form onSubmit={handleSubmit} className="flex flex-wrap gap-2">
                 <input
@@ -291,7 +356,7 @@ function LocalSiteCard({ slug }: { slug: string }) {
                 />
                 <button type="submit" disabled={zipInput.length !== 5}
                   className="h-8 rounded-lg bg-blue-600 px-3 text-xs font-semibold text-white hover:bg-blue-700 disabled:opacity-40 disabled:cursor-not-allowed">
-                  Find sites near me
+                  Check near me
                 </button>
               </form>
             </div>
