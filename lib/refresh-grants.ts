@@ -169,14 +169,16 @@ async function extractFromUrl(
     .trim()
     .slice(0, 12000)
 
+  const today = new Date().toISOString().slice(0, 10)
+
   const message = await anthropic.messages.create({
     model: "claude-sonnet-4-20250514",
     max_tokens: 1024,
     messages: [
       {
         role: "user",
-        content: `Extract grant/benefit information for "${grantName}" from this webpage text. Return ONLY valid JSON with these fields:
-- deadline: ISO date string (YYYY-MM-DD) or null
+        content: `Today is ${today}. Extract grant/benefit information for "${grantName}" from this webpage text. Return ONLY valid JSON with these fields:
+- deadline: ISO date string (YYYY-MM-DD) or null. Look for phrases like "deadline", "due date", "apply by", "closes", "submissions due", "applications accepted through". If you find a month/day without a year (e.g. "May 30"), use the current or next upcoming occurrence based on today's date. For monthly recurring grants, return the next upcoming monthly deadline. Return null only if no deadline can be determined.
 - max_amount: number (dollars) or null
 - required_documents: array of strings (document names required to apply)
 - application_url: the direct URL to apply or null

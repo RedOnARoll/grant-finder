@@ -65,11 +65,15 @@ function formatDate(deadline: string | null) {
 }
 
 function getUrgency(grant: Grant) {
-  if (grant.is_recurring || !grant.deadline) {
+  if (!grant.deadline) {
     return { label: "Rolling deadline", classes: "bg-slate-100 text-slate-700", dot: "bg-slate-400" }
   }
 
   const daysUntil = Math.ceil((new Date(grant.deadline).getTime() - Date.now()) / 86400000)
+  // Recurring grant whose current deadline just passed — next cycle not yet scraped
+  if (daysUntil < 0 && grant.is_recurring) {
+    return { label: "Rolling deadline", classes: "bg-slate-100 text-slate-700", dot: "bg-slate-400" }
+  }
   if (daysUntil < 0) return { label: "Closed", classes: "bg-rose-50 text-rose-600", dot: "bg-rose-600" }
   if (daysUntil <= 14) return { label: `${daysUntil} days left - urgent`, classes: "bg-rose-50 text-rose-600", dot: "bg-rose-600" }
   if (daysUntil <= 60) return { label: `${daysUntil} days left`, classes: "bg-amber-50 text-amber-700", dot: "bg-amber-500" }

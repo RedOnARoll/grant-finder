@@ -51,9 +51,10 @@ function daysUntil(deadline: string | null | undefined): number | null {
 }
 
 function urgencyBadge(days: number | null, isRecurring: boolean | null | undefined) {
-  if (isRecurring) return { bg: "bg-slate-100", text: "text-slate-600", label: "Rolling" }
-  if (days === null) return { bg: "bg-slate-100", text: "text-slate-600", label: "—" }
-  if (days < 0)    return { bg: "bg-rose-50",   text: "text-rose-600",   label: "Closed" }
+  if (days === null) return { bg: "bg-slate-100", text: "text-slate-600", label: isRecurring ? "Rolling" : "—" }
+  if (days < 0)  return isRecurring
+    ? { bg: "bg-slate-100", text: "text-slate-600", label: "Rolling" }  // next cycle not yet scraped
+    : { bg: "bg-rose-50",   text: "text-rose-600",  label: "Closed" }
   if (days <= 14)  return { bg: "bg-rose-50",   text: "text-rose-600",   label: `${days}d left` }
   if (days <= 60)  return { bg: "bg-amber-50",  text: "text-amber-700",  label: `${days}d left` }
   return               { bg: "bg-emerald-50", text: "text-emerald-700", label: `${days}d left` }
@@ -110,9 +111,8 @@ export default function GrantsTableClient({ allGrants, initialCategory, initialS
       }
       if (urgency !== "any") {
         const d = daysUntil(g.deadline)
-        if (urgency === "rolling") return !!g.is_recurring
+        if (urgency === "rolling") return !g.deadline
         const cap = parseInt(urgency, 10)
-        if (g.is_recurring) return false
         if (d === null || d < 0 || d > cap) return false
       }
       return true
