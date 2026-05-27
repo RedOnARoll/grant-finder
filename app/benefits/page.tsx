@@ -16,6 +16,14 @@ const AGENCY_STATES: Record<string, string[]> = {
 
 type BenefitSort = "name_asc" | "subcategory_asc" | "amount_desc"
 
+function matchesSubcategory(b: Grant, cat: string): boolean {
+  if (b.subcategory === cat) return true
+  const lower = `${b.slug} ${b.name}`.toLowerCase()
+  if (cat === "veterans") return lower.includes("veteran") || lower.includes("vash") || lower.includes("tricare") || lower.includes("military") || lower.includes("armed forces")
+  if (cat === "reentry") return lower.includes("reentry") || lower.includes("re-entry") || lower.includes("formerly incarcerated") || lower.includes("second chance") || lower.includes("reintegration")
+  return false
+}
+
 // Programs most people need first
 const SUBCATEGORY_PRIORITY: Record<string, number> = {
   food:       1,
@@ -164,7 +172,7 @@ export default async function BenefitsPage({
     : []
 
   const filtered = allBenefits.filter((b) => {
-    if (selectedSubcategories.size > 0 && !selectedSubcategories.has(b.subcategory ?? "")) return false
+    if (selectedSubcategories.size > 0 && !Array.from(selectedSubcategories).some(cat => matchesSubcategory(b, cat))) return false
     if (selectedSources.size > 0 && !selectedSources.has(b.funding_source ?? "")) return false
     if (state) {
       const agencyStates = AGENCY_STATES[b.agency]
@@ -281,7 +289,7 @@ export default async function BenefitsPage({
               {/* Situation chips */}
               {SITUATIONS.map(s => {
                 const isActive = selectedSubcategories.has(s.key)
-                const count = allBenefits.filter(b => b.subcategory === s.key).length
+                const count = allBenefits.filter(b => matchesSubcategory(b, s.key)).length
                 const href = buildBenefitsUrl({ cats: new Set([s.key]), sources: selectedSources, state, zip, q, sort })
                 return (
                   <Link

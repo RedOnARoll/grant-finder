@@ -7,6 +7,14 @@ import { Search, ArrowRight, ArrowUpDown, Sparkles, MapPin } from "lucide-react"
 import type { Grant } from "@/lib/types"
 
 // ── Constants ────────────────────────────────────────────────────────
+
+function matchesCategory(g: Grant, cat: string): boolean {
+  if (g.category === cat) return true
+  const lower = `${g.slug} ${g.name} ${g.description ?? ""}`.toLowerCase()
+  if (cat === "nonprofit") return lower.includes("nonprofit") || lower.includes("non-profit") || lower.includes("501(c)(3)") || lower.includes("501c3") || lower.includes("charitable organization")
+  return false
+}
+
 const CATEGORY_LABELS: Record<string, string> = {
   small_business: "Small Business",
   nonprofit:      "Nonprofit",
@@ -94,7 +102,7 @@ export default function GrantsTableClient({ allGrants, initialCategory, initialS
   const filtered = useMemo(() => {
     return allGrants.filter(g => {
       if (selectedSources.size > 0 && !selectedSources.has(g.funding_source ?? "")) return false
-      if (selectedCategories.size > 0 && !selectedCategories.has(g.category)) return false
+      if (selectedCategories.size > 0 && !Array.from(selectedCategories).some(cat => matchesCategory(g, cat))) return false
       if (amountMin > 0 && (!g.max_amount || g.max_amount < amountMin)) return false
       if (search) {
         const hay = `${g.name} ${g.agency} ${g.description}`.toLowerCase()
@@ -133,7 +141,7 @@ export default function GrantsTableClient({ allGrants, initialCategory, initialS
     key: k, label: lbl, count: allGrants.filter(g => g.funding_source === k).length,
   }))
   const categoryFacets = Object.entries(CATEGORY_LABELS).map(([k, lbl]) => ({
-    key: k, label: lbl, count: allGrants.filter(g => g.category === k).length,
+    key: k, label: lbl, count: allGrants.filter(g => matchesCategory(g, k)).length,
   }))
 
   // Live stats
