@@ -439,6 +439,36 @@ function parseStringRequirement(req: string, index: number): Question {
     }
   }
 
+  // Primary residence
+  if (lower.includes("primary residence") && !lower.includes("must not have owned") && !lower.includes("not have owned")) {
+    return {
+      kind: "yesno", id, qualifyingAnswer: "yes", failReason,
+      label: "Is this your primary residence?",
+      meaning: "The home must be where you actually live full-time — not a vacation home, rental property, or someone else's address.",
+      proof: "Utility bills, bank statements, or government mail at the property address in your name, dated within the last 60 days.",
+    }
+  }
+
+  // Owner-occupied property
+  if (lower.includes("owner-occupied") || lower.includes("owner occupied")) {
+    return {
+      kind: "yesno", id, qualifyingAnswer: "yes", failReason,
+      label: "Do you own and live in the home?",
+      meaning: "An owner-occupied property is one where you both own and live in it as your primary residence. Rental properties you own but don't live in do not qualify.",
+      proof: "Property deed or title in your name, plus a utility bill or government mail showing your address matches the property.",
+    }
+  }
+
+  // Delinquent taxes / tax debt
+  if ((lower.includes("delinquent") && lower.includes("tax")) || lower.includes("back taxes") || (lower.includes("tax") && (lower.includes("past due") || lower.includes("overdue") || lower.includes("unpaid taxes")))) {
+    return {
+      kind: "yesno", id, qualifyingAnswer: "yes", failReason,
+      label: "Are you current on your taxes (no delinquent or unpaid taxes)?",
+      meaning: "Some programs require you to have no outstanding federal, state, or local tax debt — including income taxes, property taxes, or payroll taxes.",
+      proof: "IRS tax transcripts, property tax receipts, or a letter from the tax authority confirming you are current.",
+    }
+  }
+
   // Home non-ownership
   if (lower.includes("must not have owned") || lower.includes("not have owned a primary residence") || (lower.includes("owned") && lower.includes("prior"))) {
     return {
@@ -522,6 +552,19 @@ function statementToQuestion(text: string): string {
   if (/^organizations? must have\b/i.test(cleaned)) return cleaned.replace(/^organizations? must have\s+/i, "Does your organization have ").replace(/\.$/, "?")
   if (/^business(?:es)? must be\b/i.test(cleaned)) return cleaned.replace(/^business(?:es)? must be\s+/i, "Is your business ").replace(/\.$/, "?")
   if (/^business(?:es)? must have\b/i.test(cleaned)) return cleaned.replace(/^business(?:es)? must have\s+/i, "Does your business have ").replace(/\.$/, "?")
+
+  // Non-personal subject: "Home must be...", "Property must have...", etc.
+  const thingMustMatch = cleaned.match(/^(home|property|unit|vehicle|residence|building|address|account|land|lot|parcel)\s+must(?:\s+not)?\s+(be|have)\s+/i)
+  if (thingMustMatch) {
+    const subj = thingMustMatch[1].toLowerCase()
+    const isNeg = /must\s+not/i.test(cleaned)
+    const verb = thingMustMatch[2].toLowerCase()
+    const rest = cleaned.slice(thingMustMatch[0].length).replace(/\.$/, "")
+    const displaySubj = (subj === "home" || subj === "residence") ? "your home" : `the ${subj}`
+    if (verb === "have") return `Does ${displaySubj} have ${rest}?`
+    if (isNeg) return `Is ${displaySubj} not ${rest}?`
+    return `Is ${displaySubj} ${rest}?`
+  }
 
   let q = cleaned
     .replace(/^Must be a\s+/i, "Are you a ")

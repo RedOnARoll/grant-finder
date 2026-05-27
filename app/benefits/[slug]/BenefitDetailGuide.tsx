@@ -212,6 +212,20 @@ function isPriorityNotice(item: string): boolean {
 /** Convert statement-style criteria to a short, direct question. */
 function toQuestion(text: string): string {
   const cleaned = text.replace(/\s*\([^)]*\)/g, "").trim()
+
+  // Non-personal subject: "Home must be...", "Property must have...", etc.
+  const thingMustMatch = cleaned.match(/^(home|property|unit|vehicle|residence|building|address|account|land|lot|parcel)\s+must(?:\s+not)?\s+(be|have)\s+/i)
+  if (thingMustMatch) {
+    const subj = thingMustMatch[1].toLowerCase()
+    const isNeg = /must\s+not/i.test(cleaned)
+    const verb = thingMustMatch[2].toLowerCase()
+    const rest = cleaned.slice(thingMustMatch[0].length).replace(/\.$/, "")
+    const displaySubj = (subj === "home" || subj === "residence") ? "your home" : `the ${subj}`
+    if (verb === "have") return `Does ${displaySubj} have ${rest}?`
+    if (isNeg) return `Is ${displaySubj} not ${rest}?`
+    return `Is ${displaySubj} ${rest}?`
+  }
+
   let q = cleaned
     .replace(/^Must be a\s+/i, "Are you a ")
     .replace(/^Must be an\s+/i, "Are you an ")
