@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { Suspense } from "react";
 import { Inter } from "next/font/google";
-import { Analytics } from "@vercel/analytics/next";
+import { Analytics } from "@vercel/analytics/react";
 import SiteFooter from "@/components/SiteFooter";
 import UpgradeBanner from "@/components/UpgradeBanner";
 import ReturningVisitorBanner from "@/components/ReturningVisitorBanner";
