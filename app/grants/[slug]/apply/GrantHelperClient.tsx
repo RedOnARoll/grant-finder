@@ -320,7 +320,7 @@ export default function GrantHelperClient({
 
   async function handleGenerate() {
     if (access === "helper" && credits <= 0) { setPaywallOpen(true); return }
-    if (QUESTIONS.filter(q => q.required).some(q => !answers[q.key].trim())) return
+    if (questions.filter(q => q.required).some(q => !answers[q.key].trim())) return
     setGenState("generating"); setNarrative(""); setEditsRemaining(MAX_EDITS); setEditInstruction(""); setEditState("idle")
     try {
       const { data: { session } } = await supabase.auth.getSession()
