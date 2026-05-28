@@ -160,19 +160,12 @@ export default async function GrantDetailPage({
 
             <div className="flex flex-wrap gap-2 lg:justify-end">
               <SaveInterestButton slug={grant.slug} type="grant" />
-              <ApplyButton
-                slug={grant.slug}
-                type="grant"
-                name={grant.name}
-                agency={grant.agency}
-                applicationUrl={grant.application_url}
-                officialSourceUrl={grant.official_source_url}
-                requiredDocuments={grant.required_documents}
+              <Link
+                href={`/grants/${grant.slug}/apply`}
                 className="inline-flex h-10 items-center justify-center gap-2 rounded-lg bg-blue-600 px-4 text-sm font-semibold text-white hover:bg-blue-700"
               >
                 Start Application
-                <ExternalLink className="h-4 w-4" />
-              </ApplyButton>
+              </Link>
             </div>
           </div>
 
@@ -210,19 +203,12 @@ export default async function GrantDetailPage({
           <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_21rem] lg:items-start">
             <div className="min-w-0">
               <div className="lg:hidden mb-5 rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
-                <ApplyButton
-                  slug={grant.slug}
-                  type="grant"
-                  name={grant.name}
-                  agency={grant.agency}
-                  applicationUrl={grant.application_url}
-                  officialSourceUrl={grant.official_source_url}
-                  requiredDocuments={grant.required_documents}
+                <Link
+                  href={`/grants/${grant.slug}/apply`}
                   className="flex h-11 w-full items-center justify-center gap-2 rounded-lg bg-blue-600 px-4 text-sm font-semibold text-white hover:bg-blue-700"
                 >
                   Start Application
-                  <ExternalLink className="h-4 w-4" />
-                </ApplyButton>
+                </Link>
               </div>
 
               <GrantDetailTabs
@@ -289,18 +275,12 @@ export default async function GrantDetailPage({
                       <ExternalLink className="h-4 w-4" />
                     </a>
                   )}
-                  <ApplyButton
-                    slug={grant.slug}
-                    type="grant"
-                    name={grant.name}
-                    agency={grant.agency}
-                    applicationUrl={grant.application_url}
-                    officialSourceUrl={grant.official_source_url}
-                    requiredDocuments={grant.required_documents}
+                  <Link
+                    href={`/grants/${grant.slug}/apply`}
                     className="flex w-full items-center justify-center gap-2 rounded-lg border border-slate-200 px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
                   >
-                    View Document Checklist
-                  </ApplyButton>
+                    Open Grant Helper
+                  </Link>
                 </div>
                 <p className="mt-4 text-xs leading-5 text-slate-500">
                   Starting an application opens official agency guidance. GrantWay does not submit applications on your behalf.
