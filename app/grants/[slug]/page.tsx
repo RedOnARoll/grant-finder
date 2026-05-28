@@ -233,13 +233,13 @@ export default async function GrantDetailPage({
                   </p>
                   <div className="mt-5 grid gap-2">
                     {[
-                      ["Narrative draft", FileText],
-                      ["Budget and impact framing", CheckCircle2],
-                      ["3 AI edit rounds", Sparkles],
-                    ].map(([label, Icon]) => (
-                      <div key={label as string} className="flex items-center gap-2 text-sm text-slate-200">
+                      { label: "Narrative draft", icon: FileText },
+                      { label: "Budget and impact framing", icon: CheckCircle2 },
+                      { label: "3 AI edit rounds", icon: Sparkles },
+                    ].map(({ label, icon: Icon }) => (
+                      <div key={label} className="flex items-center gap-2 text-sm text-slate-200">
                         <Icon className="h-4 w-4 shrink-0 text-blue-300" />
-                        <span>{label as string}</span>
+                        <span>{label}</span>
                       </div>
                     ))}
                   </div>
