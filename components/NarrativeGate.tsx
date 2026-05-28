@@ -1,5 +1,6 @@
 "use client"
 
+import Link from "next/link"
 import { useEffect, useMemo, useRef, useState } from "react"
 import { createPortal } from "react-dom"
 import { Sparkles, Copy, Check, RefreshCw, Download, X, ChevronRight } from "lucide-react"
@@ -50,9 +51,11 @@ type AnswerKey = (typeof QUESTIONS)[number]["key"]
 export default function NarrativeGate({
   grantName,
   grantDescription,
+  applyHref,
 }: {
   grantName: string
   grantDescription?: string
+  applyHref?: string
 }) {
   const supabase = useMemo(() => getBrowserSupabase(), [])
   const [access, setAccess] = useState<AccessState>("loading")
@@ -320,16 +323,26 @@ export default function NarrativeGate({
             <p className="text-xs text-blue-700 mt-0.5">{credits} draft{credits !== 1 ? "s" : ""} remaining · {MAX_EDITS} AI edits per draft</p>
           </div>
         )}
-        <button
-          onClick={() => {
-            if (helperOutOfCredits) { setPaywallOpen(true); return }
-            setModalOpen(true)
-          }}
-          className="flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-blue-600 px-5 text-sm font-bold text-white transition-colors hover:bg-blue-700"
-        >
-          <Sparkles className="w-4 h-4" />
-          {genState === "done" ? "View / edit narrative" : "Open AI Writer"}
-        </button>
+        {applyHref && !helperOutOfCredits ? (
+          <Link
+            href={applyHref}
+            className="flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-blue-600 px-5 text-sm font-bold text-white transition-colors hover:bg-blue-700"
+          >
+            <Sparkles className="w-4 h-4" />
+            Prepare this application
+          </Link>
+        ) : (
+          <button
+            onClick={() => {
+              if (helperOutOfCredits) { setPaywallOpen(true); return }
+              setModalOpen(true)
+            }}
+            className="flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-blue-600 px-5 text-sm font-bold text-white transition-colors hover:bg-blue-700"
+          >
+            <Sparkles className="w-4 h-4" />
+            {genState === "done" ? "Continue draft" : "Prepare this application"}
+          </button>
+        )}
         {genState === "done" && (
           <p className="text-xs text-slate-400 text-center">
             {editsRemaining} edit{editsRemaining !== 1 ? "s" : ""} remaining
