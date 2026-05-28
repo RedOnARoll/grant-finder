@@ -3,6 +3,7 @@
 import { useState, useMemo, useRef, useEffect } from "react"
 import { Sparkles, Copy, Check, Download, RefreshCw, Square, CheckSquare2 } from "lucide-react"
 import { getBrowserSupabase } from "@/lib/supabase-browser"
+import type { GrantCategory } from "@/lib/types"
 import DocumentGuide from "@/components/DocumentGuide"
 import PaywallModal from "@/components/PaywallModal"
 
@@ -12,17 +13,138 @@ type EditState = "idle" | "editing" | "error"
 
 const MAX_EDITS = 3
 
-const QUESTIONS = [
-  { key: "orgDescription",    label: "Describe your organization",              placeholder: "What does your organization do, who do you serve, and what is your mission?",                              required: true  },
-  { key: "projectDescription",label: "What project will this grant fund?",      placeholder: "Describe the specific project, program, or initiative you're seeking funding for.",                      required: true  },
-  { key: "fundingUse",        label: "How will the funds be used?",             placeholder: "List the main expenses: staffing, equipment, marketing, operations, etc.",                              required: true  },
-  { key: "expectedOutcomes",  label: "What outcomes or impact do you expect?",  placeholder: "Describe measurable goals — people served, jobs created, products launched, etc.",                      required: true  },
-  { key: "additionalContext", label: "Anything else the reviewer should know?", placeholder: "Partnerships, past successes, unique qualifications, awards…",                                           required: false },
-] as const
+type AnswerKey = "orgDescription" | "projectDescription" | "fundingUse" | "expectedOutcomes" | "additionalContext"
+type Question = {
+  key: AnswerKey
+  label: string
+  placeholder: string
+  required: boolean
+}
 
-type AnswerKey = (typeof QUESTIONS)[number]["key"]
+function fmtAmount(amount: number | null | undefined) {
+  if (!amount) return null
+  return new Intl.NumberFormat("en-US", {
+    style: "currency",
+    currency: "USD",
+    maximumFractionDigits: 0,
+  }).format(amount)
+}
 
-function getPrepItems(documents: string[]): string[] {
+function fmtDate(date: string | null | undefined) {
+  if (!date) return null
+  return new Date(date).toLocaleDateString("en-US", {
+    month: "long",
+    day: "numeric",
+    year: "numeric",
+  })
+}
+
+function getApplicationQuestions({
+  grantName,
+  agency,
+  category,
+  maxAmount,
+  deadline,
+}: {
+  grantName: string
+  agency: string
+  category: GrantCategory
+  maxAmount?: number | null
+  deadline?: string | null
+}): Question[] {
+  const amount = fmtAmount(maxAmount)
+  const due = fmtDate(deadline)
+  const contextByCategory: Record<GrantCategory, { applicant: string; project: string; outcome: string }> = {
+    small_business: {
+      applicant: "Describe your business",
+      project: "What business project will this grant fund?",
+      outcome: "What business outcomes will the funding create?",
+    },
+    individual: {
+      applicant: "Describe yourself as the applicant",
+      project: "What personal goal or need will this grant support?",
+      outcome: "What will change for you if this grant is approved?",
+    },
+    agricultural: {
+      applicant: "Describe your farm, ranch, or agricultural operation",
+      project: "What agricultural project will this grant fund?",
+      outcome: "What production, conservation, or rural impact will result?",
+    },
+    research: {
+      applicant: "Describe the research team or organization",
+      project: "What research project will this grant fund?",
+      outcome: "What findings, deliverables, or technical milestones will result?",
+    },
+    education: {
+      applicant: "Describe the school, program, student, or organization",
+      project: "What education project will this grant fund?",
+      outcome: "What student, training, or access outcomes will result?",
+    },
+    veterans: {
+      applicant: "Describe the veteran, organization, or service population",
+      project: "What veteran-focused project or need will this grant support?",
+      outcome: "What veteran outcomes will the funding improve?",
+    },
+    arts: {
+      applicant: "Describe the artist, organization, or creative practice",
+      project: "What creative project will this grant fund?",
+      outcome: "What audience, community, or artistic outcome will result?",
+    },
+    housing: {
+      applicant: "Describe the household, property, or organization",
+      project: "What housing project or need will this grant support?",
+      outcome: "What housing stability or affordability outcome will result?",
+    },
+    energy: {
+      applicant: "Describe the applicant and property or site",
+      project: "What energy project will this grant fund?",
+      outcome: "What energy savings, resilience, or emissions impact will result?",
+    },
+    health: {
+      applicant: "Describe the healthcare organization, project team, or applicant",
+      project: "What health project or need will this grant support?",
+      outcome: "What patient, public health, or care access outcomes will result?",
+    },
+  }
+  const copy = contextByCategory[category]
+  const amountHint = amount ? ` Keep the request tied to the ${amount} maximum award.` : ""
+  const deadlineHint = due ? ` Mention readiness to submit by ${due}.` : ""
+
+  return [
+    {
+      key: "orgDescription",
+      label: copy.applicant,
+      placeholder: `Give ${agency} the context they need: mission, location, who you serve, relevant history, and why you fit ${grantName}.`,
+      required: true,
+    },
+    {
+      key: "projectDescription",
+      label: copy.project,
+      placeholder: `Describe the specific work, timeline, location, people involved, and why this project matches ${grantName}.${deadlineHint}`,
+      required: true,
+    },
+    {
+      key: "fundingUse",
+      label: "How will this grant money be used?",
+      placeholder: `List the main expenses and why each cost is necessary.${amountHint} Include estimates, vendors, staffing, equipment, materials, or services where relevant.`,
+      required: true,
+    },
+    {
+      key: "expectedOutcomes",
+      label: copy.outcome,
+      placeholder: "Use measurable results: people served, jobs created, units improved, savings, revenue, publications, training completions, or other concrete outputs.",
+      required: true,
+    },
+    {
+      key: "additionalContext",
+      label: `Anything else ${agency} should know?`,
+      placeholder: "Add eligibility details, partnerships, prior awards, matching funds, readiness, community support, risks, or anything requested in the official notice.",
+      required: false,
+    },
+  ]
+}
+
+function getPrepItems(documents: string[], category: GrantCategory, formNumbers: string[]): string[] {
   const base = [
     "Organization name, address, EIN / Tax ID",
     "Mission statement (2–3 sentences)",
@@ -31,6 +153,18 @@ function getPrepItems(documents: string[]): string[] {
     "Expected outcomes and measurable metrics",
     "Key staff names, titles, and short bios",
   ]
+  const categoryItems: Partial<Record<GrantCategory, string[]>> = {
+    small_business: ["Current business plan or pitch summary", "Revenue, employee count, and ownership details"],
+    individual: ["Personal statement explaining need and intended use", "Proof of identity, residency, or status if requested"],
+    agricultural: ["Farm or operation description, acreage, and production history", "Equipment quotes, conservation plan, or site details"],
+    research: ["Research abstract, methods, timeline, and deliverables", "Principal investigator bios and institutional support"],
+    education: ["Student, school, or program outcome data", "Enrollment, curriculum, training, or completion details"],
+    veterans: ["Veteran status documentation or service population data", "Partner or case management support details"],
+    arts: ["Artist statement, portfolio, or work samples", "Performance, exhibition, publication, or public access plan"],
+    housing: ["Property, lease, mortgage, or occupancy documentation", "Cost estimates, inspection notes, or project scope"],
+    energy: ["Utility bills, site details, contractor quotes, or energy audit", "Equipment specifications and expected savings"],
+    health: ["Population served, care model, and partner/provider details", "Licenses, clinical protocols, or outcome measures"],
+  }
   const docHints: Record<string, string> = {
     "financial statements":  "Last 2 years of audited or compiled financials",
     "business plan":         "Written business or project plan (current draft OK)",
@@ -51,7 +185,8 @@ function getPrepItems(documents: string[]): string[] {
       }
     }
   }
-  return [...base, ...extra.slice(0, 3)]
+  const forms = formNumbers.slice(0, 3).map((form) => `Official form: ${form}`)
+  return [...base, ...(categoryItems[category] ?? []), ...forms, ...extra.slice(0, 3)]
 }
 
 function SectionHead({ n, title, sub }: { n: number; title: string; sub: string }) {
@@ -116,16 +251,34 @@ interface Props {
   grantName: string
   grantDescription?: string
   requiredDocuments: string[]
+  category: GrantCategory
+  agency: string
+  maxAmount?: number | null
+  deadline?: string | null
+  formNumbers: string[]
 }
 
-export default function GrantHelperClient({ grantName, grantDescription, requiredDocuments }: Props) {
+export default function GrantHelperClient({
+  grantName,
+  grantDescription,
+  requiredDocuments,
+  category,
+  agency,
+  maxAmount,
+  deadline,
+  formNumbers,
+}: Props) {
   const supabase = useMemo(() => getBrowserSupabase(), [])
   const [access, setAccess]   = useState<AccessState>("loading")
   const [credits, setCredits] = useState(0)
   const [paywallOpen, setPaywallOpen] = useState(false)
 
   const [checked, setChecked] = useState<Set<number>>(new Set())
-  const prepItems = useMemo(() => getPrepItems(requiredDocuments), [requiredDocuments])
+  const prepItems = useMemo(() => getPrepItems(requiredDocuments, category, formNumbers), [requiredDocuments, category, formNumbers])
+  const questions = useMemo(
+    () => getApplicationQuestions({ grantName, agency, category, maxAmount, deadline }),
+    [grantName, agency, category, maxAmount, deadline]
+  )
 
   const [answers, setAnswers] = useState<Record<AnswerKey, string>>({
     orgDescription: "", projectDescription: "", fundingUse: "", expectedOutcomes: "", additionalContext: "",
@@ -232,7 +385,7 @@ export default function GrantHelperClient({ grantName, grantDescription, require
     setCopied(true); setTimeout(() => setCopied(false), 2000)
   }
 
-  const allRequired  = QUESTIONS.filter(q => q.required).every(q => answers[q.key].trim())
+  const allRequired  = questions.filter(q => q.required).every(q => answers[q.key].trim())
   const isGenerating = genState === "generating" || editState === "editing"
   const canGenerate  = access === "unlocked" || (access === "helper" && credits > 0)
 
@@ -291,7 +444,7 @@ export default function GrantHelperClient({ grantName, grantDescription, require
                 <p className="text-xs text-blue-700 mt-0.5">{credits} draft{credits !== 1 ? "s" : ""} available · {MAX_EDITS} AI edits per draft</p>
               </div>
             )}
-            {QUESTIONS.map(q => (
+            {questions.map(q => (
               <div key={q.key}>
                 <label className="block text-sm font-medium text-slate-800 mb-1.5">
                   {q.label}
