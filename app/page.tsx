@@ -6,7 +6,7 @@ import { Badge } from "@/components/ui/Badge"
 import { QuizIllustration } from "@/components/illustrations/GeoShapes"
 import HeroSearch from "@/components/HeroSearch"
 
-export const dynamic = "force-dynamic"
+export const revalidate = 3600
 
 const GRANT_CATEGORIES: Record<string, { label: string; description: string; accent: string }> = {
   small_business: { label: "Small Business",  description: "Grants for entrepreneurs, startups, and growing businesses.", accent: "bg-blue-100"   },

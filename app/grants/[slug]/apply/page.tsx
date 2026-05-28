@@ -5,7 +5,7 @@ import { getGrantBySlug } from "@/lib/supabase"
 import DocumentGuide from "@/components/DocumentGuide"
 import SiteNav from "@/components/SiteNav"
 
-export const dynamic = "force-dynamic"
+export const revalidate = 3600
 
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params
