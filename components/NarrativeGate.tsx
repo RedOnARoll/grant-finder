@@ -246,49 +246,57 @@ export default function NarrativeGate({
   if (access === "locked") {
     return (
       <>
-        <div className="space-y-4">
-          <div className="text-center">
-            <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-3">
-              <Sparkles className="w-5 h-5 text-blue-600" />
-            </div>
-            <p className="font-semibold text-slate-900 text-sm leading-snug">
+        <div className="space-y-5">
+          <div>
+            <p className="text-base font-bold leading-snug text-slate-900">
               Get a complete AI draft for this grant
             </p>
-            <p className="text-sm text-slate-500 mt-1 leading-5">
-              Answer 5 questions. Get a tailored proposal narrative — ready to edit and submit.
+            <p className="mt-2 text-sm leading-6 text-slate-600">
+              Answer 5 guided questions. GrantWay turns your answers into a proposal narrative, document plan, and editable draft for <strong>{grantName}</strong>.
             </p>
           </div>
 
-          <ul className="space-y-1.5">
+          <ul className="grid gap-2">
             {[
-              "Full narrative: summary, need, goals, budget",
-              `${MAX_EDITS} rounds of AI-powered edits`,
-              "Required documents checklist",
+              "Tailored summary, need, goals, and budget justification",
+              `${MAX_EDITS} AI edit rounds included`,
+              "Copy, export, and keep refining before you submit",
             ].map(f => (
-              <li key={f} className="flex items-center gap-2 text-xs text-slate-600">
-                <Check className="w-3.5 h-3.5 text-blue-600 shrink-0" />
-                {f}
+              <li key={f} className="flex items-start gap-2 rounded-lg bg-white px-3 py-2.5 text-sm leading-5 text-slate-700 ring-1 ring-blue-100">
+                <Check className="mt-0.5 h-4 w-4 shrink-0 text-blue-600" />
+                <span>{f}</span>
               </li>
             ))}
           </ul>
 
-          <div className="space-y-2 pt-1">
+          <div className="space-y-3 pt-1">
             <button
               onClick={() => setPaywallOpen(true)}
-              className="w-full bg-blue-600 text-white rounded-lg px-4 py-2.5 text-sm font-semibold hover:bg-blue-700 transition-colors"
+              className="w-full rounded-xl bg-blue-600 px-5 py-4 text-left text-white shadow-sm transition-colors hover:bg-blue-700"
             >
-              Unlock for this grant — $19
+              <span className="flex items-center justify-between gap-3">
+                <span>
+                  <span className="block text-base font-bold">Unlock Grant Helper</span>
+                  <span className="mt-0.5 block text-sm text-blue-100">$19 for this grant</span>
+                </span>
+                <ChevronRight className="h-5 w-5 shrink-0 text-blue-100" />
+              </span>
             </button>
             <button
               onClick={() => setPaywallOpen(true)}
-              className="w-full border border-slate-200 text-slate-700 rounded-lg px-4 py-2 text-sm font-medium hover:bg-slate-50 transition-colors flex items-center justify-center gap-1"
+              className="w-full rounded-xl border border-slate-300 bg-white px-5 py-3.5 text-left text-slate-800 transition-colors hover:bg-slate-50"
             >
-              Premium — unlimited grants
-              <ChevronRight className="w-3.5 h-3.5 text-slate-400" />
+              <span className="flex items-center justify-between gap-3">
+                <span>
+                  <span className="block text-sm font-bold">Go Premium</span>
+                  <span className="mt-0.5 block text-xs text-slate-500">Unlimited grant drafts and edits across programs</span>
+                </span>
+                <ChevronRight className="h-4 w-4 shrink-0 text-slate-400" />
+              </span>
             </button>
           </div>
 
-          <p className="text-center text-xs text-slate-400">Secure checkout via Stripe</p>
+          <p className="text-center text-xs text-slate-500">Secure checkout via Stripe. GrantWay helps you prepare; agencies make final decisions.</p>
         </div>
         <PaywallModal isOpen={paywallOpen} onClose={() => setPaywallOpen(false)} grantName={grantName} />
       </>
@@ -317,7 +325,7 @@ export default function NarrativeGate({
             if (helperOutOfCredits) { setPaywallOpen(true); return }
             setModalOpen(true)
           }}
-          className="w-full flex items-center justify-center gap-2 h-10 rounded-lg bg-blue-600 text-white text-sm font-medium hover:bg-blue-700 transition-colors"
+          className="flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-blue-600 px-5 text-sm font-bold text-white transition-colors hover:bg-blue-700"
         >
           <Sparkles className="w-4 h-4" />
           {genState === "done" ? "View / edit narrative" : "Open AI Writer"}
