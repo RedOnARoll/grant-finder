@@ -70,14 +70,19 @@ function getUrgency(grant: Grant) {
   }
 
   const daysUntil = Math.ceil((new Date(grant.deadline).getTime() - Date.now()) / 86400000)
-  // Recurring grant whose current deadline just passed — next cycle not yet scraped
-  if (daysUntil < 0 && grant.is_recurring) {
-    return { label: "Rolling deadline", classes: "bg-slate-100 text-slate-700", dot: "bg-slate-400" }
-  }
   if (daysUntil < 0) return { label: "Closed", classes: "bg-rose-50 text-rose-600", dot: "bg-rose-600" }
   if (daysUntil <= 14) return { label: `${daysUntil} days left - urgent`, classes: "bg-rose-50 text-rose-600", dot: "bg-rose-600" }
   if (daysUntil <= 60) return { label: `${daysUntil} days left`, classes: "bg-amber-50 text-amber-700", dot: "bg-amber-500" }
   return { label: `${daysUntil} days left`, classes: "bg-emerald-50 text-emerald-700", dot: "bg-emerald-700" }
+}
+
+function getNextOpenEstimate(grant: Grant): string | null {
+  if (!grant.deadline || !grant.is_recurring) return null
+  const d = new Date(grant.deadline)
+  if (d.getTime() > Date.now()) return null
+  const next = new Date(d)
+  next.setFullYear(next.getFullYear() + 1)
+  return next.toLocaleDateString("en-US", { month: "long", year: "numeric" })
 }
 
 function StatCard({
@@ -114,6 +119,8 @@ export default async function GrantDetailPage({
   if (!grant) notFound()
 
   const urgency = getUrgency(grant)
+  const isClosed = !!grant.deadline && new Date(grant.deadline).getTime() < Date.now()
+  const nextOpen = getNextOpenEstimate(grant)
   const category = grant.category.replace("_", " ")
   const reviewCycle = grant.processing_time_days ? `${grant.processing_time_days} days` : "Varies"
 
@@ -179,6 +186,23 @@ export default async function GrantDetailPage({
 
       <main className="mx-auto w-full max-w-7xl flex-1 px-4 py-8 sm:px-6 lg:px-8">
         <div className="space-y-6">
+          {isClosed && (
+            <div className="flex items-start gap-3 rounded-xl border border-rose-200 bg-rose-50 px-5 py-4">
+              <svg className="mt-0.5 h-5 w-5 shrink-0 text-rose-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <circle cx="12" cy="12" r="10" />
+                <path strokeLinecap="round" d="M12 8v4m0 4h.01" />
+              </svg>
+              <div>
+                <p className="font-semibold text-rose-900">Applications are currently closed.</p>
+                <p className="mt-1 text-sm text-rose-700">
+                  {nextOpen
+                    ? <>This grant is recurring — the next cycle is estimated to open around <strong>{nextOpen}</strong>. Check the official source to confirm when applications reopen.</>
+                    : <>This grant cycle has ended. Check the official source for information about future funding opportunities.</>
+                  }
+                </p>
+              </div>
+            </div>
+          )}
           <AdminVerificationWarning isVerified={grant.is_verified} lastVerifiedAt={grant.last_verified_at} />
 
           <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_21rem] lg:items-start">
@@ -229,9 +253,15 @@ export default async function GrantDetailPage({
                 <h2 className="text-sm font-semibold uppercase tracking-wide text-slate-500">Key dates</h2>
                 <dl className="mt-4 space-y-3 text-sm">
                   <div className="flex justify-between gap-4 border-b border-dashed border-slate-100 pb-3">
-                    <dt className="text-slate-500">Application deadline</dt>
-                    <dd className="text-right font-medium tabular-nums text-slate-900">{formatDate(grant.deadline)}</dd>
+                    <dt className="text-slate-500">Last deadline</dt>
+                    <dd className={`text-right font-medium tabular-nums${isClosed ? " text-rose-600 line-through decoration-rose-300" : " text-slate-900"}`}>{formatDate(grant.deadline)}</dd>
                   </div>
+                  {isClosed && (
+                    <div className="flex justify-between gap-4 border-b border-dashed border-slate-100 pb-3">
+                      <dt className="text-slate-500">Est. next cycle</dt>
+                      <dd className="text-right font-medium text-slate-900">{nextOpen ?? "Unknown"}</dd>
+                    </div>
+                  )}
                   <div className="flex justify-between gap-4 border-b border-dashed border-slate-100 pb-3">
                     <dt className="text-slate-500">Review cycle</dt>
                     <dd className="text-right font-medium text-slate-900">{reviewCycle}</dd>

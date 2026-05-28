@@ -52,12 +52,19 @@ function daysUntil(deadline: string | null | undefined): number | null {
 
 function urgencyBadge(days: number | null, isRecurring: boolean | null | undefined) {
   if (days === null) return { bg: "bg-slate-100", text: "text-slate-600", label: isRecurring ? "Rolling" : "—" }
-  if (days < 0)  return isRecurring
-    ? { bg: "bg-slate-100", text: "text-slate-600", label: "Rolling" }  // next cycle not yet scraped
-    : { bg: "bg-rose-50",   text: "text-rose-600",  label: "Closed" }
-  if (days <= 14)  return { bg: "bg-rose-50",   text: "text-rose-600",   label: `${days}d left` }
-  if (days <= 60)  return { bg: "bg-amber-50",  text: "text-amber-700",  label: `${days}d left` }
+  if (days < 0)    return { bg: "bg-rose-50",   text: "text-rose-600",  label: "Closed" }
+  if (days <= 14)  return { bg: "bg-rose-50",   text: "text-rose-600",  label: `${days}d left` }
+  if (days <= 60)  return { bg: "bg-amber-50",  text: "text-amber-700", label: `${days}d left` }
   return               { bg: "bg-emerald-50", text: "text-emerald-700", label: `${days}d left` }
+}
+
+function nextOpenEstimate(deadline: string | null | undefined, isRecurring: boolean | null | undefined): string | null {
+  if (!deadline || !isRecurring) return null
+  const d = new Date(deadline)
+  if (d.getTime() > Date.now()) return null
+  const next = new Date(d)
+  next.setFullYear(next.getFullYear() + 1)
+  return next.toLocaleDateString("en-US", { month: "long", year: "numeric" })
 }
 
 // ── Component ────────────────────────────────────────────────────────
@@ -384,11 +391,18 @@ export default function GrantsTableClient({ allGrants, initialCategory, initialS
                       const days = daysUntil(g.deadline)
                       const badge = urgencyBadge(days, g.is_recurring)
                       const catLabel = CATEGORY_LABELS[g.category] ?? g.category.replace(/_/g, " ")
+                      const isClosed = days !== null && days < 0
+                      const nextOpen = isClosed ? nextOpenEstimate(g.deadline, g.is_recurring) : null
                       return (
-                        <tr key={g.id} className="hover:bg-slate-50 transition-colors group cursor-pointer">
+                        <tr key={g.id} className={`hover:bg-slate-50 transition-colors group cursor-pointer${isClosed ? " bg-slate-50/60" : ""}`}>
                           <td className="px-4 py-3.5">
                             <Link href={`/grants/${g.slug}`} className="block">
-                              <p className="font-semibold text-slate-900 group-hover:text-blue-600 transition-colors leading-snug">{g.name}</p>
+                              <div className="flex items-center gap-2">
+                                <p className={`font-semibold leading-snug group-hover:text-blue-600 transition-colors${isClosed ? " text-slate-400" : " text-slate-900"}`}>{g.name}</p>
+                                {isClosed && (
+                                  <span className="shrink-0 text-xs font-semibold px-1.5 py-0.5 rounded bg-rose-100 text-rose-700">Closed</span>
+                                )}
+                              </div>
                               <p className="text-xs text-slate-400 mt-0.5">
                                 {g.agency} · <span className="capitalize">{catLabel}</span>
                               </p>
@@ -400,13 +414,16 @@ export default function GrantsTableClient({ allGrants, initialCategory, initialS
                             </span>
                           </td>
                           <td className="px-4 py-3.5 text-right hidden sm:table-cell">
-                            <span className="font-bold text-slate-900 tabular-nums">{formatAmount(g.max_amount)}</span>
+                            <span className={`font-bold tabular-nums${isClosed ? " text-slate-400" : " text-slate-900"}`}>{formatAmount(g.max_amount)}</span>
                           </td>
                           <td className="px-4 py-3.5">
-                            <p className="text-sm text-slate-700 tabular-nums leading-snug">{formatDate(g.deadline)}</p>
+                            <p className={`text-sm tabular-nums leading-snug${isClosed ? " text-slate-400 line-through" : " text-slate-700"}`}>{formatDate(g.deadline)}</p>
                             <span className={`inline-block text-xs font-semibold px-1.5 py-0.5 rounded mt-0.5 ${badge.bg} ${badge.text}`}>
                               {badge.label}
                             </span>
+                            {nextOpen && (
+                              <p className="text-xs text-slate-400 mt-0.5">Est. reopens {nextOpen}</p>
+                            )}
                           </td>
                           <td className="px-4 py-3.5">
                             <Link
