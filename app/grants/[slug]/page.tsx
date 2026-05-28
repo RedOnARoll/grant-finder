@@ -11,6 +11,7 @@ import ApplyButton from "@/components/ApplyButton"
 import GrantDetailTabs from "./GrantDetailTabs"
 import GrantMatchScore from "./GrantMatchScore"
 import AdminVerificationWarning from "@/components/AdminVerificationWarning"
+import ReportDataButton from "@/components/ReportDataButton"
 import ScrollToTop from "@/components/ScrollToTop"
 
 export const revalidate = 3600
@@ -304,6 +305,7 @@ export default async function GrantDetailPage({
                 <p className="mt-4 text-xs leading-5 text-slate-500">
                   Starting an application opens official agency guidance. GrantWay does not submit applications on your behalf.
                 </p>
+                <ReportDataButton slug={grant.slug} type="grant" />
               </div>
             </aside>
           </div>

@@ -10,6 +10,7 @@ import ApplyButton from "@/components/ApplyButton"
 import BenefitDetailGuide from "./BenefitDetailGuide"
 import StateProgramBanner from "@/components/StateProgramBanner"
 import AdminVerificationWarning from "@/components/AdminVerificationWarning"
+import ReportDataButton from "@/components/ReportDataButton"
 import ScrollToTop from "@/components/ScrollToTop"
 
 export const revalidate = 3600
@@ -266,6 +267,7 @@ export default async function BenefitDetailPage({
               <p className="mt-4 text-xs leading-5 text-slate-500">
                 GrantWay helps you prepare. The agency or local office decides eligibility and benefit amounts.
               </p>
+              <ReportDataButton slug={benefit.slug} type="benefit" />
             </div>
           </aside>
         </div>
