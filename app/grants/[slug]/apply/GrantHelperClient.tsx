@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useMemo, useRef, useEffect } from "react"
-import { Lock, Sparkles, Copy, Check, Download, RefreshCw, Square, CheckSquare2 } from "lucide-react"
+import { Sparkles, Copy, Check, Download, RefreshCw, Square, CheckSquare2 } from "lucide-react"
 import { getBrowserSupabase } from "@/lib/supabase-browser"
 import DocumentGuide from "@/components/DocumentGuide"
 import PaywallModal from "@/components/PaywallModal"
@@ -68,23 +68,46 @@ function SectionHead({ n, title, sub }: { n: number; title: string; sub: string 
 
 function AccessGate({ onUnlock, grantName }: { onUnlock: () => void; grantName: string }) {
   return (
-    <div className="rounded-xl border border-slate-200 bg-white p-8 flex flex-col items-center gap-4 text-center">
-      <div className="w-12 h-12 bg-slate-100 rounded-full flex items-center justify-center">
-        <Lock className="w-5 h-5 text-slate-500" />
+    <div className="rounded-2xl border border-blue-100 bg-gradient-to-b from-blue-50 to-white p-8 flex flex-col items-center gap-5 text-center">
+      <div className="w-14 h-14 bg-blue-100 rounded-2xl flex items-center justify-center">
+        <Sparkles className="w-7 h-7 text-blue-600" />
       </div>
       <div>
-        <p className="font-semibold text-slate-900">Unlock the AI Grant Writer</p>
-        <p className="text-sm text-slate-500 mt-1 max-w-xs">
-          Answer these questions once and get a tailored draft for {grantName}, with {MAX_EDITS} free edits.
+        <h3 className="text-xl font-bold text-slate-900">Write this application with AI</h3>
+        <p className="text-sm text-slate-500 mt-2 max-w-sm leading-6">
+          Answer 5 questions about your organization. Get a complete, tailored draft for <strong className="text-slate-700">{grantName}</strong> — with {MAX_EDITS} rounds of AI edits included.
         </p>
       </div>
-      <p className="text-xs text-slate-400">1 generation · {MAX_EDITS} edits included · $19 one-time</p>
-      <button
-        onClick={onUnlock}
-        className="bg-blue-600 text-white rounded-lg px-6 py-2.5 text-sm font-semibold hover:bg-blue-700 transition-colors"
-      >
-        Unlock Grant Helper
-      </button>
+      <ul className="flex flex-col gap-2 text-sm text-slate-600 text-left w-full max-w-sm">
+        {[
+          "Full narrative — summary, need, goals, and budget justification",
+          `${MAX_EDITS} AI-powered edit rounds`,
+          "Required documents checklist",
+          "Export to copy or download",
+        ].map(f => (
+          <li key={f} className="flex items-center gap-2">
+            <Check className="w-4 h-4 text-blue-600 shrink-0" />
+            {f}
+          </li>
+        ))}
+      </ul>
+      <div className="flex flex-col sm:flex-row gap-3 w-full max-w-sm">
+        <button
+          onClick={onUnlock}
+          className="flex-1 bg-blue-600 text-white rounded-lg px-5 py-3 text-sm font-semibold hover:bg-blue-700 transition-colors"
+        >
+          Unlock for $19
+          <span className="block text-xs font-normal opacity-75 mt-0.5">This grant only</span>
+        </button>
+        <button
+          onClick={onUnlock}
+          className="flex-1 border border-slate-300 text-slate-700 rounded-lg px-5 py-3 text-sm font-semibold hover:bg-slate-50 transition-colors"
+        >
+          Go Premium
+          <span className="block text-xs font-normal text-slate-400 mt-0.5">Unlimited grants</span>
+        </button>
+      </div>
+      <p className="text-xs text-slate-400">Secure checkout · Powered by Stripe · Cancel anytime</p>
     </div>
   )
 }
@@ -260,9 +283,12 @@ export default function GrantHelperClient({ grantName, grantDescription, require
         {(access === "unlocked" || access === "helper") && (
           <div className="bg-white border border-slate-200 rounded-xl p-5 space-y-5">
             {access === "helper" && (
-              <div className="flex items-center justify-between bg-amber-50 border border-amber-200 rounded-lg px-4 py-2.5">
-                <p className="text-sm text-amber-800 font-medium">{credits} generation{credits !== 1 ? "s" : ""} remaining</p>
-                <button onClick={() => setPaywallOpen(true)} className="text-xs text-blue-600 hover:underline font-medium">Upgrade</button>
+              <div className="rounded-lg bg-blue-50 border border-blue-200 px-4 py-3">
+                <div className="flex items-center justify-between gap-2">
+                  <p className="text-sm text-blue-900 font-semibold">Grant Helper — active for this grant</p>
+                  <button onClick={() => setPaywallOpen(true)} className="text-xs text-blue-600 hover:underline font-medium shrink-0">Upgrade to unlimited</button>
+                </div>
+                <p className="text-xs text-blue-700 mt-0.5">{credits} draft{credits !== 1 ? "s" : ""} available · {MAX_EDITS} AI edits per draft</p>
               </div>
             )}
             {QUESTIONS.map(q => (

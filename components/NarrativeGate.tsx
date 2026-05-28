@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react"
 import { createPortal } from "react-dom"
-import { Lock, Sparkles, Copy, Check, RefreshCw, Download, X, ChevronRight } from "lucide-react"
+import { Sparkles, Copy, Check, RefreshCw, Download, X, ChevronRight } from "lucide-react"
 import { getBrowserSupabase } from "@/lib/supabase-browser"
 import PaywallModal from "@/components/PaywallModal"
 
@@ -246,25 +246,49 @@ export default function NarrativeGate({
   if (access === "locked") {
     return (
       <>
-        <div className="rounded-xl border border-slate-200 overflow-hidden">
-          <div className="flex flex-col items-center gap-4 py-8 px-6 text-center">
-            <div className="w-12 h-12 bg-slate-100 rounded-full flex items-center justify-center">
-              <Lock className="w-6 h-6 text-slate-500" />
+        <div className="space-y-4">
+          <div className="text-center">
+            <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-3">
+              <Sparkles className="w-5 h-5 text-blue-600" />
             </div>
-            <div>
-              <h3 className="font-bold text-slate-900 text-lg">Write My Application</h3>
-              <p className="text-sm text-slate-500 mt-1 max-w-xs">
-                Let AI draft a professional narrative based on this grant&apos;s requirements and your profile.
-              </p>
-            </div>
-            <p className="text-xs text-slate-400">1 generation · {MAX_EDITS} free edits included</p>
+            <p className="font-semibold text-slate-900 text-sm leading-snug">
+              Get a complete AI draft for this grant
+            </p>
+            <p className="text-sm text-slate-500 mt-1 leading-5">
+              Answer 5 questions. Get a tailored proposal narrative — ready to edit and submit.
+            </p>
+          </div>
+
+          <ul className="space-y-1.5">
+            {[
+              "Full narrative: summary, need, goals, budget",
+              `${MAX_EDITS} rounds of AI-powered edits`,
+              "Required documents checklist",
+            ].map(f => (
+              <li key={f} className="flex items-center gap-2 text-xs text-slate-600">
+                <Check className="w-3.5 h-3.5 text-blue-600 shrink-0" />
+                {f}
+              </li>
+            ))}
+          </ul>
+
+          <div className="space-y-2 pt-1">
             <button
               onClick={() => setPaywallOpen(true)}
-              className="bg-blue-600 text-white rounded-lg px-6 py-2.5 text-sm font-medium hover:bg-blue-700 transition-colors"
+              className="w-full bg-blue-600 text-white rounded-lg px-4 py-2.5 text-sm font-semibold hover:bg-blue-700 transition-colors"
             >
-              Unlock Grant Helper
+              Unlock for this grant — $19
+            </button>
+            <button
+              onClick={() => setPaywallOpen(true)}
+              className="w-full border border-slate-200 text-slate-700 rounded-lg px-4 py-2 text-sm font-medium hover:bg-slate-50 transition-colors flex items-center justify-center gap-1"
+            >
+              Premium — unlimited grants
+              <ChevronRight className="w-3.5 h-3.5 text-slate-400" />
             </button>
           </div>
+
+          <p className="text-center text-xs text-slate-400">Secure checkout via Stripe</p>
         </div>
         <PaywallModal isOpen={paywallOpen} onClose={() => setPaywallOpen(false)} grantName={grantName} />
       </>
@@ -280,13 +304,12 @@ export default function NarrativeGate({
       {/* Compact sidebar trigger */}
       <div className="space-y-3">
         {access === "helper" && (
-          <div className="flex items-center justify-between bg-amber-50 border border-amber-200 rounded-lg px-4 py-2.5">
-            <p className="text-sm text-amber-800 font-medium">
-              {credits} generation{credits !== 1 ? "s" : ""} remaining
-            </p>
-            <button onClick={() => setPaywallOpen(true)} className="text-xs text-blue-600 hover:underline font-medium">
-              Upgrade to unlimited
-            </button>
+          <div className="rounded-lg bg-blue-50 border border-blue-200 px-4 py-3">
+            <div className="flex items-center justify-between gap-2">
+              <p className="text-sm text-blue-900 font-semibold">Grant Helper — active for this grant</p>
+              <button onClick={() => setPaywallOpen(true)} className="text-xs text-blue-600 hover:underline font-medium shrink-0">Upgrade →</button>
+            </div>
+            <p className="text-xs text-blue-700 mt-0.5">{credits} draft{credits !== 1 ? "s" : ""} remaining · {MAX_EDITS} AI edits per draft</p>
           </div>
         )}
         <button
