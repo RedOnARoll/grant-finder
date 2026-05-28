@@ -1,6 +1,6 @@
 import Link from "next/link"
 import { notFound } from "next/navigation"
-import { CalendarDays, ChevronRight, Clock, DollarSign, ExternalLink, Sparkles } from "lucide-react"
+import { CalendarDays, CheckCircle2, ChevronRight, Clock, DollarSign, ExternalLink, FileText, Sparkles } from "lucide-react"
 import { getGrants, getGrantBySlug } from "@/lib/supabase"
 import type { Grant } from "@/lib/types"
 import SiteNav from "@/components/SiteNav"
@@ -221,18 +221,30 @@ export default async function GrantDetailPage({
             </div>
 
             <aside className="space-y-4 lg:sticky lg:top-20">
-              <div className="overflow-hidden rounded-xl border border-blue-100 bg-white shadow-sm">
-                <div className="bg-slate-900 p-5 text-white">
-                  <div className="mb-3 flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-slate-300">
-                    <Sparkles className="h-4 w-4 text-blue-300" />
-                    GrantWay Pro
+              <div className="overflow-hidden rounded-xl border border-blue-200 bg-white shadow-sm">
+                <div className="bg-slate-900 p-6 text-white">
+                  <div className="mb-4 inline-flex items-center gap-2 rounded-lg bg-blue-600 px-3 py-1.5 text-xs font-semibold uppercase tracking-wide text-white">
+                    <Sparkles className="h-4 w-4" />
+                    Grant Helper
                   </div>
-                  <h2 className="text-lg font-bold leading-snug">Draft this application with AI</h2>
-                  <p className="mt-2 text-sm leading-6 text-slate-300">
-                    Generate a tailored proposal narrative using this grant and your answers.
+                  <h2 className="text-2xl font-bold leading-tight">Build a stronger application for this grant</h2>
+                  <p className="mt-3 text-sm leading-6 text-slate-300">
+                    Turn this program&apos;s requirements into a tailored narrative, checklist, and editable draft.
                   </p>
+                  <div className="mt-5 grid gap-2">
+                    {[
+                      ["Narrative draft", FileText],
+                      ["Budget and impact framing", CheckCircle2],
+                      ["3 AI edit rounds", Sparkles],
+                    ].map(([label, Icon]) => (
+                      <div key={label as string} className="flex items-center gap-2 text-sm text-slate-200">
+                        <Icon className="h-4 w-4 shrink-0 text-blue-300" />
+                        <span>{label as string}</span>
+                      </div>
+                    ))}
+                  </div>
                 </div>
-                <div className="p-5">
+                <div className="border-t border-blue-100 bg-blue-50 p-5">
                   <NarrativeGate grantName={grant.name} grantDescription={grant.description} />
                 </div>
               </div>
