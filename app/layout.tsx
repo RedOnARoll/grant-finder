@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Suspense } from "react";
 import { Inter } from "next/font/google";
+import { Analytics } from "@vercel/analytics/next";
 import SiteFooter from "@/components/SiteFooter";
 import UpgradeBanner from "@/components/UpgradeBanner";
 import ReturningVisitorBanner from "@/components/ReturningVisitorBanner";
@@ -41,6 +42,7 @@ export default function RootLayout({
           <SaveProgressBanner />
         </Suspense>
         <SiteFooter />
+        <Analytics />
       </body>
     </html>
   );
