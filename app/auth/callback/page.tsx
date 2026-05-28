@@ -52,7 +52,9 @@ function AuthCallback() {
         : safeNext
 
       if (isEmailConfirmation) {
-        const confirmationTarget = "/"
+        const confirmationTarget = profileCompletion(userProfile) === 0
+          ? "/onboarding?next=/grants"
+          : "/grants"
         broadcastAuthConfirmation(confirmationTarget)
         setConfirmedTarget(confirmationTarget)
         setConfirmed(true)

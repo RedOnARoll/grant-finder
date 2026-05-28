@@ -9,6 +9,7 @@ import { Badge } from "@/components/ui/Badge"
 import NarrativeGate from "@/components/NarrativeGate"
 import ApplyButton from "@/components/ApplyButton"
 import GrantDetailTabs from "./GrantDetailTabs"
+import GrantMatchScore from "./GrantMatchScore"
 import AdminVerificationWarning from "@/components/AdminVerificationWarning"
 import ScrollToTop from "@/components/ScrollToTop"
 
@@ -177,7 +178,7 @@ export default async function GrantDetailPage({
           <div className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
             <StatCard label="Max award" value={formatAmount(grant.max_amount)} icon={DollarSign} />
             <StatCard label="Deadline" value={formatDate(grant.deadline)} icon={CalendarDays} />
-            <StatCard label="Match score" value="Profile needed" note="Take quiz for score" icon={Sparkles} />
+            <GrantMatchScore grant={grant} />
             <StatCard label="Documents" value={`${grant.required_documents.length || 3}`} note="estimated items" icon={ExternalLink} />
             <StatCard label="Review cycle" value={reviewCycle} icon={Clock} />
           </div>
