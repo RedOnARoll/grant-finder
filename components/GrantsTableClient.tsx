@@ -156,6 +156,24 @@ export default function GrantsTableClient({ allGrants, initialCategory, initialS
     key: k, label: lbl, count: allGrants.filter(g => matchesCategory(g, k)).length,
   }))
 
+  // Per-tab counts (respects all other filters except urgency)
+  const urgencyBase = useMemo(() => allGrants.filter(g => {
+    if (selectedSources.size > 0 && !selectedSources.has(g.funding_source ?? "")) return false
+    if (selectedCategories.size > 0 && !Array.from(selectedCategories).some(cat => matchesCategory(g, cat))) return false
+    if (amountMin > 0 && (!g.max_amount || g.max_amount < amountMin)) return false
+    if (search) { const hay = `${g.name} ${g.agency} ${g.description}`.toLowerCase(); if (!hay.includes(search.toLowerCase())) return false }
+    if (openOnly) { const d = daysUntil(g.deadline); if (d !== null && d < 0) return false }
+    return true
+  }), [allGrants, selectedSources, selectedCategories, amountMin, search, openOnly])
+
+  const urgencyCounts = useMemo(() => ({
+    any:     urgencyBase.length,
+    "30":    urgencyBase.filter(g => { const d = daysUntil(g.deadline); return d !== null && d >= 0 && d <= 30 }).length,
+    "90":    urgencyBase.filter(g => { const d = daysUntil(g.deadline); return d !== null && d >= 0 && d <= 90 }).length,
+    "180":   urgencyBase.filter(g => { const d = daysUntil(g.deadline); return d !== null && d >= 0 && d <= 180 }).length,
+    rolling: urgencyBase.filter(g => !g.deadline).length,
+  }), [urgencyBase])
+
   // Live stats
   const totalValue = sorted.reduce((acc, g) => acc + (g.max_amount ?? 0), 0)
   const closingSoon = sorted.filter(g => { const d = daysUntil(g.deadline); return d !== null && d >= 0 && d <= 30 }).length
@@ -289,20 +307,23 @@ export default function GrantsTableClient({ allGrants, initialCategory, initialS
               {/* Urgency tabs */}
               <div className="flex gap-1 p-1 bg-white/10 rounded-lg">
                 {([
-                  ["any",     "Any"],
+                  ["any",     "All"],
                   ["30",      "≤ 30d"],
                   ["90",      "≤ 90d"],
                   ["180",     "≤ 6mo"],
-                  ["rolling", "Rolling"],
+                  ["rolling", "No deadline"],
                 ] as const).map(([k, lbl]) => (
                   <button
                     key={k}
                     onClick={() => setUrgency(k)}
-                    className={`px-3 py-1.5 rounded-md text-xs font-medium transition-colors whitespace-nowrap cursor-pointer ${
+                    className={`flex items-center gap-1 px-3 py-1.5 rounded-md text-xs font-medium transition-colors whitespace-nowrap cursor-pointer ${
                       urgency === k ? "bg-white text-slate-900" : "text-slate-300 hover:text-white"
                     }`}
                   >
                     {lbl}
+                    <span className={`tabular-nums ${urgency === k ? "text-slate-500" : "text-slate-500"}`}>
+                      {urgencyCounts[k]}
+                    </span>
                   </button>
                 ))}
               </div>
