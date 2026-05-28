@@ -89,6 +89,7 @@ export default function GrantsTableClient({ allGrants, initialCategory, initialS
     new Set(initialCategory ? initialCategory.split(",").filter(Boolean) : [])
   )
   const [urgency, setUrgency] = useState<"any" | "30" | "90" | "180" | "rolling">("any")
+  const [openOnly, setOpenOnly] = useState(true)
   const [amountMin, setAmountMin] = useState(0)
 
   // Sort state
@@ -116,6 +117,10 @@ export default function GrantsTableClient({ allGrants, initialCategory, initialS
         const hay = `${g.name} ${g.agency} ${g.description}`.toLowerCase()
         if (!hay.includes(search.toLowerCase())) return false
       }
+      if (openOnly) {
+        const d = daysUntil(g.deadline)
+        if (d !== null && d < 0) return false
+      }
       if (urgency !== "any") {
         const d = daysUntil(g.deadline)
         if (urgency === "rolling") return !g.deadline
@@ -124,7 +129,7 @@ export default function GrantsTableClient({ allGrants, initialCategory, initialS
       }
       return true
     })
-  }, [allGrants, selectedSources, selectedCategories, amountMin, search, urgency])
+  }, [allGrants, selectedSources, selectedCategories, amountMin, search, urgency, openOnly])
 
   const sorted = useMemo(() => {
     return [...filtered].sort((a, b) => {
@@ -161,10 +166,10 @@ export default function GrantsTableClient({ allGrants, initialCategory, initialS
     return `$${n}`
   }
 
-  const hasFilters = selectedSources.size > 0 || selectedCategories.size > 0 || amountMin > 0 || urgency !== "any" || !!search
+  const hasFilters = selectedSources.size > 0 || selectedCategories.size > 0 || amountMin > 0 || urgency !== "any" || !!search || !openOnly
 
   function clearAll() {
-    setSelectedSources(new Set()); setSelectedCategories(new Set()); setAmountMin(0); setUrgency("any"); setSearch("")
+    setSelectedSources(new Set()); setSelectedCategories(new Set()); setAmountMin(0); setUrgency("any"); setSearch(""); setOpenOnly(true)
   }
 
   // Sort header cell
@@ -253,7 +258,7 @@ export default function GrantsTableClient({ allGrants, initialCategory, initialS
             </div>
           </div>
 
-          {/* Keyword search + urgency tabs */}
+          {/* Keyword search + urgency tabs + open-only toggle */}
           <div className="flex flex-col sm:flex-row gap-3 items-stretch sm:items-center">
             <div className="flex-1 flex items-center gap-2 bg-white rounded-lg px-3 h-9">
               <Search className="w-4 h-4 text-slate-400 shrink-0" />
@@ -265,25 +270,42 @@ export default function GrantsTableClient({ allGrants, initialCategory, initialS
               />
             </div>
 
-            {/* Urgency tabs */}
-            <div className="flex gap-1 p-1 bg-white/10 rounded-lg shrink-0">
-              {([
-                ["any",     "Any"],
-                ["30",      "≤ 30d"],
-                ["90",      "≤ 90d"],
-                ["180",     "≤ 6mo"],
-                ["rolling", "Rolling"],
-              ] as const).map(([k, lbl]) => (
-                <button
-                  key={k}
-                  onClick={() => setUrgency(k)}
-                  className={`px-3 py-1.5 rounded-md text-xs font-medium transition-colors whitespace-nowrap cursor-pointer ${
-                    urgency === k ? "bg-white text-slate-900" : "text-slate-300 hover:text-white"
-                  }`}
-                >
-                  {lbl}
-                </button>
-              ))}
+            <div className="flex gap-2 shrink-0">
+              {/* Open-only toggle */}
+              <button
+                onClick={() => setOpenOnly(v => !v)}
+                className={`flex items-center gap-1.5 h-9 px-3 rounded-lg text-xs font-semibold transition-colors whitespace-nowrap cursor-pointer border ${
+                  openOnly
+                    ? "bg-emerald-500 border-emerald-400 text-white"
+                    : "bg-white/10 border-white/15 text-slate-400 hover:text-white hover:border-white/30"
+                }`}
+              >
+                <span className={`w-3.5 h-3.5 rounded-full border-2 flex items-center justify-center ${openOnly ? "border-white bg-white" : "border-slate-500"}`}>
+                  {openOnly && <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />}
+                </span>
+                Open only
+              </button>
+
+              {/* Urgency tabs */}
+              <div className="flex gap-1 p-1 bg-white/10 rounded-lg">
+                {([
+                  ["any",     "Any"],
+                  ["30",      "≤ 30d"],
+                  ["90",      "≤ 90d"],
+                  ["180",     "≤ 6mo"],
+                  ["rolling", "Rolling"],
+                ] as const).map(([k, lbl]) => (
+                  <button
+                    key={k}
+                    onClick={() => setUrgency(k)}
+                    className={`px-3 py-1.5 rounded-md text-xs font-medium transition-colors whitespace-nowrap cursor-pointer ${
+                      urgency === k ? "bg-white text-slate-900" : "text-slate-300 hover:text-white"
+                    }`}
+                  >
+                    {lbl}
+                  </button>
+                ))}
+              </div>
             </div>
           </div>
         </div>
