@@ -245,7 +245,11 @@ export default async function GrantDetailPage({
                   </div>
                 </div>
                 <div className="border-t border-blue-100 bg-blue-50 p-5">
-                  <NarrativeGate grantName={grant.name} grantDescription={grant.description} />
+                  <NarrativeGate
+                    grantName={grant.name}
+                    grantDescription={grant.description}
+                    applyHref={`/grants/${grant.slug}/apply`}
+                  />
                 </div>
               </div>
 
