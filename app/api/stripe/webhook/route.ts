@@ -44,94 +44,12 @@ async function logEvent(
   )
 }
 
-async function sendGuestWelcomeEmail(
-  email: string,
-  actionLink: string,
-  tierLabel: string
-) {
-  const resendKey = process.env.RESEND_API_KEY
-  const fromEmail = process.env.RESEND_FROM_EMAIL
-  if (!resendKey || !fromEmail || fromEmail.includes("@resend.dev")) return
-
-  await fetch("https://api.resend.com/emails", {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${resendKey}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      from: fromEmail,
-      to: email,
-      subject: `Your GrantWay ${tierLabel} account is ready`,
-      html: `
-        <div style="font-family: Arial, sans-serif; color: #0f172a; line-height: 1.6; max-width: 560px;">
-          <h1 style="font-size: 24px; margin-bottom: 12px;">Welcome to GrantWay ${tierLabel}!</h1>
-          <p>Your payment was successful. Click the button below to sign in and access your account:</p>
-          <p style="margin: 28px 0;">
-            <a href="${actionLink}" style="background: #2563eb; color: white; padding: 12px 24px; border-radius: 8px; text-decoration: none; font-weight: 600; font-size: 15px;">
-              Access My Account &rarr;
-            </a>
-          </p>
-          <p style="font-size: 13px; color: #475569;">
-            This link expires in 1 hour. After signing in you can set a password from your account settings.
-          </p>
-          <p style="font-size: 12px; color: #64748b; margin-top: 28px;">
-            If you didn't purchase GrantWay, you can safely ignore this email.
-          </p>
-        </div>
-      `,
-    }),
-  })
-}
-
 async function handleGuestCheckoutCompleted(
-  supabase: AppSupabaseClient,
-  session: Stripe.Checkout.Session
+  _supabase: AppSupabaseClient,
+  _session: Stripe.Checkout.Session
 ) {
-  const email = session.customer_details?.email
-  if (!email) throw new Error("Guest checkout: no email in session")
-
-  const customerId = typeof session.customer === "string" ? session.customer : session.customer?.id
-
-  // Create the Supabase user (email already verified by Stripe)
-  const { data: createData, error: createError } = await supabase.auth.admin.createUser({
-    email,
-    email_confirm: true,
-  })
-
-  // Generate a magic link — also returns user data if user already exists
-  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "https://grantway.org"
-  const { data: magicData } = await supabase.auth.admin.generateLink({
-    type: "magiclink",
-    email,
-    options: { redirectTo: `${siteUrl}/auth/callback?next=/account` },
-  })
-
-  const targetUserId = createData?.user?.id ?? magicData?.user?.id
-  if (!targetUserId) throw new Error("Guest checkout: could not resolve user ID")
-
-  if (createError && !createError.message.toLowerCase().includes("already")) {
-    throw createError
-  }
-
-  // Upsert profile — safe for both new and pre-existing users
-  const profileUpdate =
-    session.mode === "payment"
-      ? { subscription_tier: "grant_helper", one_time_credits: 3, is_premium: false,
-          stripe_subscription_id: null, cancel_at_period_end: false, current_period_end: null }
-      : { subscription_tier: "premium", subscription_status: "active", is_premium: true }
-
-  await supabase.from("profiles").upsert(
-    { user_id: targetUserId, stripe_customer_id: customerId ?? null, ...profileUpdate },
-    { onConflict: "user_id" }
-  )
-
-  // Send welcome email with magic sign-in link
-  const actionLink = magicData?.properties?.action_link
-  if (actionLink) {
-    const tierLabel = session.mode === "payment" ? "Grant Helper" : "Premium"
-    await sendGuestWelcomeEmail(email, actionLink, tierLabel)
-  }
+  // Account creation is deferred — user completes signup on /welcome after redirect.
+  // The /api/stripe/claim endpoint creates the account and applies the tier.
 }
 
 async function handleCheckoutCompleted(

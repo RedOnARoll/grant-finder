@@ -112,11 +112,10 @@ export async function POST(request: Request) {
       return NextResponse.json({ url: session.url })
     } else {
       // ── Guest checkout ──────────────────────────────────────────────────────
-      // Stripe Checkout will collect the email. Webhook creates the account.
-      const successUrl = new URL(`${BASE_URL}/welcome`)
-      successUrl.searchParams.set("setup", "1")
-      if (safeReturnTo) successUrl.searchParams.set("returnTo", safeReturnTo)
-      sessionParams.success_url = successUrl.toString()
+      // {CHECKOUT_SESSION_ID} is replaced by Stripe with the real session ID.
+      let guestSuccessUrl = `${BASE_URL}/welcome?setup=1&session_id={CHECKOUT_SESSION_ID}`
+      if (safeReturnTo) guestSuccessUrl += `&returnTo=${encodeURIComponent(safeReturnTo)}`
+      sessionParams.success_url = guestSuccessUrl
       sessionParams.metadata = { guest: "true" }
 
       const session = await stripe.checkout.sessions.create(sessionParams)
