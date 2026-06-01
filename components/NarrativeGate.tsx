@@ -10,7 +10,6 @@ type AccessState = "loading" | "locked" | "unlocked" | "helper"
 type GenState = "idle" | "generating" | "done" | "error"
 type EditState = "idle" | "editing" | "error"
 
-const MAX_EDITS = 3
 
 const QUESTIONS = [
   {
@@ -74,7 +73,6 @@ export default function NarrativeGate({
   const [copied, setCopied] = useState(false)
   const narrativeRef = useRef<HTMLDivElement>(null)
 
-  const [editsRemaining, setEditsRemaining] = useState(MAX_EDITS)
   const [editInstruction, setEditInstruction] = useState("")
   const [editState, setEditState] = useState<EditState>("idle")
 
@@ -135,7 +133,6 @@ export default function NarrativeGate({
 
     setGenState("generating")
     setNarrative("")
-    setEditsRemaining(MAX_EDITS)
     setEditInstruction("")
     setEditState("idle")
 
@@ -170,7 +167,6 @@ export default function NarrativeGate({
   }
 
   async function handleEdit() {
-    if (editsRemaining <= 0) return
     const instruction = editInstruction.trim()
     if (!instruction) return
 
@@ -201,7 +197,6 @@ export default function NarrativeGate({
         setNarrative(accumulated)
         if (narrativeRef.current) narrativeRef.current.scrollTop = narrativeRef.current.scrollHeight
       }
-      setEditsRemaining(r => r - 1)
       setEditState("idle")
     } catch (err) {
       console.error(err)
@@ -230,7 +225,6 @@ export default function NarrativeGate({
     if (access === "helper" && credits <= 0) { setPaywallOpen(true); return }
     setGenState("idle")
     setNarrative("")
-    setEditsRemaining(MAX_EDITS)
     setEditInstruction("")
     setEditState("idle")
   }
@@ -257,7 +251,7 @@ export default function NarrativeGate({
                 Let AI draft a professional narrative based on this grant&apos;s requirements and your profile.
               </p>
             </div>
-            <p className="text-xs text-slate-400">1 generation · {MAX_EDITS} free edits included</p>
+            <p className="text-xs text-slate-400">1 generation · unlimited edits included</p>
             <button
               onClick={() => setPaywallOpen(true)}
               className="bg-blue-600 text-white rounded-lg px-6 py-2.5 text-sm font-medium hover:bg-blue-700 transition-colors"
@@ -299,11 +293,6 @@ export default function NarrativeGate({
           <Sparkles className="w-4 h-4" />
           {genState === "done" ? "View / edit narrative" : "Open AI Writer"}
         </button>
-        {genState === "done" && (
-          <p className="text-xs text-slate-400 text-center">
-            {editsRemaining} edit{editsRemaining !== 1 ? "s" : ""} remaining
-          </p>
-        )}
       </div>
 
       {/* Full-size modal */}
@@ -392,14 +381,9 @@ export default function NarrativeGate({
               )}
 
               {/* Edit interface */}
-              {genState === "done" && editState !== "editing" && editsRemaining > 0 && (
+              {genState === "done" && editState !== "editing" && (
                 <div className="rounded-xl border border-slate-200 bg-white p-4 space-y-3">
-                  <div className="flex items-center justify-between">
-                    <p className="text-sm font-medium text-slate-900">Request an edit</p>
-                    <span className="text-xs text-slate-500 bg-slate-100 rounded-full px-2.5 py-0.5">
-                      {editsRemaining} of {MAX_EDITS} edits remaining
-                    </span>
-                  </div>
+                  <p className="text-sm font-medium text-slate-900">Request an edit</p>
                   <textarea
                     value={editInstruction}
                     onChange={e => setEditInstruction(e.target.value)}
@@ -417,14 +401,6 @@ export default function NarrativeGate({
                   {editState === "error" && (
                     <p className="text-xs text-rose-600 text-center">Edit failed. Please try again.</p>
                   )}
-                </div>
-              )}
-
-              {genState === "done" && editsRemaining === 0 && (
-                <div className="rounded-lg bg-amber-50 border border-amber-200 px-4 py-3 text-sm text-amber-800">
-                  You&apos;ve used all {MAX_EDITS} edits for this draft.{" "}
-                  <button onClick={handleReset} className="font-medium underline">Start a new draft</button>
-                  {access === "helper" && credits <= 0 && " (requires a new generation credit)"}.
                 </div>
               )}
 
@@ -461,7 +437,7 @@ export default function NarrativeGate({
               <div className="px-6 py-4 border-t border-slate-100 bg-slate-50 shrink-0 space-y-3">
                 {access === "helper" && (
                   <p className="text-xs text-amber-700 text-center">
-                    {credits} generation{credits !== 1 ? "s" : ""} remaining · includes {MAX_EDITS} free edits per draft
+                    {credits} generation{credits !== 1 ? "s" : ""} remaining · unlimited edits per draft
                   </p>
                 )}
                 <button
