@@ -2,6 +2,7 @@ import Link from "next/link"
 import { Sparkles, ArrowRight } from "lucide-react"
 import { getGrants, getBenefits } from "@/lib/supabase"
 import SiteNav from "@/components/SiteNav"
+import SaveResultsBanner from "@/components/SaveResultsBanner"
 
 export default async function AIResultsPage({
   searchParams,
@@ -79,21 +80,7 @@ export default async function AIResultsPage({
 
       <main className="flex-1 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 w-full">
 
-        {/* Save CTA — above the fold */}
-        <div className="bg-blue-600 text-white rounded-xl px-5 py-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-8">
-          <div>
-            <p className="font-semibold text-base leading-snug">Save your results — free, no credit card</p>
-            <p className="text-sm text-blue-100 mt-0.5">Track deadlines, documents, and eligibility checklists for every match.</p>
-          </div>
-          <div className="flex gap-2 shrink-0">
-            <Link href="/auth" className="h-9 px-4 bg-white text-blue-700 rounded-lg text-sm font-semibold hover:bg-blue-50 transition-colors inline-flex items-center whitespace-nowrap">
-              Create free account
-            </Link>
-            <Link href="/auth" className="h-9 px-4 bg-blue-700 text-white rounded-lg text-sm font-medium hover:bg-blue-800 transition-colors inline-flex items-center whitespace-nowrap">
-              Sign in
-            </Link>
-          </div>
-        </div>
+        <SaveResultsBanner />
 
         {/* Top matches */}
         <div className="flex items-baseline gap-3 mb-2">
