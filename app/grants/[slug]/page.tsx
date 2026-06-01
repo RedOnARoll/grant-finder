@@ -1,6 +1,6 @@
 import Link from "next/link"
 import { notFound } from "next/navigation"
-import { CalendarDays, ChevronRight, Clock, DollarSign, ExternalLink, Sparkles } from "lucide-react"
+import { CalendarDays, CheckCircle2, ChevronRight, Clock, DollarSign, ExternalLink, FileText, Sparkles } from "lucide-react"
 import { getGrants, getGrantBySlug } from "@/lib/supabase"
 import type { Grant } from "@/lib/types"
 import SiteNav from "@/components/SiteNav"
@@ -160,19 +160,12 @@ export default async function GrantDetailPage({
 
             <div className="flex flex-wrap gap-2 lg:justify-end">
               <SaveInterestButton slug={grant.slug} type="grant" />
-              <ApplyButton
-                slug={grant.slug}
-                type="grant"
-                name={grant.name}
-                agency={grant.agency}
-                applicationUrl={grant.application_url}
-                officialSourceUrl={grant.official_source_url}
-                requiredDocuments={grant.required_documents}
+              <Link
+                href={`/grants/${grant.slug}/apply`}
                 className="inline-flex h-10 items-center justify-center gap-2 rounded-lg bg-blue-600 px-4 text-sm font-semibold text-white hover:bg-blue-700"
               >
                 Start Application
-                <ExternalLink className="h-4 w-4" />
-              </ApplyButton>
+              </Link>
             </div>
           </div>
 
@@ -210,19 +203,12 @@ export default async function GrantDetailPage({
           <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_21rem] lg:items-start">
             <div className="min-w-0">
               <div className="lg:hidden mb-5 rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
-                <ApplyButton
-                  slug={grant.slug}
-                  type="grant"
-                  name={grant.name}
-                  agency={grant.agency}
-                  applicationUrl={grant.application_url}
-                  officialSourceUrl={grant.official_source_url}
-                  requiredDocuments={grant.required_documents}
+                <Link
+                  href={`/grants/${grant.slug}/apply`}
                   className="flex h-11 w-full items-center justify-center gap-2 rounded-lg bg-blue-600 px-4 text-sm font-semibold text-white hover:bg-blue-700"
                 >
                   Start Application
-                  <ExternalLink className="h-4 w-4" />
-                </ApplyButton>
+                </Link>
               </div>
 
               <GrantDetailTabs
@@ -235,19 +221,35 @@ export default async function GrantDetailPage({
             </div>
 
             <aside className="space-y-4 lg:sticky lg:top-20">
-              <div className="overflow-hidden rounded-xl border border-blue-100 bg-white shadow-sm">
-                <div className="bg-slate-900 p-5 text-white">
-                  <div className="mb-3 flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-slate-300">
-                    <Sparkles className="h-4 w-4 text-blue-300" />
-                    GrantWay Pro
+              <div className="overflow-hidden rounded-xl border border-blue-200 bg-white shadow-sm">
+                <div className="bg-slate-900 p-6 text-white">
+                  <div className="mb-4 inline-flex items-center gap-2 rounded-lg bg-blue-600 px-3 py-1.5 text-xs font-semibold uppercase tracking-wide text-white">
+                    <Sparkles className="h-4 w-4" />
+                    Grant Helper
                   </div>
-                  <h2 className="text-lg font-bold leading-snug">Draft this application with AI</h2>
-                  <p className="mt-2 text-sm leading-6 text-slate-300">
-                    Generate a tailored proposal narrative using this grant and your answers.
+                  <h2 className="text-2xl font-bold leading-tight">Build a stronger application for this grant</h2>
+                  <p className="mt-3 text-sm leading-6 text-slate-300">
+                    Turn this program&apos;s requirements into a tailored narrative, checklist, and editable draft.
                   </p>
+                  <div className="mt-5 grid gap-2">
+                    {[
+                      { label: "Narrative draft", icon: FileText },
+                      { label: "Budget and impact framing", icon: CheckCircle2 },
+                      { label: "3 AI edit rounds", icon: Sparkles },
+                    ].map(({ label, icon: Icon }) => (
+                      <div key={label} className="flex items-center gap-2 text-sm text-slate-200">
+                        <Icon className="h-4 w-4 shrink-0 text-blue-300" />
+                        <span>{label}</span>
+                      </div>
+                    ))}
+                  </div>
                 </div>
-                <div className="p-5">
-                  <NarrativeGate grantName={grant.name} grantDescription={grant.description} />
+                <div className="border-t border-blue-100 bg-blue-50 p-5">
+                  <NarrativeGate
+                    grantName={grant.name}
+                    grantDescription={grant.description}
+                    applyHref={`/grants/${grant.slug}/apply`}
+                  />
                 </div>
               </div>
 
@@ -289,18 +291,12 @@ export default async function GrantDetailPage({
                       <ExternalLink className="h-4 w-4" />
                     </a>
                   )}
-                  <ApplyButton
-                    slug={grant.slug}
-                    type="grant"
-                    name={grant.name}
-                    agency={grant.agency}
-                    applicationUrl={grant.application_url}
-                    officialSourceUrl={grant.official_source_url}
-                    requiredDocuments={grant.required_documents}
+                  <Link
+                    href={`/grants/${grant.slug}/apply`}
                     className="flex w-full items-center justify-center gap-2 rounded-lg border border-slate-200 px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
                   >
-                    View Document Checklist
-                  </ApplyButton>
+                    Open Grant Helper
+                  </Link>
                 </div>
                 <p className="mt-4 text-xs leading-5 text-slate-500">
                   Starting an application opens official agency guidance. GrantWay does not submit applications on your behalf.

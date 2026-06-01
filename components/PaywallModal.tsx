@@ -19,7 +19,7 @@ type Plan = {
 }
 
 const PREMIUM_FEATURES = [
-  { text: "Unlimited AI generations", included: true },
+  { text: "Unlimited grants — AI draft + 3 edits each", included: true },
   { text: "Full document checklist", included: true },
   { text: "PDF and Word export", included: true },
   { text: "Deadline alerts via email", included: true },
@@ -33,13 +33,13 @@ const PLANS: Plan[] = [
     label: "Grant Helper",
     price: "$19",
     period: "one-time",
-    cta: "Get Grant Helper",
+    cta: "Get Grant Helper — $19",
     features: [
-      { text: "3 AI narrative generations", included: true },
+      { text: "1 grant · 1 AI draft + 3 edits", included: true },
       { text: "Full document checklist", included: true },
-      { text: "PDF and Word export", included: true },
+      { text: "Copy & download export", included: true },
       { text: "Deadline alerts", included: false },
-      { text: "Advanced matching", included: false },
+      { text: "Unlimited grants", included: false },
     ],
   },
   {

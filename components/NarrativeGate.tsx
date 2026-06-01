@@ -1,8 +1,9 @@
 "use client"
 
+import Link from "next/link"
 import { useEffect, useMemo, useRef, useState } from "react"
 import { createPortal } from "react-dom"
-import { Lock, Sparkles, Copy, Check, RefreshCw, Download, X, ChevronRight } from "lucide-react"
+import { Sparkles, Copy, Check, RefreshCw, Download, X, ChevronRight } from "lucide-react"
 import { getBrowserSupabase } from "@/lib/supabase-browser"
 import PaywallModal from "@/components/PaywallModal"
 
@@ -49,9 +50,11 @@ type AnswerKey = (typeof QUESTIONS)[number]["key"]
 export default function NarrativeGate({
   grantName,
   grantDescription,
+  applyHref,
 }: {
   grantName: string
   grantDescription?: string
+  applyHref?: string
 }) {
   const supabase = useMemo(() => getBrowserSupabase(), [])
   const [access, setAccess] = useState<AccessState>("loading")
@@ -240,25 +243,57 @@ export default function NarrativeGate({
   if (access === "locked") {
     return (
       <>
-        <div className="rounded-xl border border-slate-200 overflow-hidden">
-          <div className="flex flex-col items-center gap-4 py-8 px-6 text-center">
-            <div className="w-12 h-12 bg-slate-100 rounded-full flex items-center justify-center">
-              <Lock className="w-6 h-6 text-slate-500" />
-            </div>
-            <div>
-              <h3 className="font-bold text-slate-900 text-lg">Write My Application</h3>
-              <p className="text-sm text-slate-500 mt-1 max-w-xs">
-                Let AI draft a professional narrative based on this grant&apos;s requirements and your profile.
-              </p>
-            </div>
-            <p className="text-xs text-slate-400">1 generation · unlimited edits included</p>
+        <div className="space-y-5">
+          <div>
+            <p className="text-base font-bold leading-snug text-slate-900">
+              Get a complete AI draft for this grant
+            </p>
+            <p className="mt-2 text-sm leading-6 text-slate-600">
+              Answer 5 guided questions. GrantWay turns your answers into a proposal narrative, document plan, and editable draft for <strong>{grantName}</strong>.
+            </p>
+          </div>
+
+          <ul className="grid gap-2">
+            {[
+              "Tailored summary, need, goals, and budget justification",
+              "Unlimited AI edit rounds included",
+              "Copy, export, and keep refining before you submit",
+            ].map(f => (
+              <li key={f} className="flex items-start gap-2 rounded-lg bg-white px-3 py-2.5 text-sm leading-5 text-slate-700 ring-1 ring-blue-100">
+                <Check className="mt-0.5 h-4 w-4 shrink-0 text-blue-600" />
+                <span>{f}</span>
+              </li>
+            ))}
+          </ul>
+
+          <div className="space-y-3 pt-1">
             <button
               onClick={() => setPaywallOpen(true)}
-              className="bg-blue-600 text-white rounded-lg px-6 py-2.5 text-sm font-medium hover:bg-blue-700 transition-colors"
+              className="w-full rounded-xl bg-blue-600 px-5 py-4 text-left text-white shadow-sm transition-colors hover:bg-blue-700"
             >
-              Unlock Grant Helper
+              <span className="flex items-center justify-between gap-3">
+                <span>
+                  <span className="block text-base font-bold">Unlock Grant Helper</span>
+                  <span className="mt-0.5 block text-sm text-blue-100">$19 for this grant</span>
+                </span>
+                <ChevronRight className="h-5 w-5 shrink-0 text-blue-100" />
+              </span>
+            </button>
+            <button
+              onClick={() => setPaywallOpen(true)}
+              className="w-full rounded-xl border border-slate-300 bg-white px-5 py-3.5 text-left text-slate-800 transition-colors hover:bg-slate-50"
+            >
+              <span className="flex items-center justify-between gap-3">
+                <span>
+                  <span className="block text-sm font-bold">Go Premium</span>
+                  <span className="mt-0.5 block text-xs text-slate-500">Unlimited grant drafts and edits across programs</span>
+                </span>
+                <ChevronRight className="h-4 w-4 shrink-0 text-slate-400" />
+              </span>
             </button>
           </div>
+
+          <p className="text-center text-xs text-slate-500">Secure checkout via Stripe. GrantWay helps you prepare; agencies make final decisions.</p>
         </div>
         <PaywallModal isOpen={paywallOpen} onClose={() => setPaywallOpen(false)} grantName={grantName} />
       </>
@@ -274,25 +309,34 @@ export default function NarrativeGate({
       {/* Compact sidebar trigger */}
       <div className="space-y-3">
         {access === "helper" && (
-          <div className="flex items-center justify-between bg-amber-50 border border-amber-200 rounded-lg px-4 py-2.5">
-            <p className="text-sm text-amber-800 font-medium">
-              {credits} generation{credits !== 1 ? "s" : ""} remaining
-            </p>
-            <button onClick={() => setPaywallOpen(true)} className="text-xs text-blue-600 hover:underline font-medium">
-              Upgrade to unlimited
-            </button>
+          <div className="rounded-lg bg-blue-50 border border-blue-200 px-4 py-3">
+            <div className="flex items-center justify-between gap-2">
+              <p className="text-sm text-blue-900 font-semibold">Grant Helper — active for this grant</p>
+              <button onClick={() => setPaywallOpen(true)} className="text-xs text-blue-600 hover:underline font-medium shrink-0">Upgrade →</button>
+            </div>
+            <p className="text-xs text-blue-700 mt-0.5">{credits} draft{credits !== 1 ? "s" : ""} remaining · unlimited AI edits per draft</p>
           </div>
         )}
-        <button
-          onClick={() => {
-            if (helperOutOfCredits) { setPaywallOpen(true); return }
-            setModalOpen(true)
-          }}
-          className="w-full flex items-center justify-center gap-2 h-10 rounded-lg bg-blue-600 text-white text-sm font-medium hover:bg-blue-700 transition-colors"
-        >
-          <Sparkles className="w-4 h-4" />
-          {genState === "done" ? "View / edit narrative" : "Open AI Writer"}
-        </button>
+        {applyHref && !helperOutOfCredits ? (
+          <Link
+            href={applyHref}
+            className="flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-blue-600 px-5 text-sm font-bold text-white transition-colors hover:bg-blue-700"
+          >
+            <Sparkles className="w-4 h-4" />
+            Prepare this application
+          </Link>
+        ) : (
+          <button
+            onClick={() => {
+              if (helperOutOfCredits) { setPaywallOpen(true); return }
+              setModalOpen(true)
+            }}
+            className="flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-blue-600 px-5 text-sm font-bold text-white transition-colors hover:bg-blue-700"
+          >
+            <Sparkles className="w-4 h-4" />
+            {genState === "done" ? "Continue draft" : "Prepare this application"}
+          </button>
+        )}
       </div>
 
       {/* Full-size modal */}
