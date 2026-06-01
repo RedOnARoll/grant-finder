@@ -177,9 +177,8 @@ Write the full narrative now, ready for the applicant to review and submit.`
       const encoder = new TextEncoder()
       try {
         const messageStream = anthropic.messages.stream({
-          model: "claude-opus-4-7",
+          model: "claude-haiku-4-5-20251001",
           max_tokens: 4096,
-          thinking: { type: "adaptive" },
           system: [{ type: "text", text: systemPrompt, cache_control: { type: "ephemeral" } }],
           messages: [{ role: "user", content: userPrompt }],
         })

@@ -89,9 +89,8 @@ Return the complete revised narrative, incorporating the feedback while maintain
       const encoder = new TextEncoder()
       try {
         const messageStream = anthropic.messages.stream({
-          model: "claude-opus-4-7",
+          model: "claude-haiku-4-5-20251001",
           max_tokens: 4096,
-          thinking: { type: "adaptive" },
           system: [
             {
               type: "text",
