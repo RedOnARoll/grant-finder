@@ -2,7 +2,7 @@
 
 import { useRef, useState } from "react"
 import { useRouter } from "next/navigation"
-import { Sparkles, MapPin, ArrowRight, Loader2 } from "lucide-react"
+import { Sparkles, MapPin, Globe, ArrowRight, Loader2 } from "lucide-react"
 
 const EXAMPLES = [
   "Single parent needing childcare help",
@@ -10,9 +10,23 @@ const EXAMPLES = [
   "Help paying rent or utilities",
 ]
 
+type Tab = "ai" | "zip" | "website"
+
+const TABS: { id: Tab; label: string }[] = [
+  { id: "ai",      label: "AI Match" },
+  { id: "zip",     label: "By ZIP"   },
+  { id: "website", label: "Website"  },
+]
+
+function TabIcon({ id }: { id: Tab }) {
+  if (id === "ai")      return <Sparkles className="w-3.5 h-3.5" />
+  if (id === "zip")     return <MapPin    className="w-3.5 h-3.5" />
+  return                       <Globe     className="w-3.5 h-3.5" />
+}
+
 export default function HeroSearch() {
   const router = useRouter()
-  const [tab, setTab] = useState<"ai" | "zip">("ai")
+  const [tab, setTab] = useState<Tab>("ai")
 
   // ── AI search ────────────────────────────────────────────────────────
   const textareaRef = useRef<HTMLTextAreaElement>(null)
@@ -79,27 +93,66 @@ export default function HeroSearch() {
     }
   }
 
+  // ── Website scrape ───────────────────────────────────────────────────
+  const [websiteUrl, setWebsiteUrl] = useState("")
+  const [websiteLoading, setWebsiteLoading] = useState(false)
+  const [websiteError, setWebsiteError] = useState("")
+
+  async function handleWebsiteSubmit(e: React.FormEvent) {
+    e.preventDefault()
+    const trimmed = websiteUrl.trim()
+    if (!trimmed) return
+    setWebsiteLoading(true)
+    setWebsiteError("")
+    try {
+      const res = await fetch("/api/scrape-website", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ url: trimmed }),
+      })
+      const data = await res.json() as {
+        keywords?: string[]
+        categories?: string[]
+        interpretation?: string
+        domain?: string
+        error?: string
+      }
+      if (!res.ok) {
+        setWebsiteError(data.error ?? "Could not reach that website — check the URL and try again")
+        return
+      }
+      const { keywords = [], categories = [], interpretation = "", domain = trimmed } = data
+      const params = new URLSearchParams()
+      params.set("q", `Website: ${domain}`)
+      if (keywords.length > 0) params.set("smart_q", keywords.join("|"))
+      if (categories.length > 0) params.set("topic", categories.join(","))
+      if (interpretation) params.set("hint", interpretation)
+      router.push(`/ai-results?${params.toString()}`)
+    } catch {
+      setWebsiteError("Something went wrong — check your connection and try again")
+    } finally {
+      setWebsiteLoading(false)
+    }
+  }
+
   // ────────────────────────────────────────────────────────────────────
   return (
     <div className="w-full max-w-xl">
 
       {/* ── Tab switcher ──────────────────────────────────────────── */}
       <div className="flex gap-1 p-1 rounded-xl bg-white/10 w-fit mb-4">
-        {(["ai", "zip"] as const).map((t) => (
+        {TABS.map(({ id, label }) => (
           <button
-            key={t}
+            key={id}
             type="button"
-            onClick={() => setTab(t)}
+            onClick={() => setTab(id)}
             className={`flex items-center gap-1.5 px-4 py-1.5 rounded-lg text-sm font-medium transition-all ${
-              tab === t
+              tab === id
                 ? "bg-white text-slate-900 shadow-sm"
                 : "text-slate-300 hover:text-white"
             }`}
           >
-            {t === "ai"
-              ? <><Sparkles className="w-3.5 h-3.5" /> AI Match</>
-              : <><MapPin className="w-3.5 h-3.5" /> By ZIP</>
-            }
+            <TabIcon id={id} /> {label}
           </button>
         ))}
       </div>
@@ -192,6 +245,48 @@ export default function HeroSearch() {
           </div>
           {zipError && (
             <p className="mt-2 text-sm text-rose-300 pl-1">{zipError}</p>
+          )}
+        </form>
+      )}
+
+      {/* ── Website tab ───────────────────────────────────────────── */}
+      {tab === "website" && (
+        <form onSubmit={handleWebsiteSubmit}>
+          <div className="flex flex-col sm:flex-row gap-3">
+            <div className="relative flex-1">
+              <Globe className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400 pointer-events-none" />
+              <input
+                type="text"
+                value={websiteUrl}
+                onChange={(e) => { setWebsiteUrl(e.target.value); setWebsiteError("") }}
+                placeholder="www.example.com"
+                autoComplete="url"
+                className={`w-full h-14 pl-12 pr-4 rounded-xl border-2 text-base text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-0 transition-all bg-white ${
+                  websiteError
+                    ? "border-rose-400 focus:border-rose-500"
+                    : "border-transparent focus:border-blue-400"
+                }`}
+              />
+            </div>
+            <button
+              type="submit"
+              disabled={websiteLoading || !websiteUrl.trim()}
+              className="h-14 px-6 rounded-xl bg-blue-500 text-white font-semibold text-base hover:bg-blue-400 active:bg-blue-600 transition-colors disabled:opacity-40 flex items-center justify-center gap-2 whitespace-nowrap shrink-0"
+            >
+              {websiteLoading
+                ? <Loader2 className="w-5 h-5 animate-spin" />
+                : <><span>Find Grants</span><ArrowRight className="w-4 h-4" /></>
+              }
+            </button>
+          </div>
+          {websiteError && (
+            <p className="mt-2 text-sm text-rose-300 pl-1">{websiteError}</p>
+          )}
+          {websiteLoading && (
+            <p className="mt-2 text-sm text-slate-400 pl-1 flex items-center gap-1.5">
+              <Loader2 className="w-3.5 h-3.5 animate-spin" />
+              Scanning {websiteUrl.trim()}…
+            </p>
           )}
         </form>
       )}
