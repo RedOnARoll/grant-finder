@@ -37,7 +37,7 @@ export default function PrivacyPage() {
           title: "Your Choices",
           body: [
             "You can update your profile, change notification preferences, manage your subscription, or delete your account from the account area.",
-            "You can contact support@grantway.org for help with privacy questions or account requests.",
+            "You can contact redonaroll09@gmail.com for help with privacy questions or account requests.",
           ],
         },
         {
