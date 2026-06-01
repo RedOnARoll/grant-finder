@@ -41,9 +41,9 @@ export async function middleware(request: NextRequest) {
   const token = getAccessToken(request)
 
   if (!token) {
-    const loginUrl = new URL("/auth", request.url)
-    loginUrl.searchParams.set("next", request.nextUrl.pathname)
-    return NextResponse.redirect(loginUrl)
+    // The browser Supabase client stores sessions outside request cookies in this app.
+    // Let AdminShell verify the signed-in user client-side instead of bouncing valid admins.
+    return NextResponse.next()
   }
 
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
@@ -57,9 +57,7 @@ export async function middleware(request: NextRequest) {
     })
 
     if (!userRes.ok) {
-      const loginUrl = new URL("/auth", request.url)
-      loginUrl.searchParams.set("next", request.nextUrl.pathname)
-      return NextResponse.redirect(loginUrl)
+      return NextResponse.next()
     }
 
     const user = await userRes.json() as { id: string }
