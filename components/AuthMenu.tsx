@@ -125,7 +125,7 @@ export default function AuthMenu() {
           Admin
         </Link>
       )}
-      <Link href="/account/dashboard" className="flex items-center gap-2">
+      <Link href="/account" className="flex items-center gap-2">
         <span className="w-8 h-8 rounded-full bg-slate-900 text-white text-xs font-semibold flex items-center justify-center shrink-0">
           {initials}
         </span>

@@ -7,14 +7,15 @@ import AuthMenu from "@/components/AuthMenu"
 import ProfileCompletionBanner from "@/components/ProfileCompletionBanner"
 import { LogoMark } from "@/components/illustrations/GeoShapes"
 
-type ActiveSection = "grants" | "benefits" | "programs" | "quiz" | "account"
+type ActiveSection = "grants" | "benefits" | "programs" | "quiz" | "dashboard" | "account"
 
 const NAV_LINKS: { label: string; href: string; key: ActiveSection | "about" }[] = [
-  { label: "All Programs", href: "/programs", key: "programs" },
-  { label: "Grants",       href: "/grants",   key: "grants"   },
-  { label: "Benefits",     href: "/benefits", key: "benefits" },
-  { label: "Quiz",         href: "/quiz",     key: "quiz"     },
-  { label: "About",        href: "/about",    key: "about"    },
+  { label: "All Programs", href: "/programs",           key: "programs"  },
+  { label: "Grants",       href: "/grants",             key: "grants"    },
+  { label: "Benefits",     href: "/benefits",           key: "benefits"  },
+  { label: "Quiz",         href: "/quiz",               key: "quiz"      },
+  { label: "Dashboard",    href: "/account/dashboard",  key: "dashboard" },
+  { label: "About",        href: "/about",              key: "about"     },
 ]
 
 function desktopLinkClass(isActive: boolean) {
