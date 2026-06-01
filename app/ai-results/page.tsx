@@ -16,7 +16,7 @@ export default async function AIResultsPage({
 
   const now = new Date()
   const allPrograms = [...grants, ...benefits].filter(p =>
-    !grantsOnly || !p.deadline || new Date(p.deadline) >= now || p.is_recurring
+    !grantsOnly || !p.deadline || new Date(p.deadline) >= now
   )
 
   const keywords = smart_q ? smart_q.split("|").filter(Boolean) : []
