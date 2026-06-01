@@ -13,7 +13,11 @@ export default async function AIResultsPage({
 
   const grantsOnly = type === "grants"
   const [grants, benefits] = await Promise.all([getGrants(), grantsOnly ? Promise.resolve([]) : getBenefits()])
-  const allPrograms = [...grants, ...benefits]
+
+  const now = new Date()
+  const allPrograms = [...grants, ...benefits].filter(p =>
+    !grantsOnly || !p.deadline || new Date(p.deadline) >= now || p.is_recurring
+  )
 
   const keywords = smart_q ? smart_q.split("|").filter(Boolean) : []
   const categories = topic ? topic.split(",").filter(Boolean) : []
