@@ -3,8 +3,6 @@ import { anthropic } from "@/lib/anthropic"
 import { rateLimit, getClientIp, tooManyRequests } from "@/lib/rate-limit"
 
 const GRANT_CATEGORIES = ["small_business", "individual", "agricultural", "research", "veterans", "arts"]
-const BENEFIT_SUBCATEGORIES = ["housing", "food", "disability", "education", "childcare", "energy", "health"]
-const ALL_TOPICS = [...GRANT_CATEGORIES, ...BENEFIT_SUBCATEGORIES]
 
 function isSafeUrl(url: URL): boolean {
   const host = url.hostname.toLowerCase()
@@ -97,16 +95,14 @@ export async function POST(request: Request) {
     const message = await anthropic.messages.create({
       model: "claude-haiku-4-5",
       max_tokens: 500,
-      system: `You are analyzing a website to find relevant U.S. grants the organization may qualify for.
+      system: `You are analyzing a business website to find relevant U.S. grants the organization may qualify for.
 
 Available grant categories: ${GRANT_CATEGORIES.join(", ")}
-Available benefit subcategories: ${BENEFIT_SUBCATEGORIES.join(", ")}
-All topics: ${ALL_TOPICS.join(", ")}
 
 Return ONLY a JSON object (no markdown, no explanation) with:
 - "keywords": array of 5-12 search terms for finding grants for this org (industry, org type, activities, ownership signals)
-- "categories": array of matching category values from the lists above — empty array if none clearly apply
-- "interpretation": phrase under 15 words describing this org and what funding they need
+- "categories": array of matching grant category values from the list above — empty array if none clearly apply
+- "interpretation": phrase under 15 words describing this org and what grant funding they need
 
 Examples:
 Bakery website → {"keywords":["small business","food","bakery","entrepreneur","startup","SBA","women-owned"],"categories":["small_business"],"interpretation":"small food business seeking startup or growth funding"}

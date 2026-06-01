@@ -39,6 +39,7 @@ export default function WebsiteScanner() {
       if (keywords.length > 0) params.set("smart_q", keywords.join("|"))
       if (categories.length > 0) params.set("topic", categories.join(","))
       if (interpretation) params.set("hint", interpretation)
+      params.set("type", "grants")
       router.push(`/ai-results?${params.toString()}`)
     } catch {
       setError("Something went wrong — check your connection and try again")

@@ -7,11 +7,12 @@ import SaveResultsBanner from "@/components/SaveResultsBanner"
 export default async function AIResultsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ q?: string; smart_q?: string; topic?: string; hint?: string }>
+  searchParams: Promise<{ q?: string; smart_q?: string; topic?: string; hint?: string; type?: string }>
 }) {
-  const { q = "", smart_q = "", topic = "", hint = "" } = await searchParams
+  const { q = "", smart_q = "", topic = "", hint = "", type = "" } = await searchParams
 
-  const [grants, benefits] = await Promise.all([getGrants(), getBenefits()])
+  const grantsOnly = type === "grants"
+  const [grants, benefits] = await Promise.all([getGrants(), grantsOnly ? Promise.resolve([]) : getBenefits()])
   const allPrograms = [...grants, ...benefits]
 
   const keywords = smart_q ? smart_q.split("|").filter(Boolean) : []
