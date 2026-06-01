@@ -282,17 +282,27 @@ export default function AccountDashboard() {
                 <span className="text-xs font-semibold uppercase tracking-wide opacity-70">{label}</span>
                 <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${tone.pill}`}>{items.length}</span>
               </div>
-              <div className="space-y-1.5 min-h-[3rem]">
-                {items.slice(0, 4).map(({ saved, program }) => (
-                  <Link
-                    key={`${saved.type}-${saved.slug}`}
-                    href={`/${program.type === "grant" ? "grants" : "benefits"}/${program.slug}`}
-                    className="block text-xs text-slate-800 truncate hover:underline leading-snug"
-                    title={program.name}
-                  >
-                    {program.name}
-                  </Link>
-                ))}
+              <div className="space-y-2 min-h-[3rem]">
+                {items.slice(0, 4).map(({ saved, program }) => {
+                  const base = `/${program.type === "grant" ? "grants" : "benefits"}/${program.slug}`
+                  return (
+                    <div key={`${saved.type}-${saved.slug}`} className="flex items-center justify-between gap-1.5">
+                      <Link
+                        href={base}
+                        className="text-xs text-slate-800 truncate hover:underline leading-snug min-w-0"
+                        title={program.name}
+                      >
+                        {program.name}
+                      </Link>
+                      <Link
+                        href={`${base}/apply`}
+                        className="shrink-0 text-xs font-medium text-blue-600 hover:underline"
+                      >
+                        Apply
+                      </Link>
+                    </div>
+                  )
+                })}
                 {items.length > 4 && (
                   <p className="text-xs text-slate-500">+{items.length - 4} more</p>
                 )}
@@ -348,7 +358,15 @@ export default function AccountDashboard() {
                       {program.name}
                     </Link>
                   </div>
-                  <p className="text-xs text-slate-400 truncate mt-0.5 pl-0.5">{program.agency}</p>
+                  <div className="flex items-center gap-3 mt-0.5 pl-0.5">
+                    <p className="text-xs text-slate-400 truncate">{program.agency}</p>
+                    <Link
+                      href={`/${program.type === "grant" ? "grants" : "benefits"}/${program.slug}/apply`}
+                      className="shrink-0 text-xs font-medium text-blue-600 hover:underline"
+                    >
+                      Start application →
+                    </Link>
+                  </div>
                 </div>
 
                 {/* Amount */}
