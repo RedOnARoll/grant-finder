@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react"
 import { getSavedPrograms, migrateAccountMetadata, removeSavedProgram, saveProgram } from "@/lib/account-db"
 import { getBrowserSupabase } from "@/lib/supabase-browser"
+import AuthPromptModal from "@/components/AuthPromptModal"
 
 const PENDING_SAVE_KEY = "grantfinder_pending_save"
 
@@ -32,6 +33,7 @@ export default function SaveInterestButton({ slug, type, label = "full" }: SaveI
   const [saved, setSaved] = useState(false)
   const [loaded, setLoaded] = useState(false)
   const [pending, setPending] = useState(false)
+  const [authModalOpen, setAuthModalOpen] = useState(false)
 
   useEffect(() => {
     let mounted = true
@@ -73,9 +75,9 @@ export default function SaveInterestButton({ slug, type, label = "full" }: SaveI
     const user = data.user
 
     if (!user) {
-      const next = `${window.location.pathname}${window.location.search}`
       window.localStorage.setItem(PENDING_SAVE_KEY, JSON.stringify({ slug, type }))
-      window.location.href = `/auth?next=${encodeURIComponent(next)}`
+      setPending(false)
+      setAuthModalOpen(true)
       return
     }
 
@@ -102,22 +104,29 @@ export default function SaveInterestButton({ slug, type, label = "full" }: SaveI
   const title = saved ? "Remove from dashboard" : "Save to dashboard and get deadline reminders"
 
   return (
-    <button
-      type="button"
-      onClick={toggleSaved}
-      disabled={!loaded || pending}
-      title={title}
-      aria-pressed={saved}
-      className={`inline-flex h-10 items-center justify-center gap-2 rounded-full border px-4 text-sm font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-60 ${
-        saved
-          ? "border-yellow-300 bg-yellow-50 text-zinc-900 hover:bg-yellow-100"
-          : "border-zinc-300 bg-white text-zinc-700 hover:border-zinc-500 hover:text-zinc-900"
-      } ${label === "icon" ? "w-10 px-0" : ""}`}
-    >
-      <span className={`text-base leading-none ${saved ? "text-yellow-500" : "text-zinc-400"}`}>
-        {symbol}
-      </span>
-      {label === "full" && <span>{text}</span>}
-    </button>
+    <>
+      <button
+        type="button"
+        onClick={toggleSaved}
+        disabled={!loaded || pending}
+        title={title}
+        aria-pressed={saved}
+        className={`inline-flex h-10 items-center justify-center gap-2 rounded-full border px-4 text-sm font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-60 ${
+          saved
+            ? "border-yellow-300 bg-yellow-50 text-zinc-900 hover:bg-yellow-100"
+            : "border-zinc-300 bg-white text-zinc-700 hover:border-zinc-500 hover:text-zinc-900"
+        } ${label === "icon" ? "w-10 px-0" : ""}`}
+      >
+        <span className={`text-base leading-none ${saved ? "text-yellow-500" : "text-zinc-400"}`}>
+          {symbol}
+        </span>
+        {label === "full" && <span>{text}</span>}
+      </button>
+      <AuthPromptModal
+        isOpen={authModalOpen}
+        onClose={() => setAuthModalOpen(false)}
+        mode="save"
+      />
+    </>
   )
 }
