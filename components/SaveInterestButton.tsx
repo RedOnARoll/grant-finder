@@ -1,6 +1,7 @@
 "use client"
 
-import { useEffect, useMemo, useState } from "react"
+import { useCallback, useEffect, useMemo, useState } from "react"
+import type { User } from "@supabase/supabase-js"
 import { getSavedPrograms, migrateAccountMetadata, removeSavedProgram, saveProgram } from "@/lib/account-db"
 import { getBrowserSupabase } from "@/lib/supabase-browser"
 import AuthPromptModal from "@/components/AuthPromptModal"
@@ -35,37 +36,53 @@ export default function SaveInterestButton({ slug, type, label = "full" }: SaveI
   const [pending, setPending] = useState(false)
   const [authModalOpen, setAuthModalOpen] = useState(false)
 
+  const syncSavedState = useCallback(async (user: User | null) => {
+    if (user) await migrateAccountMetadata(supabase, user)
+    const savedPrograms = user ? await getSavedPrograms(supabase, user.id) : []
+    const alreadySaved = savedPrograms.some((item) => item.slug === slug && item.type === type)
+    const pendingSave = user ? readPendingSave() : null
+
+    if (user && pendingSave?.slug === slug && pendingSave.type === type && !alreadySaved) {
+      try {
+        await saveProgram(supabase, user.id, slug, type)
+        clearPendingSave()
+        setSaved(true)
+      } catch {
+        setSaved(false)
+      }
+      return
+    }
+
+    if (pendingSave?.slug === slug && pendingSave.type === type) clearPendingSave()
+    setSaved(alreadySaved)
+  }, [slug, supabase, type])
+
   useEffect(() => {
-    let mounted = true
+    let alive = true
 
     supabase.auth.getUser().then(async ({ data }) => {
-      if (!mounted) return
-      if (data.user) await migrateAccountMetadata(supabase, data.user)
-      const savedPrograms = data.user ? await getSavedPrograms(supabase, data.user.id) : []
-      if (!mounted) return
-      const alreadySaved = savedPrograms.some((item) => item.slug === slug && item.type === type)
-      const pendingSave = data.user ? readPendingSave() : null
-
-      if (data.user && pendingSave?.slug === slug && pendingSave.type === type && !alreadySaved) {
-        try {
-          await saveProgram(supabase, data.user.id, slug, type)
-          clearPendingSave()
-          setSaved(true)
-        } catch {
-          setSaved(false)
-        }
-      } else {
-        if (pendingSave?.slug === slug && pendingSave.type === type) clearPendingSave()
-        setSaved(alreadySaved)
-      }
-
+      if (!alive) return
+      await syncSavedState(data.user)
+      if (!alive) return
       setLoaded(true)
     })
 
     return () => {
-      mounted = false
+      alive = false
     }
-  }, [slug, supabase, type])
+  }, [supabase, syncSavedState])
+
+  useEffect(() => {
+    const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (!session?.user) return
+      void syncSavedState(session.user).then(() => {
+        setAuthModalOpen(false)
+        setLoaded(true)
+      })
+    })
+
+    return () => listener.subscription.unsubscribe()
+  }, [supabase, syncSavedState])
 
   async function toggleSaved() {
     setPending(true)
