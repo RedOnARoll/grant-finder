@@ -5,6 +5,7 @@ import SiteNav from "@/components/SiteNav"
 import { Badge } from "@/components/ui/Badge"
 import { QuizIllustration } from "@/components/illustrations/GeoShapes"
 import HeroSearch from "@/components/HeroSearch"
+import WebsiteScanner from "@/components/WebsiteScanner"
 
 export const revalidate = 3600
 
@@ -112,13 +113,27 @@ export default async function HomePage() {
             </div>
 
             {/* Headline */}
-            <div className="text-center max-w-3xl mx-auto mb-14">
+            <div className="text-center max-w-3xl mx-auto mb-8">
               <h1 className="text-5xl sm:text-6xl font-bold text-white leading-[1.08] tracking-tight mb-4">
                 Billions in grants and benefits go unclaimed every year. Find what&apos;s yours — free.
               </h1>
               <p className="text-lg text-slate-300 leading-relaxed">
-                Browse {grants.length + benefits.length}+ federal, state, and private programs. No account needed to start.
+                Enter your website and we&apos;ll scan it to find grants you may qualify for.
               </p>
+            </div>
+
+            {/* Website scanner — primary CTA */}
+            <div className="max-w-2xl mx-auto mb-10">
+              <WebsiteScanner />
+            </div>
+
+            {/* Divider */}
+            <div className="flex items-center gap-3 mb-8 max-w-4xl mx-auto px-1">
+              <span className="flex-1 h-px bg-slate-700" />
+              <span className="text-xs text-slate-400 uppercase tracking-widest font-medium whitespace-nowrap">
+                Or browse by type
+              </span>
+              <span className="flex-1 h-px bg-slate-700" />
             </div>
 
             {/* Two choice cards */}

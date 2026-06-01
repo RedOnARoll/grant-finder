@@ -79,6 +79,22 @@ export default async function AIResultsPage({
 
       <main className="flex-1 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 w-full">
 
+        {/* Save CTA — above the fold */}
+        <div className="bg-blue-600 text-white rounded-xl px-5 py-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-8">
+          <div>
+            <p className="font-semibold text-base leading-snug">Save your results — free, no credit card</p>
+            <p className="text-sm text-blue-100 mt-0.5">Track deadlines, documents, and eligibility checklists for every match.</p>
+          </div>
+          <div className="flex gap-2 shrink-0">
+            <Link href="/auth" className="h-9 px-4 bg-white text-blue-700 rounded-lg text-sm font-semibold hover:bg-blue-50 transition-colors inline-flex items-center whitespace-nowrap">
+              Create free account
+            </Link>
+            <Link href="/auth" className="h-9 px-4 bg-blue-700 text-white rounded-lg text-sm font-medium hover:bg-blue-800 transition-colors inline-flex items-center whitespace-nowrap">
+              Sign in
+            </Link>
+          </div>
+        </div>
+
         {/* Top matches */}
         <div className="flex items-baseline gap-3 mb-2">
           <h2 className="text-xl font-bold text-slate-900">
@@ -140,24 +156,6 @@ export default async function AIResultsPage({
           </div>
         )}
 
-        {/* Save CTA */}
-        <div className="bg-amber-50 border border-amber-200 rounded-2xl p-6 flex flex-col sm:flex-row gap-6 items-start sm:items-center">
-          <div className="flex-1">
-            <p className="text-xs font-semibold uppercase tracking-widest text-amber-700 mb-1">Don&apos;t lose these</p>
-            <h3 className="text-lg font-bold text-slate-900 mb-1">Save these matches to a free account</h3>
-            <p className="text-sm text-slate-600 leading-relaxed">
-              Track eligibility checklists, applications, and deadlines — free forever, no credit card.
-            </p>
-          </div>
-          <div className="flex gap-2 shrink-0">
-            <Link href="/auth" className="h-10 px-4 bg-blue-600 text-white rounded-lg text-sm font-semibold hover:bg-blue-700 transition-colors inline-flex items-center whitespace-nowrap">
-              Create free account
-            </Link>
-            <Link href="/auth" className="h-10 px-4 border border-slate-200 bg-white text-slate-600 rounded-lg text-sm font-medium hover:bg-slate-50 transition-colors inline-flex items-center whitespace-nowrap">
-              Sign in
-            </Link>
-          </div>
-        </div>
       </main>
     </div>
   )
