@@ -180,7 +180,7 @@ Write the full narrative now, ready for the applicant to review and submit.`
           model: "claude-opus-4-7",
           max_tokens: 4096,
           thinking: { type: "adaptive" },
-          system: systemPrompt,
+          system: [{ type: "text", text: systemPrompt, cache_control: { type: "ephemeral" } }],
           messages: [{ role: "user", content: userPrompt }],
         })
 

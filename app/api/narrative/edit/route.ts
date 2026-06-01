@@ -78,12 +78,9 @@ export async function POST(req: NextRequest) {
 
   const systemPrompt = `You are an expert grant writer revising an existing grant application narrative based on applicant feedback. Maintain the professional tone and structure of the original while incorporating the requested changes. Return the complete revised narrative with all sections intact.`
 
-  const userPrompt = `Revise the following grant application narrative for "${grantName}" based on this feedback:
+  const userPrompt = `Apply this edit to the narrative above for "${grantName}":
 
-Feedback: ${editInstruction}
-
-Current narrative:
-${currentNarrative}
+${editInstruction}
 
 Return the complete revised narrative, incorporating the feedback while maintaining overall quality and completeness.`
 
@@ -95,7 +92,13 @@ Return the complete revised narrative, incorporating the feedback while maintain
           model: "claude-opus-4-7",
           max_tokens: 4096,
           thinking: { type: "adaptive" },
-          system: systemPrompt,
+          system: [
+            {
+              type: "text",
+              text: `${systemPrompt}\n\nCurrent narrative to edit:\n\n${currentNarrative}`,
+              cache_control: { type: "ephemeral" },
+            },
+          ],
           messages: [{ role: "user", content: userPrompt }],
         })
 
