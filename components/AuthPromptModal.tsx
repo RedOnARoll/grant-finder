@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react"
 import { createPortal } from "react-dom"
 import { LogIn, X } from "lucide-react"
+import AuthForm from "@/components/AuthForm"
 
 interface Props {
   isOpen: boolean
@@ -13,14 +14,12 @@ interface Props {
 
 const COPY = {
   save: {
-    title: "Sign in to save & track",
-    body: "Create a free account to save programs, get deadline reminders, and track your applications.",
-    cta: "Sign In to Save",
+    title: "Sign in or create an account",
+    body: "We will save this program to your dashboard after you log in.",
   },
   apply: {
-    title: "Sign in to start applying",
-    body: "Create a free account to track this application, get deadline reminders, and save your progress.",
-    cta: "Sign In to Apply",
+    title: "Sign in or create an account",
+    body: "Track this application, get deadline reminders, and save your progress.",
   },
 }
 
@@ -44,8 +43,6 @@ export default function AuthPromptModal({ isOpen, onClose, mode, next }: Props) 
 
   const copy = COPY[mode]
   const nextParam = next ?? (typeof window !== "undefined" ? `${window.location.pathname}${window.location.search}` : "/")
-  const signInHref = `/auth?mode=login&next=${encodeURIComponent(nextParam)}`
-  const signUpHref = `/auth?mode=signup&next=${encodeURIComponent(nextParam)}`
 
   return createPortal(
     <>
@@ -58,17 +55,23 @@ export default function AuthPromptModal({ isOpen, onClose, mode, next }: Props) 
         className="fixed z-[401] flex flex-col bg-white rounded-2xl shadow-2xl overflow-hidden"
         style={{
           top: "50%", left: "50%", transform: "translate(-50%, -50%)",
-          width: "380px", maxWidth: "calc(100vw - 32px)",
+          width: "480px", maxWidth: "calc(100vw - 32px)", maxHeight: "calc(100vh - 32px)",
         }}
         role="dialog"
         aria-modal="true"
       >
-        <div className="flex items-center justify-between px-5 pt-5 pb-4">
+        <div className="flex items-start justify-between gap-4 border-b border-slate-200 px-5 py-5">
           <div className="flex items-center gap-3">
             <div className="flex h-9 w-9 items-center justify-center rounded-full bg-blue-50">
               <LogIn className="h-4 w-4 text-blue-600" />
             </div>
-            <h2 className="text-base font-semibold text-slate-900">{copy.title}</h2>
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-wide text-blue-600">
+                {mode === "save" ? "Save & Track" : "Apply"}
+              </p>
+              <h2 className="mt-1 text-base font-semibold text-slate-900">{copy.title}</h2>
+              <p className="mt-1 text-sm leading-6 text-slate-500">{copy.body}</p>
+            </div>
           </div>
           <button
             onClick={onClose}
@@ -79,21 +82,8 @@ export default function AuthPromptModal({ isOpen, onClose, mode, next }: Props) 
           </button>
         </div>
 
-        <p className="px-5 pb-5 text-sm text-slate-500 leading-relaxed">{copy.body}</p>
-
-        <div className="flex flex-col gap-2 px-5 pb-5">
-          <a
-            href={signInHref}
-            className="flex h-10 items-center justify-center rounded-lg bg-blue-600 text-sm font-semibold text-white hover:bg-blue-700 transition-colors"
-          >
-            {copy.cta}
-          </a>
-          <a
-            href={signUpHref}
-            className="flex h-10 items-center justify-center rounded-lg border border-slate-200 text-sm font-medium text-slate-700 hover:bg-slate-50 transition-colors"
-          >
-            Create free account
-          </a>
+        <div className="overflow-y-auto bg-slate-50 p-4 sm:p-5">
+          <AuthForm initialMode="login" next={nextParam} />
         </div>
       </div>
     </>,
