@@ -13,6 +13,7 @@ import GrantMatchScore from "./GrantMatchScore"
 import AdminVerificationWarning from "@/components/AdminVerificationWarning"
 import ReportDataButton from "@/components/ReportDataButton"
 import ScrollToTop from "@/components/ScrollToTop"
+import PrefillButton from "./PrefillButton"
 
 export const revalidate = 3600
 export const dynamicParams = true
@@ -302,6 +303,11 @@ export default async function GrantDetailPage({
                   Starting an application opens official agency guidance. GrantWay does not submit applications on your behalf.
                 </p>
                 <ReportDataButton slug={grant.slug} type="grant" />
+              </div>
+
+              <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+                <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-slate-500">Pre-fill Application</h2>
+                <PrefillButton grantSlug={grant.slug} grantName={grant.name} />
               </div>
             </aside>
           </div>
