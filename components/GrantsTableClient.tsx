@@ -240,15 +240,16 @@ export default function GrantsTableClient({ allGrants, initialCategory, initialS
             </div>
           </div>
 
+          <WebsiteScanInput onScan={handleScan} />
+
           {/* AI search form */}
           <div className="bg-white/5 border border-white/10 rounded-xl px-4 py-4 mb-4">
             <div className="flex items-center gap-2 mb-3">
               <div className="w-7 h-7 rounded-lg bg-blue-600 flex items-center justify-center shrink-0">
                 <Sparkles className="w-3.5 h-3.5 text-white" />
               </div>
-              <p className="text-sm font-semibold text-white">Describe your business</p>
+              <p className="text-sm font-semibold text-white">Or describe your business</p>
             </div>
-            <WebsiteScanInput onScan={handleScan} />
             <textarea
               value={aiDesc}
               onChange={e => setAiDesc(e.target.value)}
