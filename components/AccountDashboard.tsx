@@ -113,16 +113,31 @@ export default function AccountDashboard() {
     const REQ = ["org", "project", "funding", "outcomes"]
     try {
       const ans: Record<string, Record<string, string>> = JSON.parse(localStorage.getItem("gw_ws_answers") ?? "{}")
-      const txt: Record<string, string> = JSON.parse(localStorage.getItem("gw_ws_text") ?? "{}")
+      const drMap: Record<string, number[]> = JSON.parse(localStorage.getItem("gw_ws_docready") ?? "{}")
       setWsPct(Object.fromEntries(dashboard.saved_programs.flatMap(s => {
         const p = programs.find(g => g.slug === s.slug); if (!p) return []
         const aDone = REQ.filter(k => ans[p.slug]?.[k]?.trim()).length
         const dc = p.required_documents.length
-        const dDone = dc > 0 ? [...Array(dc)].filter((_, i) => txt[`${p.slug}:${i}`]?.trim()).length : 0
+        const drArr = drMap[p.slug] ?? []
+        const dDone = dc > 0 ? drArr.filter(i => i < dc).length : 0
         return [[p.slug, Math.round((aDone / 4 + (dc > 0 ? dDone / dc : 0)) / (dc > 0 ? 2 : 1) * 100)]]
       })))
     } catch {}
   }, [programs, dashboard.saved_programs])
+
+  useEffect(() => {
+    if (!user || !Object.keys(wsPct).length) return
+    const toUpdate = dashboard.saved_programs.filter(s =>
+      s.status === "interested" && (wsPct[s.slug] ?? 0) > 0
+    )
+    if (!toUpdate.length) return
+    Promise.all(toUpdate.map(s =>
+      updateProgramStatus(supabase, user.id, s.slug, s.type, "applying")
+    )).then(async () => {
+      const savedPrograms = await getSavedPrograms(supabase, user.id)
+      setDashboard({ saved_programs: savedPrograms })
+    }).catch(() => {})
+  }, [wsPct, dashboard.saved_programs, user, supabase])
 
   async function runSaveMutation(mutation: () => Promise<unknown>, successMessage: string) {
     if (!user) return

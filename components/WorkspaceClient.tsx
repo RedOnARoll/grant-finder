@@ -236,7 +236,7 @@ export default function WorkspaceClient({ initialSlug }: { initialSlug?: string 
   const [loading, setLoading] = useState(true)
   const [selectedSlug, setSelectedSlug] = usePersist<string | null>("gw_ws_slug", null)
 
-  const [docReady, setDocReady] = usePersist<number[]>("gw_ws_docready", [])
+  const [docReadyMap, setDocReadyMap] = usePersist<Record<string, number[]>>("gw_ws_docready", {})
   const [docText, setDocTextMap] = usePersist<Record<string, string>>("gw_ws_text", {})
   const [attached, setAttachedMap] = usePersist<Record<string, string | null>>("gw_ws_attach", {})
   const [answers, setAnswersMap] = usePersist<Record<string, Record<string, string>>>("gw_ws_answers", {})
@@ -284,8 +284,15 @@ export default function WorkspaceClient({ initialSlug }: { initialSlug?: string 
 
   const grant = workingPrograms.find(g => g.slug === selectedSlug) ?? workingPrograms[0] ?? null
 
+  const docReady = useMemo(() => grant ? (docReadyMap[grant.slug] ?? []) : [], [docReadyMap, grant])
   const docReadySet = useMemo(() => new Set(docReady), [docReady])
-  const toggleDoc = (i: number) => setDocReady(a => a.includes(i) ? a.filter(x => x !== i) : [...a, i])
+  const toggleDoc = (i: number) => {
+    const slug = grant?.slug ?? ""
+    setDocReadyMap(m => {
+      const cur = m[slug] ?? []
+      return { ...m, [slug]: cur.includes(i) ? cur.filter(x => x !== i) : [...cur, i] }
+    })
+  }
   const getDocText = (i: number) => docText[`${grant?.slug}:${i}`] ?? ""
   const setDocText = (i: number, v: string) => setDocTextMap(m => ({ ...m, [`${grant?.slug}:${i}`]: v }))
   const getAttached = (i: number) => attached[`${grant?.slug}:${i}`] ?? null
