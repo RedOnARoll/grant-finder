@@ -162,7 +162,7 @@ export default async function GrantDetailPage({
             <div className="flex flex-wrap gap-2 lg:justify-end">
               <SaveInterestButton slug={grant.slug} type="grant" />
               <Link
-                href={`/grants/${grant.slug}/apply`}
+                href={`/workspace?slug=${grant.slug}`}
                 className="inline-flex h-10 items-center justify-center gap-2 rounded-lg bg-blue-600 px-4 text-sm font-semibold text-white hover:bg-blue-700"
               >
                 Start Application
@@ -205,7 +205,7 @@ export default async function GrantDetailPage({
             <div className="min-w-0">
               <div className="lg:hidden mb-5 rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
                 <Link
-                  href={`/grants/${grant.slug}/apply`}
+                  href={`/workspace?slug=${grant.slug}`}
                   className="flex h-11 w-full items-center justify-center gap-2 rounded-lg bg-blue-600 px-4 text-sm font-semibold text-white hover:bg-blue-700"
                 >
                   Start Application
@@ -249,7 +249,7 @@ export default async function GrantDetailPage({
                   <NarrativeGate
                     grantName={grant.name}
                     grantDescription={grant.description}
-                    applyHref={`/grants/${grant.slug}/apply`}
+                    applyHref={`/workspace?slug=${grant.slug}`}
                   />
                 </div>
               </div>
@@ -293,7 +293,7 @@ export default async function GrantDetailPage({
                     </a>
                   )}
                   <Link
-                    href={`/grants/${grant.slug}/apply`}
+                    href={`/workspace?slug=${grant.slug}`}
                     className="flex w-full items-center justify-center gap-2 rounded-lg border border-slate-200 px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
                   >
                     Open Grant Helper

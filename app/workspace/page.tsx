@@ -4,11 +4,16 @@ import WorkspaceClient from "@/components/WorkspaceClient"
 
 export const metadata = { title: "Workspace — GrantWay" }
 
-export default function WorkspacePage() {
+export default async function WorkspacePage({
+  searchParams,
+}: {
+  searchParams: Promise<{ slug?: string }>
+}) {
+  const { slug } = await searchParams
   return (
     <>
       <SiteNav active="workspace" />
-      <WorkspaceClient />
+      <WorkspaceClient initialSlug={slug} />
       <SiteFooter />
     </>
   )

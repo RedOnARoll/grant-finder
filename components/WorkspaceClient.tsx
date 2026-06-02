@@ -229,9 +229,9 @@ function RailHowItWorks() {
 
 const MAX_EDITS = 3
 
-export default function WorkspaceClient() {
+export default function WorkspaceClient({ initialSlug }: { initialSlug?: string }) {
   const supabase = useMemo(() => getBrowserSupabase(), [])
-  const [grants, setGrants] = useState<Grant[]>([])
+  const [allGrants, setAllGrants] = useState<Grant[]>([])
   const [savedPrograms, setSavedPrograms] = useState<SavedProgram[]>([])
   const [loading, setLoading] = useState(true)
   const [selectedSlug, setSelectedSlug] = usePersist<string | null>("gw_ws_slug", null)
@@ -252,10 +252,8 @@ export default function WorkspaceClient() {
   useEffect(() => {
     async function load() {
       const { data: { user } } = await supabase.auth.getUser()
-      const [{ data: grantData }] = await Promise.all([
-        supabase.from("grants").select("*").order("name"),
-      ])
-      setGrants((grantData ?? []) as Grant[])
+      const { data: grantData } = await supabase.from("grants").select("*").order("name")
+      setAllGrants((grantData ?? []) as Grant[])
       if (user) {
         const saved = await getSavedPrograms(supabase, user.id)
         setSavedPrograms(saved)
@@ -265,7 +263,25 @@ export default function WorkspaceClient() {
     load()
   }, [supabase])
 
-  const workingPrograms = grants.filter(g => savedPrograms.some(s => s.slug === g.slug))
+  // When navigating from a grant page, honour the URL slug on first load
+  const initialisedRef = useRef(false)
+  useEffect(() => {
+    if (!loading && initialSlug && !initialisedRef.current) {
+      initialisedRef.current = true
+      setSelectedSlug(initialSlug)
+    }
+  }, [loading, initialSlug, setSelectedSlug])
+
+  // Grants the user has saved, plus any grant opened directly via URL
+  const workingPrograms = useMemo(() => {
+    const saved = allGrants.filter(g => savedPrograms.some(s => s.slug === g.slug))
+    if (initialSlug && !saved.some(g => g.slug === initialSlug)) {
+      const extra = allGrants.find(g => g.slug === initialSlug)
+      if (extra) return [extra, ...saved]
+    }
+    return saved
+  }, [allGrants, savedPrograms, initialSlug])
+
   const grant = workingPrograms.find(g => g.slug === selectedSlug) ?? workingPrograms[0] ?? null
 
   const docReadySet = useMemo(() => new Set(docReady), [docReady])
@@ -322,7 +338,7 @@ export default function WorkspaceClient() {
     return <div className="min-h-[calc(100vh-64px)] bg-slate-50 flex items-center justify-center"><div className="w-6 h-6 border-2 border-blue-600 border-t-transparent rounded-full animate-spin" /></div>
   }
 
-  if (savedPrograms.length === 0) {
+  if (workingPrograms.length === 0) {
     return (
       <div className="min-h-[calc(100vh-64px)] bg-slate-50 flex items-center justify-center px-4">
         <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-10 max-w-md w-full text-center">
@@ -341,28 +357,32 @@ export default function WorkspaceClient() {
     <div className="min-h-[calc(100vh-64px)] bg-slate-50 pb-16">
       <div className="max-w-[1240px] mx-auto px-4 sm:px-6 lg:px-8 pt-6 grid gap-5">
 
-        {/* program picker */}
-        {workingPrograms.length > 1 && (
-          <div className="flex items-center gap-3">
-            <span className="text-sm font-medium text-slate-500 flex-none">Working on:</span>
-            <select value={grant?.slug ?? ""} onChange={e => setSelectedSlug(e.target.value)}
-              className="h-9 rounded-lg border border-slate-200 bg-white px-3 text-sm font-medium text-slate-800 outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100">
-              {workingPrograms.map(g => <option key={g.slug} value={g.slug}>{g.name}</option>)}
-            </select>
-          </div>
-        )}
-
         {grant && (
           <>
-            {/* compact hero bar */}
+            {/* compact hero bar with grant selector */}
             <div className="rounded-xl border border-slate-200 bg-white shadow-sm flex items-center justify-between gap-4 px-5 py-4 flex-wrap relative overflow-hidden">
               <div className="absolute inset-0 opacity-40 pointer-events-none" style={{ background: "radial-gradient(120% 140% at 100% 0%, #eff6ff 0%, transparent 50%)" }} />
-              <div className="flex items-center gap-3 min-w-0 relative">
+
+              <div className="flex items-center gap-3 min-w-0 flex-1 relative">
                 <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-blue-50 text-blue-700 text-xs font-semibold flex-none capitalize">
                   {grant.type === "benefit" ? "Benefit" : grant.category.replace(/_/g, " ")}
                 </span>
-                <h1 className="text-lg font-bold text-slate-900 leading-tight truncate">{grant.name}</h1>
+                {workingPrograms.length > 1 ? (
+                  <div className="relative min-w-0 flex-1 max-w-sm">
+                    <select
+                      value={grant.slug}
+                      onChange={e => setSelectedSlug(e.target.value)}
+                      className="w-full h-9 rounded-lg border border-slate-200 bg-white pl-3 pr-8 text-base font-bold text-slate-900 outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100 appearance-none truncate"
+                    >
+                      {workingPrograms.map(g => <option key={g.slug} value={g.slug}>{g.name}</option>)}
+                    </select>
+                    <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
+                  </div>
+                ) : (
+                  <h1 className="text-lg font-bold text-slate-900 leading-tight truncate">{grant.name}</h1>
+                )}
               </div>
+
               <div className="flex items-center gap-6 flex-none relative">
                 <div className="flex items-center gap-2.5">
                   <div className="w-9 h-9 rounded-lg bg-blue-50 text-blue-700 grid place-items-center"><Award className="w-4 h-4" /></div>
