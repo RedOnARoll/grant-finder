@@ -903,7 +903,7 @@ export default function EligibilityQuiz({ criteria, slug }: { criteria: Eligibil
       <div className="rounded-xl border border-zinc-200 bg-white p-6">
         <h2 className="text-xl font-semibold text-zinc-900 mb-2">Am I Eligible?</h2>
         <p className="text-sm text-zinc-500 mb-4">No specific eligibility criteria on file. Review the program&apos;s official requirements before applying.</p>
-        <Link href={`/benefits/${slug}/apply`} className="inline-flex items-center h-11 px-6 rounded-full bg-zinc-900 text-white text-sm font-semibold hover:bg-zinc-700 transition-colors">
+        <Link href={`/workspace?slug=${slug}`} className="inline-flex items-center h-11 px-6 rounded-full bg-zinc-900 text-white text-sm font-semibold hover:bg-zinc-700 transition-colors">
           Start Application →
         </Link>
       </div>
@@ -1008,7 +1008,7 @@ export default function EligibilityQuiz({ criteria, slug }: { criteria: Eligibil
               </div>
             </div>
           )}
-          <Link href={`/benefits/${slug}/apply`} className="inline-flex items-center h-11 px-6 rounded-full bg-zinc-900 text-white text-sm font-semibold hover:bg-zinc-700 transition-colors">
+          <Link href={`/workspace?slug=${slug}`} className="inline-flex items-center h-11 px-6 rounded-full bg-zinc-900 text-white text-sm font-semibold hover:bg-zinc-700 transition-colors">
             Start Application →
           </Link>
         </div>

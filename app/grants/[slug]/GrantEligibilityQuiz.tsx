@@ -1007,7 +1007,7 @@ export default function GrantEligibilityQuiz({ criteria, slug }: { criteria: Eli
           To confirm your eligibility, review the current official announcement on <strong>Grants.gov</strong> or the program&apos;s official website before applying.
           Do not rely on older criteria unless the current solicitation repeats them.
         </p>
-        <Link href={`/grants/${slug}/apply`} className="inline-flex items-center h-10 px-5 rounded-lg bg-blue-600 text-white text-sm font-medium hover:bg-blue-700 transition-colors">
+        <Link href={`/workspace?slug=${slug}`} className="inline-flex items-center h-10 px-5 rounded-lg bg-blue-600 text-white text-sm font-medium hover:bg-blue-700 transition-colors">
           Review Application Requirements →
         </Link>
       </div>
@@ -1019,7 +1019,7 @@ export default function GrantEligibilityQuiz({ criteria, slug }: { criteria: Eli
       <div className="rounded-xl border border-slate-200 p-6">
         <h2 className="text-base font-semibold text-slate-900 mb-2">Eligibility</h2>
         <p className="text-sm text-slate-500 mb-4">No specific eligibility criteria on file. Review the program&apos;s official requirements before applying.</p>
-        <Link href={`/grants/${slug}/apply`} className="inline-flex items-center h-10 px-5 rounded-lg bg-blue-600 text-white text-sm font-medium hover:bg-blue-700 transition-colors">Start Application →</Link>
+        <Link href={`/workspace?slug=${slug}`} className="inline-flex items-center h-10 px-5 rounded-lg bg-blue-600 text-white text-sm font-medium hover:bg-blue-700 transition-colors">Start Application →</Link>
       </div>
     )
   }
@@ -1070,7 +1070,7 @@ export default function GrantEligibilityQuiz({ criteria, slug }: { criteria: Eli
               <p className="text-xs text-amber-600">Eligibility rules can have exceptions. You may still want to apply or speak with a grant advisor.</p>
             </div>
           )}
-          <Link href={`/grants/${slug}/apply`} className="inline-flex items-center h-11 px-6 rounded-full bg-zinc-900 text-white text-sm font-medium hover:bg-zinc-700 transition-colors">Start Application →</Link>
+          <Link href={`/workspace?slug=${slug}`} className="inline-flex items-center h-11 px-6 rounded-full bg-zinc-900 text-white text-sm font-medium hover:bg-zinc-700 transition-colors">Start Application →</Link>
         </div>
       )}
     </div>
