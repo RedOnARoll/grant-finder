@@ -71,8 +71,8 @@ interface DocEditorProps {
 export function DocEditor({ grant, index, isReady, toggleReady, text, onTextChange, attached, onAttach }: DocEditorProps) {
   const title = grant.required_documents[index] ?? ""
   const docCount = grant.required_documents.length
-  const { what, how } = docGuidance(title)
-  const [guideOpen, setGuideOpen] = useState(true)
+  const { what } = docGuidance(title)
+  const [guideOpen, setGuideOpen] = useState(false)
   const fileRef = useRef<HTMLInputElement>(null)
 
   function exportTxt() {
@@ -108,20 +108,15 @@ export function DocEditor({ grant, index, isReady, toggleReady, text, onTextChan
       <div className="border-b border-slate-100">
         <button onClick={() => setGuideOpen(o => !o)} className="w-full flex items-center gap-2.5 px-5 py-3 text-left hover:bg-slate-50 transition-colors">
           <Sparkles className="w-4 h-4 text-blue-500" />
-          <span className="flex-1 text-xs font-semibold text-slate-700">What this is &amp; how to get it</span>
+          <span className="flex-1 text-xs font-semibold text-slate-700">What this is</span>
           <ChevronDown className={`w-4 h-4 text-slate-400 transition-transform ${guideOpen ? "rotate-180" : ""}`} />
         </button>
         {guideOpen && (
-          <div className="px-5 pb-4 grid gap-3">
-            {([["What it is", what, "bg-blue-500"], ["How to get it", how, "bg-amber-400"]] as const).map(([label, body, dot]) => (
-              <div key={label} className="flex gap-2.5">
-                <span className="flex-none mt-2"><span className={`block w-1.5 h-1.5 rounded-full ${dot}`} /></span>
-                <div>
-                  <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-400 mb-0.5">{label}</p>
-                  <p className="text-sm text-slate-600 leading-relaxed">{body}</p>
-                </div>
-              </div>
-            ))}
+          <div className="px-5 pb-4">
+            <div className="flex gap-2.5">
+              <span className="flex-none mt-2"><span className="block w-1.5 h-1.5 rounded-full bg-blue-500" /></span>
+              <p className="text-sm text-slate-600 leading-relaxed">{what}</p>
+            </div>
           </div>
         )}
       </div>
