@@ -1,8 +1,24 @@
 "use client"
 
 import { useRef, useState } from "react"
-import { Check, ChevronDown, Copy, Download, FileText, RefreshCw, Sparkles } from "lucide-react"
+import { Check, ChevronDown, Copy, Download, ExternalLink, FileText, RefreshCw, Sparkles } from "lucide-react"
 import type { Grant } from "@/lib/types"
+
+// Maps document title keywords → hosted PDF path (served from /public/forms/)
+const FORM_REGISTRY: Array<{ match: RegExp; path: string; label: string }> = [
+  { match: /sf[-\s]?424\b(?![\s-]?[abcd])/i,   path: "/forms/sf-424.pdf",  label: "SF-424" },
+  { match: /sf[-\s]?424[\s-]?a\b/i,             path: "/forms/sf-424a.pdf", label: "SF-424A" },
+  { match: /sf[-\s]?424[\s-]?b\b/i,             path: "/forms/sf-424b.pdf", label: "SF-424B" },
+  { match: /sf[-\s]?424[\s-]?c\b/i,             path: "/forms/sf-424c.pdf", label: "SF-424C" },
+  { match: /sf[-\s]?424[\s-]?d\b/i,             path: "/forms/sf-424d.pdf", label: "SF-424D" },
+  { match: /sf[-\s]?lll\b/i,                    path: "/forms/sf-lll.pdf",  label: "SF-LLL"  },
+  { match: /sf[-\s]?3881\b/i,                   path: "/forms/sf-3881.pdf", label: "SF-3881" },
+]
+
+function matchForm(title: string) {
+  // Also check against grant.form_numbers by passing them in title
+  return FORM_REGISTRY.find(f => f.match.test(title)) ?? null
+}
 
 export const QUESTIONS = [
   { key: "org",      label: "Describe your organization and its mission",  placeholder: "Who you are, who you serve, how long you've operated, and why you're positioned to do this work.",    required: true  },
@@ -73,7 +89,11 @@ export function DocEditor({ grant, index, isReady, toggleReady, text, onTextChan
   const docCount = grant.required_documents.length
   const { what } = docGuidance(title)
   const [guideOpen, setGuideOpen] = useState(false)
+  const [tab, setTab] = useState<"form" | "notes">("form")
   const fileRef = useRef<HTMLInputElement>(null)
+
+  // Check this doc title and any grant-level form numbers for a hosted PDF
+  const formMatch = matchForm(title) ?? grant.form_numbers?.map(n => matchForm(n)).find(Boolean) ?? null
 
   function exportTxt() {
     const a = Object.assign(document.createElement("a"), {
@@ -85,6 +105,7 @@ export function DocEditor({ grant, index, isReady, toggleReady, text, onTextChan
 
   return (
     <div className="rounded-xl border border-slate-200 bg-white shadow-sm overflow-hidden">
+      {/* header */}
       <div className="flex items-center justify-between gap-3 px-5 py-3 border-b border-slate-100 bg-slate-50">
         <div className="flex items-center gap-3 min-w-0">
           <div className="w-8 h-8 rounded-lg bg-slate-900 text-white grid place-items-center flex-none">
@@ -96,15 +117,24 @@ export function DocEditor({ grant, index, isReady, toggleReady, text, onTextChan
           </div>
         </div>
         <div className="flex items-center gap-2 flex-none">
-          <button onClick={exportTxt} className="inline-flex items-center gap-1.5 h-8 px-3 rounded-lg border border-slate-200 text-xs font-medium text-slate-600 hover:bg-white transition-colors">
-            <Download className="w-3.5 h-3.5" /> Export
-          </button>
+          {!formMatch && (
+            <button onClick={exportTxt} className="inline-flex items-center gap-1.5 h-8 px-3 rounded-lg border border-slate-200 text-xs font-medium text-slate-600 hover:bg-white transition-colors">
+              <Download className="w-3.5 h-3.5" /> Export
+            </button>
+          )}
+          {formMatch && (
+            <a href={formMatch.path} download={`${formMatch.label}.pdf`}
+              className="inline-flex items-center gap-1.5 h-8 px-3 rounded-lg border border-slate-200 text-xs font-medium text-slate-600 hover:bg-white transition-colors">
+              <Download className="w-3.5 h-3.5" /> Download PDF
+            </a>
+          )}
           <button onClick={toggleReady} className={`inline-flex items-center gap-1.5 h-8 px-3 rounded-lg text-xs font-semibold transition-colors ${isReady ? "border border-slate-200 bg-white text-slate-600 hover:bg-slate-50" : "bg-blue-600 text-white hover:bg-blue-700"}`}>
             {isReady ? <><Check className="w-3.5 h-3.5" /> Ready</> : <>Mark ready</>}
           </button>
         </div>
       </div>
 
+      {/* guidance row */}
       <div className="border-b border-slate-100">
         <button onClick={() => setGuideOpen(o => !o)} className="w-full flex items-center gap-2.5 px-5 py-3 text-left hover:bg-slate-50 transition-colors">
           <Sparkles className="w-4 h-4 text-blue-500" />
@@ -121,35 +151,76 @@ export function DocEditor({ grant, index, isReady, toggleReady, text, onTextChan
         )}
       </div>
 
-      <div className="p-5 bg-slate-50">
-        <div className="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden max-w-2xl mx-auto">
-          <div className="flex items-center justify-between px-4 py-2.5 border-b border-slate-100">
-            <span className="text-xs font-semibold text-slate-400">Working draft</span>
-            <span className="text-xs text-slate-400 tabular-nums">{text.trim() ? text.trim().split(/\s+/).length : 0} words</span>
-          </div>
-          <textarea value={text} onChange={e => onTextChange(e.target.value)}
-            placeholder={`Draft or paste notes for "${title}" — what you'll need, field values, or content you'll transfer to the official form.`}
-            className="w-full min-h-[260px] resize-y p-4 text-sm leading-relaxed text-slate-800 bg-transparent outline-none font-[inherit]" />
+      {/* tab bar — only shown when a PDF form is available */}
+      {formMatch && (
+        <div className="flex border-b border-slate-100 bg-white px-5 gap-4">
+          <button onClick={() => setTab("form")}
+            className={`py-2.5 text-xs font-semibold border-b-2 transition-colors ${tab === "form" ? "border-blue-600 text-blue-700" : "border-transparent text-slate-400 hover:text-slate-600"}`}>
+            Fill out form
+          </button>
+          <button onClick={() => setTab("notes")}
+            className={`py-2.5 text-xs font-semibold border-b-2 transition-colors ${tab === "notes" ? "border-blue-600 text-blue-700" : "border-transparent text-slate-400 hover:text-slate-600"}`}>
+            Notes &amp; attachments
+          </button>
         </div>
+      )}
 
-        <div className="max-w-2xl mx-auto mt-3">
-          <input ref={fileRef} type="file" accept=".pdf,.doc,.docx" className="hidden"
-            onChange={e => { const f = e.target.files?.[0]; if (f) onAttach(f.name) }} />
-          {attached ? (
-            <div className="flex items-center gap-3 px-4 py-3 rounded-xl bg-white border border-slate-200">
-              <div className="w-8 h-8 rounded-lg bg-blue-50 text-blue-700 grid place-items-center flex-none"><FileText className="w-4 h-4" /></div>
-              <span className="flex-1 text-sm font-semibold text-slate-800 truncate">{attached}</span>
-              <span className="text-xs font-medium bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded-md">Attached</span>
-              <button onClick={() => onAttach(null)} className="text-xs font-semibold text-slate-400 hover:text-slate-700 transition-colors">Remove</button>
+      {/* PDF form embed */}
+      {formMatch && tab === "form" && (
+        <div className="bg-slate-100 p-4">
+          <div className="rounded-xl overflow-hidden border border-slate-200 shadow-sm bg-white">
+            <div className="flex items-center justify-between px-4 py-2 border-b border-slate-100 bg-slate-50">
+              <span className="text-xs font-semibold text-slate-500">{formMatch.label} — fill in your browser, then download</span>
+              <a href={formMatch.path} target="_blank" rel="noopener noreferrer"
+                className="inline-flex items-center gap-1 text-xs font-medium text-blue-600 hover:text-blue-800 transition-colors">
+                Open in new tab <ExternalLink className="w-3 h-3" />
+              </a>
             </div>
-          ) : (
-            <button onClick={() => fileRef.current?.click()}
-              className="w-full flex items-center justify-center gap-2 py-4 rounded-xl border-2 border-dashed border-slate-200 bg-white text-sm font-semibold text-slate-400 hover:border-blue-400 hover:text-blue-600 transition-colors">
-              <Download className="w-4 h-4 rotate-180" /> Attach the completed file
-            </button>
-          )}
+            <iframe
+              src={formMatch.path}
+              title={formMatch.label}
+              className="w-full"
+              style={{ height: "780px", border: "none" }}
+            />
+          </div>
+          <p className="mt-2 text-center text-[11px] text-slate-400">
+            Fill fields above, then use <strong>Download PDF</strong> in the header to save your completed copy.
+          </p>
         </div>
-      </div>
+      )}
+
+      {/* notes + attach — always shown for non-form docs, or on the notes tab */}
+      {(!formMatch || tab === "notes") && (
+        <div className="p-5 bg-slate-50">
+          <div className="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden max-w-2xl mx-auto">
+            <div className="flex items-center justify-between px-4 py-2.5 border-b border-slate-100">
+              <span className="text-xs font-semibold text-slate-400">Working draft</span>
+              <span className="text-xs text-slate-400 tabular-nums">{text.trim() ? text.trim().split(/\s+/).length : 0} words</span>
+            </div>
+            <textarea value={text} onChange={e => onTextChange(e.target.value)}
+              placeholder={`Draft or paste notes for "${title}" — what you'll need, field values, or content you'll transfer to the official form.`}
+              className="w-full min-h-[260px] resize-y p-4 text-sm leading-relaxed text-slate-800 bg-transparent outline-none font-[inherit]" />
+          </div>
+
+          <div className="max-w-2xl mx-auto mt-3">
+            <input ref={fileRef} type="file" accept=".pdf,.doc,.docx" className="hidden"
+              onChange={e => { const f = e.target.files?.[0]; if (f) onAttach(f.name) }} />
+            {attached ? (
+              <div className="flex items-center gap-3 px-4 py-3 rounded-xl bg-white border border-slate-200">
+                <div className="w-8 h-8 rounded-lg bg-blue-50 text-blue-700 grid place-items-center flex-none"><FileText className="w-4 h-4" /></div>
+                <span className="flex-1 text-sm font-semibold text-slate-800 truncate">{attached}</span>
+                <span className="text-xs font-medium bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded-md">Attached</span>
+                <button onClick={() => onAttach(null)} className="text-xs font-semibold text-slate-400 hover:text-slate-700 transition-colors">Remove</button>
+              </div>
+            ) : (
+              <button onClick={() => fileRef.current?.click()}
+                className="w-full flex items-center justify-center gap-2 py-4 rounded-xl border-2 border-dashed border-slate-200 bg-white text-sm font-semibold text-slate-400 hover:border-blue-400 hover:text-blue-600 transition-colors">
+                <Download className="w-4 h-4 rotate-180" /> Attach the completed file
+              </button>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   )
 }
