@@ -48,6 +48,7 @@ export default function AccountDashboard() {
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [message, setMessage] = useState<string | null>(null)
+  const [wsPct, setWsPct] = useState<Record<string, number>>({})
 
   useEffect(() => {
     let mounted = true
@@ -106,6 +107,22 @@ export default function AccountDashboard() {
     const savedPrograms = await getSavedPrograms(supabase, currentUser.id)
     setDashboard({ saved_programs: savedPrograms })
   }
+
+  useEffect(() => {
+    if (!programs.length || !dashboard.saved_programs.length) return
+    const REQ = ["org", "project", "funding", "outcomes"]
+    try {
+      const ans: Record<string, Record<string, string>> = JSON.parse(localStorage.getItem("gw_ws_answers") ?? "{}")
+      const txt: Record<string, string> = JSON.parse(localStorage.getItem("gw_ws_text") ?? "{}")
+      setWsPct(Object.fromEntries(dashboard.saved_programs.flatMap(s => {
+        const p = programs.find(g => g.slug === s.slug); if (!p) return []
+        const aDone = REQ.filter(k => ans[p.slug]?.[k]?.trim()).length
+        const dc = p.required_documents.length
+        const dDone = dc > 0 ? [...Array(dc)].filter((_, i) => txt[`${p.slug}:${i}`]?.trim()).length : 0
+        return [[p.slug, Math.round((aDone / 4 + (dc > 0 ? dDone / dc : 0)) / (dc > 0 ? 2 : 1) * 100)]]
+      })))
+    } catch {}
+  }, [programs, dashboard.saved_programs])
 
   async function runSaveMutation(mutation: () => Promise<unknown>, successMessage: string) {
     if (!user) return
@@ -361,11 +378,23 @@ export default function AccountDashboard() {
                   <div className="flex items-center gap-3 mt-0.5 pl-0.5">
                     <p className="text-xs text-slate-400 truncate">{program.agency}</p>
                     <Link
-                      href={`/${program.type === "grant" ? "grants" : "benefits"}/${program.slug}/apply`}
+                      href="/workspace"
+                      onClick={() => { try { localStorage.setItem("gw_ws_slug", program.slug) } catch {} }}
                       className="shrink-0 text-xs font-medium text-blue-600 hover:underline"
                     >
-                      Start application →
+                      {(wsPct[program.slug] ?? 0) > 0 ? "Finish application →" : "Start application →"}
                     </Link>
+                  </div>
+                  <div className="mt-1.5 pl-0.5 flex items-center gap-2">
+                    <div className="flex-1 h-1.5 rounded-full bg-slate-100 overflow-hidden">
+                      <div
+                        className={`h-full rounded-full transition-all ${(wsPct[program.slug] ?? 0) === 100 ? "bg-emerald-500" : "bg-blue-500"}`}
+                        style={{ width: `${wsPct[program.slug] ?? 0}%` }}
+                      />
+                    </div>
+                    <span className="text-[10px] font-semibold tabular-nums shrink-0 text-slate-400">
+                      {wsPct[program.slug] ?? 0}% complete
+                    </span>
                   </div>
                 </div>
 
