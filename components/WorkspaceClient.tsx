@@ -411,13 +411,6 @@ export default function WorkspaceClient({ initialSlug }: { initialSlug?: string 
                       editText={editText} setEditText={setEditText} copied={copied}
                       onGenerate={onGenerate} onEdit={onEdit} onCopy={onCopy} onExport={onExport} onNewDraft={onNewDraft} />
                   : <>
-                      <DocEditor grant={grant} index={wsSelected as number}
-                        isReady={docReadySet.has(wsSelected as number)}
-                        toggleReady={() => toggleDoc(wsSelected as number)}
-                        text={getDocText(wsSelected as number)}
-                        onTextChange={v => setDocText(wsSelected as number, v)}
-                        attached={getAttached(wsSelected as number)}
-                        onAttach={v => setAttached(wsSelected as number, v)} />
                       {grant.required_documents.length > 1 && (
                         <div className="flex items-center justify-between rounded-xl border border-slate-200 bg-white shadow-sm px-4 py-3">
                           <button
@@ -441,6 +434,13 @@ export default function WorkspaceClient({ initialSlug }: { initialSlug?: string 
                           </button>
                         </div>
                       )}
+                      <DocEditor grant={grant} index={wsSelected as number}
+                        isReady={docReadySet.has(wsSelected as number)}
+                        toggleReady={() => toggleDoc(wsSelected as number)}
+                        text={getDocText(wsSelected as number)}
+                        onTextChange={v => setDocText(wsSelected as number, v)}
+                        attached={getAttached(wsSelected as number)}
+                        onAttach={v => setAttached(wsSelected as number, v)} />
                     </>
                 }
               </div>
