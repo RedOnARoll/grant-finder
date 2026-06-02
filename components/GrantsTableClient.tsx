@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation"
 import Link from "next/link"
 import { Search, ArrowRight, ArrowUpDown, Sparkles, MapPin } from "lucide-react"
 import type { Grant } from "@/lib/types"
+import WebsiteScanInput from "./WebsiteScanInput"
 
 // ── Constants ────────────────────────────────────────────────────────
 
@@ -190,6 +191,11 @@ export default function GrantsTableClient({ allGrants, initialCategory, initialS
     setSelectedSources(new Set()); setSelectedCategories(new Set()); setAmountMin(0); setUrgency("any"); setSearch(""); setOpenOnly(true)
   }
 
+  function handleScan({ interpretation, categories }: { interpretation: string; categories: string[]; keywords: string[] }) {
+    if (interpretation) setAiDesc(interpretation)
+    if (categories.length > 0) setSelectedCategories(new Set(categories))
+  }
+
   // Sort header cell
   function SortTh({ label, k, className }: { label: string; k: typeof sortKey; className?: string }) {
     return (
@@ -242,6 +248,7 @@ export default function GrantsTableClient({ allGrants, initialCategory, initialS
               </div>
               <p className="text-sm font-semibold text-white">Describe your business</p>
             </div>
+            <WebsiteScanInput onScan={handleScan} />
             <textarea
               value={aiDesc}
               onChange={e => setAiDesc(e.target.value)}
