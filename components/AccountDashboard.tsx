@@ -379,7 +379,7 @@ export default function AccountDashboard() {
                     <p className="text-xs text-slate-400 truncate">{program.agency}</p>
                     <Link
                       href="/workspace"
-                      onClick={() => { try { localStorage.setItem("gw_ws_slug", program.slug) } catch {} }}
+                      onClick={() => { try { localStorage.setItem("gw_ws_slug", JSON.stringify(program.slug)) } catch {} }}
                       className="shrink-0 text-xs font-medium text-blue-600 hover:underline"
                     >
                       {(wsPct[program.slug] ?? 0) > 0 ? "Finish application →" : "Start application →"}
