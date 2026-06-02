@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import Link from "next/link"
-import { Award, Calendar, Check, ChevronDown, ChevronRight, ExternalLink, FileText, Flag, List, Sparkles } from "lucide-react"
+import { Award, Calendar, Check, ChevronDown, ChevronLeft, ChevronRight, ExternalLink, FileText, Flag, List, Sparkles } from "lucide-react"
 import type { Grant } from "@/lib/types"
 import type { SavedProgram } from "@/lib/dashboard"
 import { getBrowserSupabase } from "@/lib/supabase-browser"
@@ -404,19 +404,44 @@ export default function WorkspaceClient({ initialSlug }: { initialSlug?: string 
 
             {/* main grid */}
             <div className="grid gap-5 items-start" style={{ gridTemplateColumns: "minmax(0,1fr) 320px" }}>
-              <div className="min-w-0">
+              <div className="min-w-0 flex flex-col gap-3">
                 {wsSelected === "narrative"
                   ? <NarrativeEditor grant={grant} answers={grantAnswers} setAnswer={setAnswer}
                       gen={gen} narrative={narrative} editsLeft={editsLeft} maxEdits={MAX_EDITS}
                       editText={editText} setEditText={setEditText} copied={copied}
                       onGenerate={onGenerate} onEdit={onEdit} onCopy={onCopy} onExport={onExport} onNewDraft={onNewDraft} />
-                  : <DocEditor grant={grant} index={wsSelected as number}
-                      isReady={docReadySet.has(wsSelected as number)}
-                      toggleReady={() => toggleDoc(wsSelected as number)}
-                      text={getDocText(wsSelected as number)}
-                      onTextChange={v => setDocText(wsSelected as number, v)}
-                      attached={getAttached(wsSelected as number)}
-                      onAttach={v => setAttached(wsSelected as number, v)} />
+                  : <>
+                      <DocEditor grant={grant} index={wsSelected as number}
+                        isReady={docReadySet.has(wsSelected as number)}
+                        toggleReady={() => toggleDoc(wsSelected as number)}
+                        text={getDocText(wsSelected as number)}
+                        onTextChange={v => setDocText(wsSelected as number, v)}
+                        attached={getAttached(wsSelected as number)}
+                        onAttach={v => setAttached(wsSelected as number, v)} />
+                      {grant.required_documents.length > 1 && (
+                        <div className="flex items-center justify-between rounded-xl border border-slate-200 bg-white shadow-sm px-4 py-3">
+                          <button
+                            onClick={() => setWsSelected((wsSelected as number) - 1)}
+                            disabled={(wsSelected as number) === 0}
+                            className="flex items-center gap-1.5 h-8 px-3 rounded-lg text-sm font-medium border border-slate-200 text-slate-700 hover:bg-slate-50 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+                          >
+                            <ChevronLeft className="w-3.5 h-3.5" />
+                            Prev
+                          </button>
+                          <span className="text-xs font-medium text-slate-400 tabular-nums">
+                            {(wsSelected as number) + 1} of {grant.required_documents.length}
+                          </span>
+                          <button
+                            onClick={() => setWsSelected((wsSelected as number) + 1)}
+                            disabled={(wsSelected as number) === grant.required_documents.length - 1}
+                            className="flex items-center gap-1.5 h-8 px-3 rounded-lg text-sm font-medium border border-slate-200 text-slate-700 hover:bg-slate-50 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+                          >
+                            Next
+                            <ChevronRight className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      )}
+                    </>
                 }
               </div>
               <aside className="flex flex-col gap-3 sticky top-20">

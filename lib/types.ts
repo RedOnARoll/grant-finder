@@ -61,6 +61,8 @@ export interface Grant {
   slug: string
   created_at: string
   updated_at: string
+  // Application process
+  apply_through_institution: boolean | null
   // Verification tracking
   last_verified_at: string | null
   data_source: string | null

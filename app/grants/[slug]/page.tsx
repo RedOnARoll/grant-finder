@@ -201,6 +201,21 @@ export default async function GrantDetailPage({
           )}
           <AdminVerificationWarning isVerified={grant.is_verified} lastVerifiedAt={grant.last_verified_at} />
 
+          {grant.apply_through_institution && (
+            <div className="flex items-start gap-3 rounded-xl border border-blue-200 bg-blue-50 px-5 py-4">
+              <svg className="mt-0.5 h-5 w-5 shrink-0 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M12 14l9-5-9-5-9 5 9 5z" />
+                <path strokeLinecap="round" strokeLinejoin="round" d="M12 14l6.16-3.422A12.083 12.083 0 0121 13c0 4.418-4.03 8-9 8s-9-3.582-9-8a12.083 12.083 0 012.84-1.578L12 14z" />
+              </svg>
+              <div>
+                <p className="font-semibold text-blue-900">You must apply through your institution.</p>
+                <p className="mt-1 text-sm text-blue-700">
+                  Individual applicants cannot apply directly. Contact your university, research office, or sponsoring organization — they must submit this application on your behalf.
+                </p>
+              </div>
+            </div>
+          )}
+
           <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_21rem] lg:items-start">
             <div className="min-w-0">
               <div className="lg:hidden mb-5 rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
