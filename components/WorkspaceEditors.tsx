@@ -1,23 +1,25 @@
 "use client"
 
-import { useRef, useState } from "react"
-import { Check, ChevronDown, Copy, Download, ExternalLink, FileText, RefreshCw, Sparkles } from "lucide-react"
+import { useRef, useState, useCallback } from "react"
+import { Check, ChevronDown, Copy, Download, FileText, RefreshCw, Sparkles } from "lucide-react"
 import type { Grant } from "@/lib/types"
+import { GovFormFiller, FORM_SCHEMAS } from "@/components/GovFormFiller"
 
-// Maps document title keywords → hosted PDF path (served from /public/forms/)
-const FORM_REGISTRY: Array<{ match: RegExp; path: string; label: string }> = [
-  { match: /sf[-\s]?424\b(?![\s-]?[abcd])/i,   path: "/forms/sf-424.pdf",  label: "SF-424" },
-  { match: /sf[-\s]?424[\s-]?a\b/i,             path: "/forms/sf-424a.pdf", label: "SF-424A" },
-  { match: /sf[-\s]?424[\s-]?b\b/i,             path: "/forms/sf-424b.pdf", label: "SF-424B" },
-  { match: /sf[-\s]?424[\s-]?c\b/i,             path: "/forms/sf-424c.pdf", label: "SF-424C" },
-  { match: /sf[-\s]?424[\s-]?d\b/i,             path: "/forms/sf-424d.pdf", label: "SF-424D" },
-  { match: /sf[-\s]?lll\b/i,                    path: "/forms/sf-lll.pdf",  label: "SF-LLL"  },
-  { match: /sf[-\s]?3881\b/i,                   path: "/forms/sf-3881.pdf", label: "SF-3881" },
+// Maps document title / form-number keywords to a GovFormFiller schema key
+const FORM_REGISTRY: Array<{ match: RegExp; key: string; label: string }> = [
+  { match: /sf[-\s]?424\b(?![\s-]?[abcd])/i, key: "sf-424",  label: "SF-424"  },
+  { match: /sf[-\s]?424[\s-]?a\b/i,           key: "sf-424a", label: "SF-424A" },
+  { match: /sf[-\s]?424[\s-]?b\b/i,           key: "sf-424b", label: "SF-424B" },
+  { match: /sf[-\s]?lll\b/i,                  key: "sf-lll",  label: "SF-LLL"  },
 ]
 
-function matchForm(title: string) {
-  // Also check against grant.form_numbers by passing them in title
-  return FORM_REGISTRY.find(f => f.match.test(title)) ?? null
+function matchFormKey(title: string): string | null {
+  return FORM_REGISTRY.find(f => f.match.test(title))?.key ?? null
+}
+
+function parseFormValues(text: string): Record<string, string> {
+  if (!text.trim().startsWith("{")) return {}
+  try { return JSON.parse(text) } catch { return {} }
 }
 
 export const QUESTIONS = [
@@ -47,7 +49,7 @@ function docGuidance(title: string): { what: string; how: string } {
   }
   if (t.includes("sf-424") || t.includes("application form") || t.includes("cover")) return {
     what: "The standard application cover form with applicant info and project summary.",
-    how: "Download the current version from the funder's portal. Complete it last — after your narrative and budget are final — so all totals match.",
+    how: "Complete it last — after your narrative and budget are final — so all totals match.",
   }
   if (t.includes("letter of support") || t.includes("letter of intent") || t.includes("partner")) return {
     what: "Signed letters from partners confirming their support or participation in your project.",
@@ -92,8 +94,16 @@ export function DocEditor({ grant, index, isReady, toggleReady, text, onTextChan
   const [tab, setTab] = useState<"form" | "notes">("form")
   const fileRef = useRef<HTMLInputElement>(null)
 
-  // Check this doc title and any grant-level form numbers for a hosted PDF
-  const formMatch = matchForm(title) ?? grant.form_numbers?.map(n => matchForm(n)).find(Boolean) ?? null
+  // Detect if this document maps to a known interactive form
+  const formKey = matchFormKey(title) ?? (grant.form_numbers?.map(n => matchFormKey(n)).find(Boolean) ?? null)
+  const hasForm = formKey !== null && formKey in FORM_SCHEMAS
+
+  // Form field values are stored as JSON inside the `text` field
+  const formValues = hasForm ? parseFormValues(text) : {}
+  const setFormValue = useCallback((k: string, v: string) => {
+    const next = { ...parseFormValues(text), [k]: v }
+    onTextChange(JSON.stringify(next))
+  }, [text, onTextChange])
 
   function exportTxt() {
     const a = Object.assign(document.createElement("a"), {
@@ -116,22 +126,16 @@ export function DocEditor({ grant, index, isReady, toggleReady, text, onTextChan
             <p className="text-sm font-semibold text-slate-900 truncate">{title}</p>
           </div>
         </div>
-        <div className="flex items-center gap-2 flex-none">
-          {!formMatch && (
+        {!hasForm && (
+          <div className="flex items-center gap-2 flex-none">
             <button onClick={exportTxt} className="inline-flex items-center gap-1.5 h-8 px-3 rounded-lg border border-slate-200 text-xs font-medium text-slate-600 hover:bg-white transition-colors">
               <Download className="w-3.5 h-3.5" /> Export
             </button>
-          )}
-          {formMatch && (
-            <a href={formMatch.path} download={`${formMatch.label}.pdf`}
-              className="inline-flex items-center gap-1.5 h-8 px-3 rounded-lg border border-slate-200 text-xs font-medium text-slate-600 hover:bg-white transition-colors">
-              <Download className="w-3.5 h-3.5" /> Download PDF
-            </a>
-          )}
-          <button onClick={toggleReady} className={`inline-flex items-center gap-1.5 h-8 px-3 rounded-lg text-xs font-semibold transition-colors ${isReady ? "border border-slate-200 bg-white text-slate-600 hover:bg-slate-50" : "bg-blue-600 text-white hover:bg-blue-700"}`}>
-            {isReady ? <><Check className="w-3.5 h-3.5" /> Ready</> : <>Mark ready</>}
-          </button>
-        </div>
+            <button onClick={toggleReady} className={`inline-flex items-center gap-1.5 h-8 px-3 rounded-lg text-xs font-semibold transition-colors ${isReady ? "border border-slate-200 bg-white text-slate-600 hover:bg-slate-50" : "bg-blue-600 text-white hover:bg-blue-700"}`}>
+              {isReady ? <><Check className="w-3.5 h-3.5" /> Ready</> : <>Mark ready</>}
+            </button>
+          </div>
+        )}
       </div>
 
       {/* guidance row */}
@@ -151,8 +155,8 @@ export function DocEditor({ grant, index, isReady, toggleReady, text, onTextChan
         )}
       </div>
 
-      {/* tab bar — only shown when a PDF form is available */}
-      {formMatch && (
+      {/* tab bar — only shown when an interactive form is available */}
+      {hasForm && (
         <div className="flex border-b border-slate-100 bg-white px-5 gap-4">
           <button onClick={() => setTab("form")}
             className={`py-2.5 text-xs font-semibold border-b-2 transition-colors ${tab === "form" ? "border-blue-600 text-blue-700" : "border-transparent text-slate-400 hover:text-slate-600"}`}>
@@ -165,39 +169,26 @@ export function DocEditor({ grant, index, isReady, toggleReady, text, onTextChan
         </div>
       )}
 
-      {/* PDF form embed */}
-      {formMatch && tab === "form" && (
-        <div className="bg-slate-100 p-4">
-          <div className="rounded-xl overflow-hidden border border-slate-200 shadow-sm bg-white">
-            <div className="flex items-center justify-between px-4 py-2 border-b border-slate-100 bg-slate-50">
-              <span className="text-xs font-semibold text-slate-500">{formMatch.label} — fill in your browser, then download</span>
-              <a href={formMatch.path} target="_blank" rel="noopener noreferrer"
-                className="inline-flex items-center gap-1 text-xs font-medium text-blue-600 hover:text-blue-800 transition-colors">
-                Open in new tab <ExternalLink className="w-3 h-3" />
-              </a>
-            </div>
-            <iframe
-              src={formMatch.path}
-              title={formMatch.label}
-              className="w-full"
-              style={{ height: "780px", border: "none" }}
-            />
-          </div>
-          <p className="mt-2 text-center text-[11px] text-slate-400">
-            Fill fields above, then use <strong>Download PDF</strong> in the header to save your completed copy.
-          </p>
-        </div>
+      {/* interactive form filler */}
+      {hasForm && tab === "form" && (
+        <GovFormFiller
+          formKey={formKey!}
+          values={formValues}
+          onChange={setFormValue}
+          onReady={toggleReady}
+          isReady={isReady}
+        />
       )}
 
-      {/* notes + attach — always shown for non-form docs, or on the notes tab */}
-      {(!formMatch || tab === "notes") && (
+      {/* notes + attach */}
+      {(!hasForm || tab === "notes") && (
         <div className="p-5 bg-slate-50">
           <div className="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden max-w-2xl mx-auto">
             <div className="flex items-center justify-between px-4 py-2.5 border-b border-slate-100">
               <span className="text-xs font-semibold text-slate-400">Working draft</span>
-              <span className="text-xs text-slate-400 tabular-nums">{text.trim() ? text.trim().split(/\s+/).length : 0} words</span>
+              <span className="text-xs text-slate-400 tabular-nums">{text.trim() && !text.startsWith("{") ? text.trim().split(/\s+/).length : 0} words</span>
             </div>
-            <textarea value={text} onChange={e => onTextChange(e.target.value)}
+            <textarea value={text.startsWith("{") ? "" : text} onChange={e => onTextChange(e.target.value)}
               placeholder={`Draft or paste notes for "${title}" — what you'll need, field values, or content you'll transfer to the official form.`}
               className="w-full min-h-[260px] resize-y p-4 text-sm leading-relaxed text-slate-800 bg-transparent outline-none font-[inherit]" />
           </div>
@@ -246,7 +237,7 @@ export interface NarrativeEditorProps {
 }
 
 export function NarrativeEditor({ grant, answers, setAnswer, gen, narrative, editsLeft, maxEdits, editText, setEditText, copied, onGenerate, onEdit, onCopy, onExport, onNewDraft }: NarrativeEditorProps) {
-  const reqDone = QUESTIONS.filter(q => q.required && answers[q.key]?.trim()).length
+  const reqDone  = QUESTIONS.filter(q => q.required && answers[q.key]?.trim()).length
   const reqTotal = QUESTIONS.filter(q => q.required).length
   const allAnswered = reqDone === reqTotal
   const busy = gen === "generating"
