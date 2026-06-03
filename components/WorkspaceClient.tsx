@@ -135,26 +135,7 @@ function RailFiles({ grant, docReady, selected, onSelect, narrativeReady }: {
 }) {
   return (
     <div className="rounded-xl border border-slate-200 bg-white shadow-sm overflow-hidden">
-      <div className="flex items-center justify-between gap-2 px-4 py-3 border-b border-slate-100">
-        <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-400">Required documents</p>
-        <span className="text-[10px] font-semibold bg-slate-100 text-slate-500 px-2 py-0.5 rounded-md tabular-nums">{docReady.size}/{grant.required_documents.length}</span>
-      </div>
       <div className="p-2">
-        {grant.required_documents.map((doc, i) => {
-          const active = selected === i, ready = docReady.has(i)
-          return (
-            <button key={i} onClick={() => onSelect(i)}
-              className={`w-full flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-left transition-colors ${active ? "bg-blue-50 border border-blue-200" : "hover:bg-slate-50 border border-transparent"}`}>
-              <span className={`w-5 h-5 rounded-md grid place-items-center flex-none border transition-colors ${ready ? "bg-emerald-500 border-emerald-500 text-white" : "border-slate-300 bg-white"}`}>
-                {ready && <Check className="w-3 h-3" strokeWidth={3} />}
-              </span>
-              <span className={`flex-1 text-[13px] font-medium leading-tight truncate ${ready ? "line-through text-slate-400" : active ? "text-blue-800 font-semibold" : "text-slate-700"}`}>{doc}</span>
-              <ChevronRight className={`w-3.5 h-3.5 flex-none ${active ? "text-blue-500" : "text-slate-300"}`} />
-            </button>
-          )
-        })}
-      </div>
-      <div className="border-t border-slate-100 p-2">
         <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-400 px-3 pb-1.5 pt-1">Application</p>
         {(() => {
           const active = selected === "narrative"
@@ -167,6 +148,27 @@ function RailFiles({ grant, docReady, selected, onSelect, narrativeReady }: {
             </button>
           )
         })()}
+      </div>
+      <div className="border-t border-slate-100">
+        <div className="flex items-center justify-between gap-2 px-4 py-3 border-b border-slate-100">
+          <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-400">Required documents</p>
+          <span className="text-[10px] font-semibold bg-slate-100 text-slate-500 px-2 py-0.5 rounded-md tabular-nums">{docReady.size}/{grant.required_documents.length}</span>
+        </div>
+        <div className="p-2">
+          {grant.required_documents.map((doc, i) => {
+            const active = selected === i, ready = docReady.has(i)
+            return (
+              <button key={i} onClick={() => onSelect(i)}
+                className={`w-full flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-left transition-colors ${active ? "bg-blue-50 border border-blue-200" : "hover:bg-slate-50 border border-transparent"}`}>
+                <span className={`w-5 h-5 rounded-md grid place-items-center flex-none border transition-colors ${ready ? "bg-emerald-500 border-emerald-500 text-white" : "border-slate-300 bg-white"}`}>
+                  {ready && <Check className="w-3 h-3" strokeWidth={3} />}
+                </span>
+                <span className={`flex-1 text-[13px] font-medium leading-tight truncate ${ready ? "line-through text-slate-400" : active ? "text-blue-800 font-semibold" : "text-slate-700"}`}>{doc}</span>
+                <ChevronRight className={`w-3.5 h-3.5 flex-none ${active ? "text-blue-500" : "text-slate-300"}`} />
+              </button>
+            )
+          })}
+        </div>
       </div>
     </div>
   )
@@ -200,8 +202,8 @@ function RailHowItWorks() {
   const [open, setOpen] = useState(false)
   const steps = [
     "Confirm the current deadline and requirements on the official program page.",
-    "Gather all required documents — check each one off in the file list above.",
-    "Draft your answers in the workspace, then generate your narrative.",
+    "Answer the application questions to shape your narrative, then generate your draft.",
+    "Gather all required supporting documents — check each one off in the file list.",
     "Submit through the official portal and save a copy of the confirmation.",
   ]
   return (
@@ -329,15 +331,15 @@ export default function WorkspaceClient({ initialSlug }: { initialSlug?: string 
   useEffect(() => () => clearInterval(streamRef.current ?? undefined), [])
 
   const stages = grant ? [
-    { label: "Forms & documents",   done: docReadySet.size, total: grant.required_documents.length, unit: "ready" },
     { label: "Application answers", done: reqDone,          total: reqQs.length,                    unit: "answered" },
     { label: "Draft narrative",     done: gen === "done" ? 1 : 0, total: 1, unit: "drafted", hint: gen === "generating" ? "Writing…" : "Not started" },
+    { label: "Forms & documents",   done: docReadySet.size, total: grant.required_documents.length, unit: "ready" },
   ] : []
   const readinessPct = grant ? Math.round(((docReadySet.size / Math.max(1, grant.required_documents.length)) + (reqDone / reqQs.length) + (gen === "done" ? 1 : 0)) / 3 * 100) : 0
   const allReady = readinessPct === 100
 
   function jumpStage(i: number) {
-    if (i === 0) setWsSelected(0)
+    if (i === 2) setWsSelected(0)
     else setWsSelected("narrative")
   }
 
