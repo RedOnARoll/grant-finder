@@ -1,214 +1,414 @@
 "use client"
 
-import { useRef, useState, useCallback } from "react"
-import { Check, ChevronDown, Copy, Download, FileText, RefreshCw, Sparkles } from "lucide-react"
+import { useCallback, useEffect, useRef, useState } from "react"
+import Link from "next/link"
+import { Check, Download, ExternalLink, RefreshCw, Send, Sparkles } from "lucide-react"
 import type { Grant } from "@/lib/types"
-import { GovFormFiller, FORM_SCHEMAS } from "@/components/GovFormFiller"
+import { getBrowserSupabase } from "@/lib/supabase-browser"
 
-// Maps document title / form-number keywords to a GovFormFiller schema key
-const FORM_REGISTRY: Array<{ match: RegExp; key: string; label: string }> = [
-  { match: /sf[-\s]?424\b(?![\s-]?[abcd])/i, key: "sf-424",  label: "SF-424"  },
-  { match: /sf[-\s]?424[\s-]?a\b/i,           key: "sf-424a", label: "SF-424A" },
-  { match: /sf[-\s]?424[\s-]?b\b/i,           key: "sf-424b", label: "SF-424B" },
-  { match: /sf[-\s]?lll\b/i,                  key: "sf-lll",  label: "SF-LLL"  },
-]
+// ── OverviewTab ────────────────────────────────────────────────────────────
 
-function matchFormKey(title: string): string | null {
-  return FORM_REGISTRY.find(f => f.match.test(title))?.key ?? null
+function fmtAmt(n: number | null) {
+  if (!n) return "Varies"
+  if (n >= 1_000_000) return `$${(n / 1_000_000).toFixed(1)}M`
+  if (n >= 1_000) return `$${(n / 1_000).toFixed(0)}K`
+  return `$${n}`
 }
 
-function parseFormValues(text: string): Record<string, string> {
-  if (!text.trim().startsWith("{")) return {}
-  try { return JSON.parse(text) } catch { return {} }
+function fmtVerified(s: string | null) {
+  if (!s) return null
+  const diff = Math.round((Date.now() - new Date(s).getTime()) / 86400000)
+  if (diff === 0) return "Verified today"
+  if (diff === 1) return "Last verified yesterday"
+  return `Last verified ${diff} days ago`
 }
 
-export const QUESTIONS = [
-  { key: "org",      label: "Describe your organization and its mission",  placeholder: "Who you are, who you serve, how long you've operated, and why you're positioned to do this work.",    required: true  },
-  { key: "project",  label: "What will this grant fund?",                  placeholder: "The specific project, activities, timeline, people involved, and how it fits this program's goals.",  required: true  },
-  { key: "funding",  label: "How will the funds be used?",                 placeholder: "Main expense categories and why each cost is necessary. Include estimates, vendors, staffing, or materials.", required: true  },
-  { key: "outcomes", label: "What outcomes do you expect?",                placeholder: "Concrete measurable results: people served, jobs created, outputs delivered, or other impacts.",        required: true  },
-  { key: "extra",    label: "Anything else the reviewer should know?",     placeholder: "Eligibility details, partnerships, prior awards, matching funds, community support, or special circumstances.", required: false },
-]
+export function OverviewTab({ grant, onStartApplication }: { grant: Grant; onStartApplication: () => void }) {
+  const verifiedText = fmtVerified(grant.last_verified_at)
+  const eligList = Array.isArray(grant.eligibility_criteria)
+    ? grant.eligibility_criteria as string[]
+    : Object.entries(grant.eligibility_criteria as Record<string, unknown>)
+        .filter(([, v]) => v !== null && v !== undefined && v !== false)
+        .map(([k, v]) => `${k.replace(/_/g, " ")}: ${v}`)
 
-const EDIT_CHIPS = [
-  "Make it more concise",
-  "Strengthen the budget justification",
-  "Add more community impact",
-  "Use a more formal tone",
-]
+  return (
+    <div className="p-5 grid gap-4">
+      {/* Meta row */}
+      <div className="flex flex-wrap gap-3">
+        <div className="bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 flex-1 min-w-32">
+          <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-400">Funder</p>
+          <p className="text-sm font-semibold text-slate-800 mt-0.5">{grant.agency}</p>
+        </div>
+        <div className="bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 flex-1 min-w-32">
+          <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-400">Max Award</p>
+          <p className="text-sm font-semibold text-blue-700 mt-0.5">{fmtAmt(grant.max_amount)}</p>
+        </div>
+        {grant.funding_source && (
+          <div className="bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 flex-1 min-w-32">
+            <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-400">Source</p>
+            <p className="text-sm font-semibold text-slate-800 mt-0.5 capitalize">{grant.funding_source}</p>
+          </div>
+        )}
+      </div>
 
-function docGuidance(title: string): { what: string; how: string } {
-  const t = title.toLowerCase()
-  if (t.includes("budget") || t.includes("matching funds")) return {
-    what: "A line-item breakdown of how you plan to spend the grant funds.",
-    how: "List all expense categories with amounts and justifications. Show any matching funds or in-kind contributions separately.",
-  }
-  if (t.includes("narrative") || t.includes("proposal") || t.includes("project description")) return {
-    what: "The written case for your project: goals, activities, timeline, and expected impact.",
-    how: "Follow the funder's review criteria as your outline. Answer each criterion directly and stay within any page limit.",
-  }
-  if (t.includes("sf-424") || t.includes("application form") || t.includes("cover")) return {
-    what: "The standard application cover form with applicant info and project summary.",
-    how: "Complete it last — after your narrative and budget are final — so all totals match.",
-  }
-  if (t.includes("letter of support") || t.includes("letter of intent") || t.includes("partner")) return {
-    what: "Signed letters from partners confirming their support or participation in your project.",
-    how: "Ask partners for letters on official letterhead naming the grant, their role, and any committed resources. Request signatures at least two weeks before the deadline.",
-  }
-  if (t.includes("registration") || t.includes("incorporation") || t.includes("ein") || t.includes("organization")) return {
-    what: "Proof your organization legally exists and is authorized to operate.",
-    how: "Use your Secretary of State formation document plus your IRS EIN letter. Federal grants also require an active SAM.gov registration and UEI.",
-  }
-  if (t.includes("tax") || t.includes("990") || t.includes("financial statement")) return {
-    what: "Your organization's financial records demonstrating fiscal health and responsibility.",
-    how: "Use the most recently filed tax return or audited statement. Ensure figures are consistent with the budget you're submitting.",
-  }
-  if (t.includes("resume") || t.includes("biosketch") || t.includes("cv") || t.includes("staff")) return {
-    what: "Brief professional profiles for key personnel who will lead the project.",
-    how: "Keep each to two pages maximum. Highlight experience relevant to this grant's work. Use the funder's required format if one is specified.",
-  }
-  return {
-    what: "A supporting document required for this grant application.",
-    how: "Review the official grant announcement or program guidelines for specific format, length, and content requirements.",
-  }
+      {/* Description */}
+      {grant.description && (
+        <div>
+          <p className="text-sm font-semibold text-slate-700 mb-1">About this grant</p>
+          <p className="text-sm text-slate-600 leading-relaxed">{grant.description}</p>
+        </div>
+      )}
+
+      {/* Eligibility checklist */}
+      {eligList.length > 0 && (
+        <div>
+          <p className="text-sm font-semibold text-slate-700 mb-2">Eligibility</p>
+          <ul className="grid gap-1.5">
+            {eligList.slice(0, 10).map((item, i) => (
+              <li key={i} className="flex items-start gap-2 text-sm text-slate-600">
+                <Check className="w-3.5 h-3.5 text-blue-500 mt-0.5 shrink-0" strokeWidth={2.5} />
+                {item}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
+      {/* Footer row */}
+      <div className="flex flex-wrap items-center gap-3 pt-1 border-t border-slate-100">
+        {verifiedText && (
+          <span className="text-xs text-slate-400 bg-slate-50 border border-slate-200 px-2 py-1 rounded-md">{verifiedText}</span>
+        )}
+        {grant.official_source_url && (
+          <a href={grant.official_source_url} target="_blank" rel="noopener noreferrer"
+            className="flex items-center gap-1.5 text-xs font-medium text-blue-600 hover:underline">
+            Official source <ExternalLink className="w-3 h-3" />
+          </a>
+        )}
+        <button onClick={onStartApplication}
+          className="ml-auto inline-flex items-center gap-1.5 h-8 px-4 rounded-lg bg-blue-600 text-white text-xs font-semibold hover:bg-blue-700 transition-colors">
+          Start Application →
+        </button>
+      </div>
+    </div>
+  )
 }
 
-// ── DocEditor ──────────────────────────────────────────────────────────────
+// ── NarrativeBuilderTab ────────────────────────────────────────────────────
 
-interface DocEditorProps {
-  grant: Grant
-  index: number
-  isReady: boolean
-  toggleReady: () => void
-  text: string
-  onTextChange: (v: string) => void
-  attached: string | null
-  onAttach: (name: string | null) => void
-}
+type ChatMsg = { role: "user" | "ai"; content: string; isError?: boolean }
 
-export function DocEditor({ grant, index, isReady, toggleReady, text, onTextChange, attached, onAttach }: DocEditorProps) {
-  const title = grant.required_documents[index] ?? ""
-  const docCount = grant.required_documents.length
-  const { what } = docGuidance(title)
-  const [guideOpen, setGuideOpen] = useState(false)
-  const [tab, setTab] = useState<"form" | "notes">("form")
-  const fileRef = useRef<HTMLInputElement>(null)
+export function NarrativeBuilderTab({ grant, userId }: { grant: Grant; userId: string }) {
+  const supabase = getBrowserSupabase()
+  const [draft, setDraft] = useState("")
+  const [lastSavedDraft, setLastSavedDraft] = useState("")
+  const [savedBadge, setSavedBadge] = useState(false)
+  const [isGenerating, setIsGenerating] = useState(false)
+  const [isEditing, setIsEditing] = useState(false)
+  const [chatMsgs, setChatMsgs] = useState<ChatMsg[]>([])
+  const [chatInput, setChatInput] = useState("")
+  const [loadError, setLoadError] = useState("")
+  const chatEndRef = useRef<HTMLDivElement>(null)
+  const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const textareaRef = useRef<HTMLTextAreaElement>(null)
 
-  // Detect if this document maps to a known interactive form
-  const formKey = matchFormKey(title) ?? (grant.form_numbers?.map(n => matchFormKey(n)).find(Boolean) ?? null)
-  const hasForm = formKey !== null && formKey in FORM_SCHEMAS
+  // Load existing draft from Supabase
+  useEffect(() => {
+    supabase.from("workspace_drafts").select("narrative_text")
+      .eq("user_id", userId).eq("grant_id", grant.id).maybeSingle()
+      .then(({ data }) => { if (data?.narrative_text) { setDraft(data.narrative_text); setLastSavedDraft(data.narrative_text) } })
+  }, [grant.id, userId, supabase])
 
-  // Form field values are stored as JSON inside the `text` field
-  const formValues = hasForm ? parseFormValues(text) : {}
-  const setFormValue = useCallback((k: string, v: string) => {
-    const next = { ...parseFormValues(text), [k]: v }
-    onTextChange(JSON.stringify(next))
-  }, [text, onTextChange])
+  useEffect(() => { chatEndRef.current?.scrollIntoView({ behavior: "smooth" }) }, [chatMsgs])
 
-  function exportTxt() {
-    const a = Object.assign(document.createElement("a"), {
-      href: URL.createObjectURL(new Blob([`${title}\n\n${text}`], { type: "text/plain" })),
-      download: title.toLowerCase().replace(/[^a-z0-9]+/g, "-").slice(0, 40) + ".txt",
-    })
-    a.click()
+  const autoSave = useCallback(async (text: string) => {
+    if (!text.trim()) return
+    await supabase.from("workspace_drafts").upsert(
+      { user_id: userId, grant_id: grant.id, narrative_text: text, generated_at: new Date().toISOString() },
+      { onConflict: "user_id,grant_id" }
+    )
+    setLastSavedDraft(text)
+    setSavedBadge(true)
+    setTimeout(() => setSavedBadge(false), 2000)
+  }, [supabase, userId, grant.id])
+
+  function handleTextareaBlur() {
+    if (draft === lastSavedDraft) return
+    clearTimeout(saveTimerRef.current ?? undefined)
+    saveTimerRef.current = setTimeout(() => autoSave(draft), 500)
+  }
+
+  async function handleGenerate() {
+    const isDirty = draft.trim() && draft !== lastSavedDraft
+    if (isDirty && !confirm("Regenerate will overwrite your current draft. Continue?")) return
+    setIsGenerating(true)
+    setLoadError("")
+    try {
+      const { data: { session } } = await supabase.auth.getSession()
+      const res = await fetch("/api/workspace/generate-narrative", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${session?.access_token ?? ""}` },
+        body: JSON.stringify({
+          grantId: grant.id, grantName: grant.name, agencyName: grant.agency,
+          fundingSource: grant.funding_source, grantDescription: grant.description,
+          eligibilityRequirements: Array.isArray(grant.eligibility_criteria) ? grant.eligibility_criteria : [],
+          grantAmount: grant.max_amount, deadline: grant.deadline,
+        }),
+      })
+      if (!res.ok) throw new Error(await res.text())
+      const { narrative } = await res.json() as { narrative: string }
+      setDraft(narrative)
+      setLastSavedDraft(narrative)
+      setChatMsgs([])
+    } catch (err) {
+      setLoadError(err instanceof Error ? err.message : "Generation failed. Please try again.")
+    }
+    setIsGenerating(false)
+  }
+
+  async function handleSend() {
+    const msg = chatInput.trim()
+    if (!msg || isEditing || !draft.trim()) return
+    const userMsg: ChatMsg = { role: "user", content: msg }
+    setChatMsgs((m) => [...m, userMsg])
+    setChatInput("")
+    setIsEditing(true)
+    const currentDraft = draft
+    try {
+      const { data: { session } } = await supabase.auth.getSession()
+      const res = await fetch("/api/workspace/edit-narrative", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${session?.access_token ?? ""}` },
+        body: JSON.stringify({ grantId: grant.id, grantName: grant.name, currentDraft, userMessage: msg }),
+      })
+      if (!res.ok) throw new Error(await res.text())
+      const reader = res.body?.getReader()
+      if (!reader) throw new Error("No stream")
+      const dec = new TextDecoder()
+      let accumulated = ""
+      setDraft("")
+      while (true) {
+        const { done, value } = await reader.read()
+        if (done) break
+        accumulated += dec.decode(value, { stream: true })
+        setDraft(accumulated)
+      }
+      setLastSavedDraft(accumulated)
+      setChatMsgs((m) => [...m, { role: "ai", content: "✓ Applied" }])
+    } catch (err) {
+      setDraft(currentDraft)
+      setChatMsgs((m) => [...m, { role: "ai", content: "Edit failed. Please try again.", isError: true }])
+    }
+    setIsEditing(false)
+  }
+
+  function exportPDF() {
+    const orgName = ""
+    const win = window.open("", "_blank")
+    if (!win) return
+    win.document.write(`<html><head><title>${grant.name} — Narrative</title><style>body{font-family:Georgia,serif;max-width:700px;margin:40px auto;line-height:1.7;font-size:13pt;color:#1e293b}h1{font-size:18pt;margin-bottom:4px}p.sub{color:#64748b;font-size:11pt;margin-top:0}hr{border:none;border-top:1px solid #e2e8f0;margin:24px 0}pre{white-space:pre-wrap;font-family:Georgia,serif;font-size:13pt;margin:0}</style></head><body><h1>${grant.name}</h1><p class="sub">${grant.agency}${orgName ? ` · ${orgName}` : ""}</p><hr/><pre>${draft.replace(/</g, "&lt;")}</pre></body></html>`)
+    win.document.close()
+    win.print()
+  }
+
+  if (!draft && !isGenerating) {
+    return (
+      <div className="p-5 flex flex-col items-center justify-center min-h-48 text-center gap-4">
+        <div className="w-12 h-12 rounded-xl bg-blue-50 text-blue-600 grid place-items-center">
+          <Sparkles className="w-6 h-6" />
+        </div>
+        <div>
+          <p className="text-sm font-semibold text-slate-800">Generate Narrative</p>
+          <p className="text-xs text-slate-500 mt-1 max-w-xs">AI will research this grant's requirements and draft a narrative using your profile.</p>
+        </div>
+        {loadError && <p className="text-xs text-rose-600">{loadError}</p>}
+        <button onClick={handleGenerate}
+          className="inline-flex items-center gap-2 h-10 px-5 rounded-lg bg-blue-600 text-white text-sm font-semibold hover:bg-blue-700 transition-colors">
+          <Sparkles className="w-4 h-4" /> Generate Narrative
+        </button>
+      </div>
+    )
+  }
+
+  if (isGenerating) {
+    return (
+      <div className="p-5 flex flex-col items-center justify-center min-h-48 gap-3 text-center">
+        <div className="w-6 h-6 border-2 border-blue-600 border-t-transparent rounded-full animate-spin" />
+        <p className="text-sm text-slate-600">Researching grant requirements and drafting your narrative…</p>
+        <p className="text-xs text-slate-400">This may take up to 30 seconds</p>
+      </div>
+    )
   }
 
   return (
-    <div className="rounded-xl border border-slate-200 bg-white shadow-sm overflow-hidden">
-      {/* header */}
-      <div className="flex items-center justify-between gap-3 px-5 py-3 border-b border-slate-100 bg-slate-50">
-        <div className="flex items-center gap-3 min-w-0">
-          <div className="w-8 h-8 rounded-lg bg-slate-900 text-white grid place-items-center flex-none">
-            <FileText className="w-4 h-4" />
-          </div>
-          <div className="min-w-0">
-            <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-400">Document {index + 1} of {docCount}</p>
-            <p className="text-sm font-semibold text-slate-900 truncate">{title}</p>
-          </div>
-        </div>
-        {!hasForm && (
-          <div className="flex items-center gap-2 flex-none">
-            <button onClick={exportTxt} className="inline-flex items-center gap-1.5 h-8 px-3 rounded-lg border border-slate-200 text-xs font-medium text-slate-600 hover:bg-white transition-colors">
-              <Download className="w-3.5 h-3.5" /> Export
+    <div className="flex" style={{ minHeight: "480px" }}>
+      {/* Left zone — editable narrative (65%) */}
+      <div className="flex flex-col border-r border-slate-100" style={{ flex: "0 0 65%" }}>
+        <div className="flex items-center justify-between px-4 py-2.5 border-b border-slate-100 bg-slate-50">
+          <span className="text-xs font-semibold text-slate-500">{grant.name} · draft</span>
+          <div className="flex items-center gap-1.5">
+            {savedBadge && <span className="text-[10px] font-semibold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-md">Saved</span>}
+            <button onClick={exportPDF} title="Export as PDF"
+              className="inline-flex items-center gap-1 h-7 px-2.5 rounded-md border border-slate-200 text-xs font-medium text-slate-600 hover:bg-white transition-colors">
+              <Download className="w-3 h-3" /> PDF
             </button>
-            <button onClick={toggleReady} className={`inline-flex items-center gap-1.5 h-8 px-3 rounded-lg text-xs font-semibold transition-colors ${isReady ? "border border-slate-200 bg-white text-slate-600 hover:bg-slate-50" : "bg-blue-600 text-white hover:bg-blue-700"}`}>
-              {isReady ? <><Check className="w-3.5 h-3.5" /> Ready</> : <>Mark ready</>}
+            <button onClick={handleGenerate} title="Regenerate from scratch"
+              className="inline-flex items-center gap-1 h-7 px-2.5 rounded-md border border-slate-200 text-xs font-medium text-slate-600 hover:bg-white transition-colors">
+              <RefreshCw className="w-3 h-3" /> Regen
             </button>
           </div>
-        )}
-      </div>
-
-      {/* guidance row */}
-      <div className="border-b border-slate-100">
-        <button onClick={() => setGuideOpen(o => !o)} className="w-full flex items-center gap-2.5 px-5 py-3 text-left hover:bg-slate-50 transition-colors">
-          <Sparkles className="w-4 h-4 text-blue-500" />
-          <span className="flex-1 text-xs font-semibold text-slate-700">What this is</span>
-          <ChevronDown className={`w-4 h-4 text-slate-400 transition-transform ${guideOpen ? "rotate-180" : ""}`} />
-        </button>
-        {guideOpen && (
-          <div className="px-5 pb-4">
-            <div className="flex gap-2.5">
-              <span className="flex-none mt-2"><span className="block w-1.5 h-1.5 rounded-full bg-blue-500" /></span>
-              <p className="text-sm text-slate-600 leading-relaxed">{what}</p>
-            </div>
-          </div>
-        )}
-      </div>
-
-      {/* tab bar — only shown when an interactive form is available */}
-      {hasForm && (
-        <div className="flex border-b border-slate-100 bg-white px-5 gap-4">
-          <button onClick={() => setTab("form")}
-            className={`py-2.5 text-xs font-semibold border-b-2 transition-colors ${tab === "form" ? "border-blue-600 text-blue-700" : "border-transparent text-slate-400 hover:text-slate-600"}`}>
-            Fill out form
-          </button>
-          <button onClick={() => setTab("notes")}
-            className={`py-2.5 text-xs font-semibold border-b-2 transition-colors ${tab === "notes" ? "border-blue-600 text-blue-700" : "border-transparent text-slate-400 hover:text-slate-600"}`}>
-            Notes &amp; attachments
-          </button>
         </div>
-      )}
-
-      {/* interactive form filler */}
-      {hasForm && tab === "form" && (
-        <GovFormFiller
-          formKey={formKey!}
-          values={formValues}
-          onChange={setFormValue}
-          onReady={toggleReady}
-          isReady={isReady}
+        <textarea
+          ref={textareaRef}
+          value={draft}
+          onChange={(e) => setDraft(e.target.value)}
+          onBlur={handleTextareaBlur}
+          disabled={isEditing}
+          className="flex-1 resize-none p-4 text-sm leading-relaxed text-slate-800 bg-white outline-none font-[inherit] disabled:opacity-60"
+          style={{ minHeight: "440px" }}
         />
-      )}
-
-      {/* notes + attach */}
-      {(!hasForm || tab === "notes") && (
-        <div className="p-5 bg-slate-50">
-          <div className="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden max-w-2xl mx-auto">
-            <div className="flex items-center justify-between px-4 py-2.5 border-b border-slate-100">
-              <span className="text-xs font-semibold text-slate-400">Working draft</span>
-              <span className="text-xs text-slate-400 tabular-nums">{text.trim() && !text.startsWith("{") ? text.trim().split(/\s+/).length : 0} words</span>
-            </div>
-            <textarea value={text.startsWith("{") ? "" : text} onChange={e => onTextChange(e.target.value)}
-              placeholder={`Draft or paste notes for "${title}" — what you'll need, field values, or content you'll transfer to the official form.`}
-              className="w-full min-h-[260px] resize-y p-4 text-sm leading-relaxed text-slate-800 bg-transparent outline-none font-[inherit]" />
-          </div>
-
-          <div className="max-w-2xl mx-auto mt-3">
-            <input ref={fileRef} type="file" accept=".pdf,.doc,.docx" className="hidden"
-              onChange={e => { const f = e.target.files?.[0]; if (f) onAttach(f.name) }} />
-            {attached ? (
-              <div className="flex items-center gap-3 px-4 py-3 rounded-xl bg-white border border-slate-200">
-                <div className="w-8 h-8 rounded-lg bg-blue-50 text-blue-700 grid place-items-center flex-none"><FileText className="w-4 h-4" /></div>
-                <span className="flex-1 text-sm font-semibold text-slate-800 truncate">{attached}</span>
-                <span className="text-xs font-medium bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded-md">Attached</span>
-                <button onClick={() => onAttach(null)} className="text-xs font-semibold text-slate-400 hover:text-slate-700 transition-colors">Remove</button>
+      </div>
+      {/* Right zone — AI chat panel (35%) */}
+      <div className="flex flex-col" style={{ flex: "0 0 35%" }}>
+        <div className="px-3 py-2.5 border-b border-slate-100 bg-slate-50">
+          <p className="text-xs font-semibold text-slate-500">Edit with AI</p>
+        </div>
+        <div className="flex-1 overflow-y-auto p-3 space-y-2" style={{ minHeight: "380px" }}>
+          {chatMsgs.length === 0 && (
+            <p className="text-xs text-slate-400 text-center pt-6">Ask AI to edit your narrative…<br />e.g. "Make the opening more concise"</p>
+          )}
+          {chatMsgs.map((m, i) => (
+            <div key={i} className={`flex ${m.role === "user" ? "justify-end" : "justify-start"}`}>
+              <div className={`max-w-[90%] rounded-lg px-3 py-2 text-xs leading-relaxed ${
+                m.role === "user" ? "bg-blue-600 text-white" :
+                m.isError ? "bg-rose-50 text-rose-700 border border-rose-200" :
+                "bg-slate-100 text-slate-700"
+              }`}>
+                {m.content}
               </div>
-            ) : (
-              <button onClick={() => fileRef.current?.click()}
-                className="w-full flex items-center justify-center gap-2 py-4 rounded-xl border-2 border-dashed border-slate-200 bg-white text-sm font-semibold text-slate-400 hover:border-blue-400 hover:text-blue-600 transition-colors">
-                <Download className="w-4 h-4 rotate-180" /> Attach the completed file
+            </div>
+          ))}
+          {isEditing && (
+            <div className="flex gap-1 px-1">
+              {[0, 1, 2].map((i) => (
+                <span key={i} className="w-1.5 h-1.5 bg-blue-400 rounded-full animate-bounce" style={{ animationDelay: `${i * 0.15}s` }} />
+              ))}
+            </div>
+          )}
+          <div ref={chatEndRef} />
+        </div>
+        <div className="flex gap-2 p-3 border-t border-slate-100">
+          <textarea
+            value={chatInput}
+            onChange={(e) => setChatInput(e.target.value)}
+            onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleSend() } }}
+            disabled={isEditing}
+            placeholder="Ask AI to edit…"
+            rows={2}
+            className="flex-1 resize-none rounded-lg border border-slate-200 px-3 py-2 text-xs text-slate-800 outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100 transition-colors disabled:opacity-60"
+          />
+          <button onClick={handleSend} disabled={!chatInput.trim() || isEditing || !draft.trim()}
+            className="self-end h-9 w-9 rounded-lg bg-blue-600 text-white grid place-items-center hover:bg-blue-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors">
+            <Send className="w-3.5 h-3.5" />
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// ── FormsTab ───────────────────────────────────────────────────────────────
+
+const PREFILL_FIELDS = ["Name", "Email", "Phone", "State", "ZIP code"]
+
+export function FormsTab({ grant, userId }: { grant: Grant; userId: string }) {
+  const supabase = getBrowserSupabase()
+  const [checkedItems, setCheckedItems] = useState<Set<number>>(new Set())
+  const [downloading, setDownloading] = useState(false)
+  const [dlError, setDlError] = useState("")
+
+  useEffect(() => {
+    supabase.from("workspace_checklist").select("checked_items")
+      .eq("user_id", userId).eq("grant_id", grant.id).maybeSingle()
+      .then(({ data }) => {
+        if (Array.isArray(data?.checked_items)) setCheckedItems(new Set(data.checked_items as number[]))
+      })
+  }, [grant.id, userId, supabase])
+
+  async function toggleItem(i: number) {
+    setCheckedItems((prev) => {
+      const next = new Set(prev)
+      next.has(i) ? next.delete(i) : next.add(i)
+      const arr = [...next]
+      supabase.from("workspace_checklist").upsert(
+        { user_id: userId, grant_id: grant.id, checked_items: arr, updated_at: new Date().toISOString() },
+        { onConflict: "user_id,grant_id" }
+      )
+      return next
+    })
+  }
+
+  async function handlePrefill() {
+    setDownloading(true)
+    setDlError("")
+    try {
+      const { data: { session } } = await supabase.auth.getSession()
+      const res = await fetch("/api/grants/prefill", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${session?.access_token ?? ""}` },
+        body: JSON.stringify({ grantSlug: grant.slug }),
+      })
+      if (!res.ok) throw new Error(await res.text())
+      const blob = await res.blob()
+      const url = URL.createObjectURL(blob)
+      const a = Object.assign(document.createElement("a"), { href: url, download: `${grant.slug}-prefilled.pdf` })
+      a.click()
+      URL.revokeObjectURL(url)
+    } catch (err) {
+      setDlError(err instanceof Error ? err.message : "Download failed. Please try again.")
+    }
+    setDownloading(false)
+  }
+
+  return (
+    <div className="p-5 grid gap-5">
+      {/* Pre-filled PDF */}
+      <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
+        <div className="flex items-start justify-between gap-3 flex-wrap">
+          <div>
+            <p className="text-sm font-semibold text-slate-800">Download Pre-filled PDF</p>
+            <p className="text-xs text-slate-500 mt-0.5">Auto-populated from your profile</p>
+            <div className="flex flex-wrap gap-1.5 mt-2">
+              {PREFILL_FIELDS.map((f) => (
+                <span key={f} className="text-[10px] font-medium bg-blue-50 text-blue-700 border border-blue-200 px-2 py-0.5 rounded-md">{f}</span>
+              ))}
+            </div>
+            {dlError && <p className="text-xs text-rose-600 mt-2">{dlError}</p>}
+          </div>
+          <button onClick={handlePrefill} disabled={downloading}
+            className="inline-flex items-center gap-1.5 h-9 px-4 rounded-lg bg-blue-600 text-white text-xs font-semibold hover:bg-blue-700 disabled:opacity-60 disabled:cursor-not-allowed transition-colors flex-none">
+            {downloading ? <><span className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" /> Generating…</> : <><Download className="w-3.5 h-3.5" /> Download</>}
+          </button>
+        </div>
+      </div>
+
+      {/* Required documents checklist */}
+      {grant.required_documents.length > 0 && (
+        <div>
+          <div className="flex items-center justify-between mb-2">
+            <p className="text-sm font-semibold text-slate-800">Required Documents</p>
+            <span className="text-xs font-semibold text-slate-400 tabular-nums">{checkedItems.size}/{grant.required_documents.length} ready</span>
+          </div>
+          <div className="grid gap-1.5">
+            {grant.required_documents.map((doc, i) => (
+              <button key={i} onClick={() => toggleItem(i)}
+                className="flex items-center gap-3 px-3 py-2.5 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 transition-colors text-left">
+                <span className={`w-5 h-5 rounded-md grid place-items-center flex-none border-2 transition-colors ${checkedItems.has(i) ? "bg-emerald-500 border-emerald-500 text-white" : "border-slate-300 bg-white"}`}>
+                  {checkedItems.has(i) && <Check className="w-3 h-3" strokeWidth={3} />}
+                </span>
+                <span className={`text-sm flex-1 leading-tight ${checkedItems.has(i) ? "line-through text-slate-400" : "text-slate-700"}`}>{doc}</span>
               </button>
-            )}
+            ))}
           </div>
         </div>
       )}
@@ -216,158 +416,50 @@ export function DocEditor({ grant, index, isReady, toggleReady, text, onTextChan
   )
 }
 
-// ── NarrativeEditor ────────────────────────────────────────────────────────
+// ── NotesTab ───────────────────────────────────────────────────────────────
 
-export interface NarrativeEditorProps {
-  grant: Grant
-  answers: Record<string, string>
-  setAnswer: (k: string, v: string) => void
-  gen: "idle" | "generating" | "done"
-  narrative: string
-  editsLeft: number
-  maxEdits: number
-  editText: string
-  setEditText: (v: string) => void
-  copied: boolean
-  onGenerate: () => void
-  onEdit: () => void
-  onCopy: () => void
-  onExport: () => void
-  onNewDraft: () => void
-}
+export function NotesTab({ grant, userId }: { grant: Grant; userId: string }) {
+  const supabase = getBrowserSupabase()
+  const [notes, setNotes] = useState("")
+  const [savedNotes, setSavedNotes] = useState("")
+  const [savedBadge, setSavedBadge] = useState(false)
+  const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
-export function NarrativeEditor({ grant, answers, setAnswer, gen, narrative, editsLeft, maxEdits, editText, setEditText, copied, onGenerate, onEdit, onCopy, onExport, onNewDraft }: NarrativeEditorProps) {
-  const reqDone  = QUESTIONS.filter(q => q.required && answers[q.key]?.trim()).length
-  const reqTotal = QUESTIONS.filter(q => q.required).length
-  const allAnswered = reqDone === reqTotal
-  const busy = gen === "generating"
+  useEffect(() => {
+    supabase.from("workspace_notes").select("content")
+      .eq("user_id", userId).eq("grant_id", grant.id).maybeSingle()
+      .then(({ data }) => { if (data?.content) { setNotes(data.content); setSavedNotes(data.content) } })
+  }, [grant.id, userId, supabase])
+
+  function handleBlur() {
+    if (notes === savedNotes) return
+    clearTimeout(saveTimerRef.current ?? undefined)
+    saveTimerRef.current = setTimeout(async () => {
+      await supabase.from("workspace_notes").upsert(
+        { user_id: userId, grant_id: grant.id, content: notes, updated_at: new Date().toISOString() },
+        { onConflict: "user_id,grant_id" }
+      )
+      setSavedNotes(notes)
+      setSavedBadge(true)
+      setTimeout(() => setSavedBadge(false), 2000)
+    }, 500)
+  }
 
   return (
-    <div className="grid gap-5">
-      <div className="rounded-xl border border-slate-200 bg-white shadow-sm overflow-hidden">
-        <div className="flex items-center justify-between gap-3 px-5 py-4 border-b border-slate-100">
-          <div>
-            <h2 className="text-base font-semibold text-slate-900">Application questions</h2>
-            <p className="text-sm text-slate-500 mt-0.5">Answer these once — your responses feed the AI draft.</p>
-          </div>
-          <span className={`text-xs font-semibold px-2.5 py-1 rounded-lg flex-none ${allAnswered ? "bg-emerald-50 text-emerald-700" : "bg-slate-100 text-slate-500"}`}>
-            {reqDone}/{reqTotal} answered
-          </span>
+    <div className="p-4">
+      <div className="rounded-xl border border-slate-200 bg-white overflow-hidden">
+        <div className="flex items-center justify-between px-4 py-2.5 border-b border-slate-100 bg-slate-50">
+          <span className="text-xs font-semibold text-slate-500">Notes — {grant.name}</span>
+          {savedBadge && <span className="text-[10px] font-semibold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-md">Saved</span>}
         </div>
-        <div className="p-5 grid gap-5">
-          {QUESTIONS.map((q, i) => {
-            const filled = (answers[q.key] ?? "").trim().length > 0
-            return (
-              <div key={q.key}>
-                <label className="flex items-center gap-2 mb-2 text-sm font-semibold text-slate-800">
-                  <span className={`w-5 h-5 rounded-full grid place-items-center text-[11px] font-bold flex-none transition-colors ${filled ? "bg-blue-100 text-blue-700" : "bg-slate-100 text-slate-400"}`}>
-                    {filled ? <Check className="w-3 h-3" strokeWidth={3} /> : i + 1}
-                  </span>
-                  {q.label}
-                  {!q.required && <span className="font-normal text-slate-400 text-xs">· optional</span>}
-                </label>
-                <textarea rows={3} value={answers[q.key] ?? ""} onChange={e => setAnswer(q.key, e.target.value)}
-                  placeholder={q.placeholder}
-                  className="w-full rounded-lg border border-slate-200 px-3 py-2.5 text-sm text-slate-800 leading-relaxed resize-none outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100 transition-colors" />
-              </div>
-            )
-          })}
-        </div>
-      </div>
-
-      <div className="rounded-xl border border-slate-200 bg-white shadow-sm overflow-hidden">
-        <div className="flex items-center justify-between gap-3 px-5 py-4 border-b border-slate-100 bg-slate-50">
-          <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-lg bg-slate-900 text-white grid place-items-center flex-none"><Sparkles className="w-4 h-4" /></div>
-            <div>
-              <h2 className="text-sm font-semibold text-slate-900">Application draft</h2>
-              <p className="text-xs text-slate-500">{maxEdits} AI edit rounds included</p>
-            </div>
-          </div>
-          {gen === "done" && (
-            <div className="flex items-center gap-1.5 flex-none">
-              <button onClick={onExport} className="inline-flex items-center gap-1.5 h-8 px-3 rounded-lg border border-slate-200 text-xs font-medium text-slate-600 hover:bg-white transition-colors"><Download className="w-3.5 h-3.5" /> Export</button>
-              <button onClick={onCopy} className="inline-flex items-center gap-1.5 h-8 px-3 rounded-lg border border-slate-200 text-xs font-medium text-slate-600 hover:bg-white transition-colors">
-                {copied ? <><Check className="w-3.5 h-3.5 text-emerald-600" /> Copied</> : <><Copy className="w-3.5 h-3.5" /> Copy</>}
-              </button>
-              <button onClick={onNewDraft} className="inline-flex items-center gap-1.5 h-8 px-3 rounded-lg border border-slate-200 text-xs font-medium text-slate-600 hover:bg-white transition-colors"><RefreshCw className="w-3.5 h-3.5" /> New</button>
-            </div>
-          )}
-        </div>
-
-        {gen === "idle" ? (
-          <div className="p-5">
-            <div className="rounded-lg border border-slate-100 bg-slate-50 p-6 text-center mb-4">
-              <div className="w-10 h-10 rounded-xl bg-white border border-slate-200 grid place-items-center mx-auto mb-3 text-slate-400">
-                <Sparkles className="w-5 h-5" />
-              </div>
-              <p className="text-sm font-semibold text-slate-600">{allAnswered ? "Ready to generate your draft" : "Answer the required questions to unlock your draft"}</p>
-            </div>
-            <div className="flex items-center justify-between gap-4 flex-wrap">
-              <ul className="flex flex-wrap gap-4 text-xs text-slate-500">
-                {["Summary · need · goals", "Budget justification", `${maxEdits} AI edit rounds`].map(f => (
-                  <li key={f} className="flex items-center gap-1.5"><Check className="w-3.5 h-3.5 text-blue-500" strokeWidth={2.5} />{f}</li>
-                ))}
-              </ul>
-              <button onClick={onGenerate} disabled={!allAnswered}
-                className="inline-flex items-center gap-2 h-10 px-5 rounded-lg bg-blue-600 text-white text-sm font-semibold hover:bg-blue-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors">
-                <Sparkles className="w-4 h-4" /> Generate draft
-              </button>
-            </div>
-          </div>
-        ) : (
-          <div>
-            <div className="px-5 py-3 flex items-center justify-between bg-slate-50 border-b border-slate-100">
-              <span className="text-xs font-semibold text-slate-500">{grant.name} — draft narrative</span>
-              {gen === "done" && <span className="text-xs text-slate-400 tabular-nums">{narrative.trim().split(/\s+/).length} words</span>}
-            </div>
-            <div className="max-h-96 overflow-y-auto p-6">
-              <div className="max-w-2xl text-[15px] leading-[1.75] text-slate-800 whitespace-pre-wrap">
-                {narrative.split(/\n\n+/).map((block, i, arr) => {
-                  const isHead = /^[A-Z][A-Z0-9 &\-/]{3,}$/.test(block.split("\n")[0].trim()) && block.split("\n").length === 1
-                  return isHead
-                    ? <div key={i} className="text-[11px] font-semibold uppercase tracking-wider text-blue-700 mt-5 mb-1 first:mt-0">{block}</div>
-                    : <p key={i} className="mt-3 first:mt-0">{block}{busy && i === arr.length - 1 && <span className="inline-block w-0.5 h-[1em] bg-blue-600 ml-0.5 align-text-bottom rounded-sm animate-pulse" />}</p>
-                })}
-              </div>
-            </div>
-          </div>
-        )}
-
-        {gen === "done" && !busy && editsLeft > 0 && (
-          <div className="p-5 border-t border-slate-100 bg-slate-50">
-            <div className="flex items-center justify-between gap-2 mb-3">
-              <span className="text-sm font-semibold text-slate-800 flex items-center gap-1.5"><Sparkles className="w-4 h-4 text-blue-500" /> Refine with AI</span>
-              <div className="flex items-center gap-1.5 text-xs text-slate-400">
-                Edits left
-                <span className="flex gap-1 ml-1">{Array.from({ length: maxEdits }).map((_, i) => <span key={i} className={`w-2 h-2 rounded-full ${i < editsLeft ? "bg-blue-500" : "bg-slate-200"}`} />)}</span>
-              </div>
-            </div>
-            <div className="flex flex-wrap gap-1.5 mb-3">
-              {EDIT_CHIPS.map(c => (
-                <button key={c} onClick={() => setEditText(c)}
-                  className="text-xs font-medium px-3 py-1.5 rounded-full border border-slate-200 bg-white text-slate-600 hover:border-blue-400 hover:text-blue-700 transition-colors">
-                  {c}
-                </button>
-              ))}
-            </div>
-            <div className="flex gap-2 items-end">
-              <textarea rows={2} value={editText} onChange={e => setEditText(e.target.value)}
-                placeholder="Describe a change — e.g. tighten the statement of need and lead with the jobs number."
-                className="flex-1 rounded-lg border border-slate-200 px-3 py-2.5 text-sm text-slate-800 resize-none outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100 transition-colors" />
-              <button onClick={onEdit} disabled={!editText.trim()}
-                className="h-[70px] px-4 rounded-lg bg-blue-600 text-white text-sm font-semibold hover:bg-blue-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors flex-none">
-                Apply →
-              </button>
-            </div>
-          </div>
-        )}
-        {gen === "done" && editsLeft === 0 && (
-          <div className="px-5 py-3 border-t border-slate-100 text-sm text-amber-700 bg-amber-50 flex items-center gap-2">
-            <Sparkles className="w-4 h-4" /> All {maxEdits} edits used.{" "}
-            <button onClick={onNewDraft} className="font-bold underline text-slate-800">Start a new draft</button>
-          </div>
-        )}
+        <textarea
+          value={notes}
+          onChange={(e) => setNotes(e.target.value)}
+          onBlur={handleBlur}
+          placeholder="Jot down notes, deadlines, contact info, or anything else relevant to this application…"
+          className="w-full p-4 text-sm leading-relaxed text-slate-800 bg-transparent outline-none resize-none font-[inherit]"
+          style={{ minHeight: "320px" }}
+        />
       </div>
     </div>
   )
