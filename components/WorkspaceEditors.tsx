@@ -367,7 +367,6 @@ export function FormsTab({ grant, userId }: { grant: Grant; userId: string }) {
   const [downloading, setDownloading] = useState(false)
   const [dlError, setDlError] = useState("")
   const [step, setStep] = useState(0)
-  const [formValues, setFormValues] = useState<Record<number, Record<string, string>>>({})
   const [seed, setSeed] = useState<Record<string, string>>({})
 
   const docs = grant.required_documents
@@ -391,18 +390,6 @@ export function FormsTab({ grant, userId }: { grant: Grant; userId: string }) {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       .then(({ data }: { data: any }) => setSeed(buildSeed(data as ProfileSeed, grant)))
   }, [userId, grant, supabase])
-
-  // Form values from localStorage
-  useEffect(() => {
-    const loaded: Record<number, Record<string, string>> = {}
-    docs.forEach((_, i) => {
-      try {
-        const raw = localStorage.getItem(`workspace:${grant.slug}:form:${i}`)
-        if (raw) loaded[i] = JSON.parse(raw) as Record<string, string>
-      } catch { /* skip malformed */ }
-    })
-    setFormValues(loaded)
-  }, [grant.slug, docs])
 
   async function toggleItem(i: number) {
     setCheckedItems((prev) => {
@@ -509,14 +496,6 @@ export function FormsTab({ grant, userId }: { grant: Grant; userId: string }) {
           <PdfFormViewer
             formKey={currentFormKey}
             seedValues={seed}
-            savedValues={formValues[step] ?? {}}
-            onValuesChange={(v) => {
-              setFormValues((prev) => {
-                const next = { ...prev, [step]: v }
-                try { localStorage.setItem(`workspace:${grant.slug}:form:${step}`, JSON.stringify(v)) } catch { /* quota */ }
-                return next
-              })
-            }}
             onReady={() => toggleItem(step)}
             isReady={checkedItems.has(step)}
           />
