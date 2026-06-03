@@ -4,7 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react"
 import { Check, ChevronLeft, ChevronRight, Download, ExternalLink, RefreshCw, Send, Sparkles } from "lucide-react"
 import type { Grant } from "@/lib/types"
 import { getBrowserSupabase } from "@/lib/supabase-browser"
-import { PdfFormViewer } from "@/components/PdfFormViewer"
+import { GovFormFiller } from "@/components/GovFormFiller"
 
 // ── OverviewTab ────────────────────────────────────────────────────────────
 
@@ -368,9 +368,32 @@ export function FormsTab({ grant, userId }: { grant: Grant; userId: string }) {
   const [dlError, setDlError] = useState("")
   const [step, setStep] = useState(0)
   const [seed, setSeed] = useState<Record<string, string>>({})
+  const [formValues, setFormValues] = useState<Record<number, Record<string, string>>>({})
 
   const docs = grant.required_documents
   const total = docs.length
+
+  // Load saved form values from localStorage
+  useEffect(() => {
+    const saved: Record<number, Record<string, string>> = {}
+    for (let i = 0; i < docs.length; i++) {
+      const raw = localStorage.getItem(`workspace:${grant.slug}:form:${i}`)
+      if (raw) { try { saved[i] = JSON.parse(raw) } catch { /* ignore */ } }
+    }
+    if (Object.keys(saved).length) setFormValues(saved)
+  }, [grant.slug, docs.length])
+
+  function getFormValues(i: number): Record<string, string> {
+    return { ...seed, ...formValues[i] }
+  }
+
+  function handleFormChange(i: number, k: string, v: string) {
+    setFormValues(prev => {
+      const next = { ...prev, [i]: { ...(prev[i] ?? {}), [k]: v } }
+      localStorage.setItem(`workspace:${grant.slug}:form:${i}`, JSON.stringify(next[i]))
+      return next
+    })
+  }
 
   // Checklist from Supabase
   useEffect(() => {
@@ -493,9 +516,10 @@ export function FormsTab({ grant, userId }: { grant: Grant; userId: string }) {
       {/* Current step content */}
       <div className="flex-1">
         {currentFormKey ? (
-          <PdfFormViewer
+          <GovFormFiller
             formKey={currentFormKey}
-            seedValues={seed}
+            values={getFormValues(step)}
+            onChange={(k, v) => handleFormChange(step, k, v)}
             onReady={() => toggleItem(step)}
             isReady={checkedItems.has(step)}
           />
