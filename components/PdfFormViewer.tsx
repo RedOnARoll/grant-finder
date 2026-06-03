@@ -78,13 +78,18 @@ function seedValueForField(fieldName: string, seed: Record<string, string>): str
   return ""
 }
 
-// ── PDF form URL map ───────────────────────────────────────────────────────
+// ── Form metadata ──────────────────────────────────────────────────────────
 
 const FORM_TITLES: Record<string, string> = {
   "sf-424":  "SF-424 — Application for Federal Assistance",
   "sf-424a": "SF-424A — Budget Information (Non-Construction)",
   "sf-424b": "SF-424B — Assurances (Non-Construction Programs)",
   "sf-lll":  "SF-LLL — Disclosure of Lobbying Activities",
+}
+
+// PDFs are committed to public/forms/ — serve as static assets, no proxy needed
+function formPdfUrl(formKey: string) {
+  return `/forms/${formKey}.pdf`
 }
 
 const RENDER_SCALE = 1.5
@@ -120,7 +125,7 @@ export function PdfFormViewer({ formKey, seedValues, savedValues, onValuesChange
         const { getDocument, GlobalWorkerOptions } = await import("pdfjs-dist")
         GlobalWorkerOptions.workerSrc = "/pdf.worker.min.mjs"
 
-        const res = await fetch(`/api/pdf-proxy?form=${encodeURIComponent(formKey)}`)
+        const res = await fetch(formPdfUrl(formKey))
         if (!res.ok) throw new Error(`PDF fetch failed: ${res.status}`)
         const buffer = await res.arrayBuffer()
         if (cancelled) return
