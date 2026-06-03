@@ -4,7 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react"
 import { Check, ChevronLeft, ChevronRight, Download, ExternalLink, RefreshCw, Send, Sparkles } from "lucide-react"
 import type { Grant } from "@/lib/types"
 import { getBrowserSupabase } from "@/lib/supabase-browser"
-import { GovFormFiller } from "@/components/GovFormFiller"
+import { PdfFormViewer } from "@/components/PdfFormViewer"
 
 // ── OverviewTab ────────────────────────────────────────────────────────────
 
@@ -404,18 +404,6 @@ export function FormsTab({ grant, userId }: { grant: Grant; userId: string }) {
     setFormValues(loaded)
   }, [grant.slug, docs])
 
-  function getFormValues(i: number): Record<string, string> {
-    return { ...seed, ...(formValues[i] ?? {}) }
-  }
-
-  function handleFormChange(i: number, k: string, v: string) {
-    setFormValues((prev) => {
-      const updated = { ...(prev[i] ?? {}), [k]: v }
-      try { localStorage.setItem(`workspace:${grant.slug}:form:${i}`, JSON.stringify(updated)) } catch { /* quota */ }
-      return { ...prev, [i]: updated }
-    })
-  }
-
   async function toggleItem(i: number) {
     setCheckedItems((prev) => {
       const next = new Set(prev)
@@ -518,10 +506,17 @@ export function FormsTab({ grant, userId }: { grant: Grant; userId: string }) {
       {/* Current step content */}
       <div className="flex-1">
         {currentFormKey ? (
-          <GovFormFiller
+          <PdfFormViewer
             formKey={currentFormKey}
-            values={getFormValues(step)}
-            onChange={(k, v) => handleFormChange(step, k, v)}
+            seedValues={seed}
+            savedValues={formValues[step] ?? {}}
+            onValuesChange={(v) => {
+              setFormValues((prev) => {
+                const next = { ...prev, [step]: v }
+                try { localStorage.setItem(`workspace:${grant.slug}:form:${step}`, JSON.stringify(v)) } catch { /* quota */ }
+                return next
+              })
+            }}
             onReady={() => toggleItem(step)}
             isReady={checkedItems.has(step)}
           />
