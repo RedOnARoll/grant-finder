@@ -33,11 +33,7 @@ const securityHeaders = [
 ]
 
 const nextConfig: NextConfig = {
-  webpack(config) {
-    // pdfjs-dist tries to require 'canvas' for server-side — stub it out
-    config.resolve.alias = { ...config.resolve.alias, canvas: false }
-    return config
-  },
+  turbopack: {},
   async headers() {
     return [
       {
