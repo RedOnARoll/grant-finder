@@ -1,7 +1,7 @@
 "use client"
 
 import { useCallback, useEffect, useRef, useState } from "react"
-import { Check, ChevronDown, Download, ExternalLink, RefreshCw, Send, Sparkles } from "lucide-react"
+import { Check, ChevronLeft, ChevronRight, Download, ExternalLink, RefreshCw, Send, Sparkles } from "lucide-react"
 import type { Grant } from "@/lib/types"
 import { getBrowserSupabase } from "@/lib/supabase-browser"
 import { GovFormFiller } from "@/components/GovFormFiller"
@@ -366,9 +366,12 @@ export function FormsTab({ grant, userId }: { grant: Grant; userId: string }) {
   const [checkedItems, setCheckedItems] = useState<Set<number>>(new Set())
   const [downloading, setDownloading] = useState(false)
   const [dlError, setDlError] = useState("")
-  const [expandedForm, setExpandedForm] = useState<number | null>(null)
+  const [step, setStep] = useState(0)
   const [formValues, setFormValues] = useState<Record<number, Record<string, string>>>({})
   const [seed, setSeed] = useState<Record<string, string>>({})
+
+  const docs = grant.required_documents
+  const total = docs.length
 
   // Checklist from Supabase
   useEffect(() => {
@@ -392,14 +395,14 @@ export function FormsTab({ grant, userId }: { grant: Grant; userId: string }) {
   // Form values from localStorage
   useEffect(() => {
     const loaded: Record<number, Record<string, string>> = {}
-    grant.required_documents.forEach((_, i) => {
+    docs.forEach((_, i) => {
       try {
         const raw = localStorage.getItem(`workspace:${grant.slug}:form:${i}`)
         if (raw) loaded[i] = JSON.parse(raw) as Record<string, string>
       } catch { /* skip malformed */ }
     })
     setFormValues(loaded)
-  }, [grant.slug, grant.required_documents])
+  }, [grant.slug, docs])
 
   function getFormValues(i: number): Record<string, string> {
     return { ...seed, ...(formValues[i] ?? {}) }
@@ -449,80 +452,123 @@ export function FormsTab({ grant, userId }: { grant: Grant; userId: string }) {
     setDownloading(false)
   }
 
-  return (
-    <div className="p-5 grid gap-5">
-      {/* Download Pre-filled PDF */}
-      <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
-        <div className="flex items-start justify-between gap-3 flex-wrap">
+  // No required documents — just show the SF-424 download
+  if (total === 0) {
+    return (
+      <div className="p-5">
+        <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 flex items-start justify-between gap-3 flex-wrap">
           <div>
-            <p className="text-sm font-semibold text-slate-800">Download Pre-filled PDF</p>
-            <p className="text-xs text-slate-500 mt-0.5">Fills a grants.gov SF-424 from your profile</p>
+            <p className="text-sm font-semibold text-slate-800">Download Pre-filled SF-424</p>
+            <p className="text-xs text-slate-500 mt-0.5">Auto-populated from your profile</p>
             {dlError && <p className="text-xs text-rose-600 mt-2">{dlError}</p>}
           </div>
           <button onClick={handlePrefill} disabled={downloading}
-            className="inline-flex items-center gap-1.5 h-9 px-4 rounded-lg bg-blue-600 text-white text-xs font-semibold hover:bg-blue-700 disabled:opacity-60 disabled:cursor-not-allowed transition-colors shrink-0">
-            {downloading
-              ? <><span className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" /> Generating…</>
-              : <><Download className="w-3.5 h-3.5" /> Download SF-424</>}
+            className="inline-flex items-center gap-1.5 h-9 px-4 rounded-lg bg-blue-600 text-white text-xs font-semibold hover:bg-blue-700 disabled:opacity-60 transition-colors shrink-0">
+            {downloading ? <><span className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" /> Generating…</> : <><Download className="w-3.5 h-3.5" /> Download</>}
           </button>
         </div>
       </div>
+    )
+  }
 
-      {/* Required Documents */}
-      {grant.required_documents.length > 0 && (
-        <div>
-          <div className="flex items-center justify-between mb-2">
-            <p className="text-sm font-semibold text-slate-800">Required Documents</p>
-            <span className="text-xs font-semibold text-slate-400 tabular-nums">{checkedItems.size}/{grant.required_documents.length} ready</span>
-          </div>
-          <div className="grid gap-2">
-            {grant.required_documents.map((doc, i) => {
-              const formKey = matchFormKey(doc)
-              if (formKey) {
-                const isExpanded = expandedForm === i
-                const isReady = checkedItems.has(i)
-                return (
-                  <div key={i} className="rounded-xl border border-slate-200 overflow-hidden">
-                    <button onClick={() => setExpandedForm(isExpanded ? null : i)}
-                      className="flex items-center gap-3 w-full px-3 py-2.5 bg-white hover:bg-slate-50 transition-colors text-left">
-                      <span className={`w-5 h-5 rounded-md grid place-items-center flex-none border-2 transition-colors ${
-                        isReady ? "bg-emerald-500 border-emerald-500 text-white" : "border-slate-300 bg-white"
-                      }`}>
-                        {isReady && <Check className="w-3 h-3" strokeWidth={3} />}
-                      </span>
-                      <span className={`text-sm flex-1 leading-tight ${isReady ? "line-through text-slate-400" : "text-slate-700"}`}>{doc}</span>
-                      <span className="text-[10px] font-semibold bg-blue-50 text-blue-700 border border-blue-200 px-2 py-0.5 rounded-md shrink-0">Interactive form</span>
-                      <ChevronDown className={`w-4 h-4 text-slate-400 transition-transform shrink-0 ${isExpanded ? "rotate-180" : ""}`} />
-                    </button>
-                    {isExpanded && (
-                      <div className="border-t border-slate-200">
-                        <GovFormFiller
-                          formKey={formKey}
-                          values={getFormValues(i)}
-                          onChange={(k, v) => handleFormChange(i, k, v)}
-                          onReady={() => toggleItem(i)}
-                          isReady={isReady}
-                        />
-                      </div>
-                    )}
-                  </div>
-                )
-              }
-              return (
-                <button key={i} onClick={() => toggleItem(i)}
-                  className="flex items-center gap-3 px-3 py-2.5 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 transition-colors text-left w-full">
-                  <span className={`w-5 h-5 rounded-md grid place-items-center flex-none border-2 transition-colors ${
-                    checkedItems.has(i) ? "bg-emerald-500 border-emerald-500 text-white" : "border-slate-300 bg-white"
-                  }`}>
-                    {checkedItems.has(i) && <Check className="w-3 h-3" strokeWidth={3} />}
-                  </span>
-                  <span className={`text-sm flex-1 leading-tight ${checkedItems.has(i) ? "line-through text-slate-400" : "text-slate-700"}`}>{doc}</span>
-                </button>
-              )
-            })}
+  const currentDoc = docs[step]
+  const currentFormKey = matchFormKey(currentDoc)
+  const allDone = checkedItems.size === total
+
+  return (
+    <div className="flex flex-col">
+      {/* Step indicator */}
+      <div className="px-5 pt-4 pb-3 border-b border-slate-100 bg-slate-50 shrink-0">
+        <div className="flex items-center justify-between mb-3">
+          <p className="text-xs font-semibold text-slate-500">
+            Step {step + 1} of {total}
+          </p>
+          <div className="flex items-center gap-2">
+            <span className="text-xs text-slate-400 tabular-nums">{checkedItems.size}/{total} complete</span>
+            <button onClick={handlePrefill} disabled={downloading}
+              className="inline-flex items-center gap-1 h-6 px-2.5 rounded-md border border-slate-200 bg-white text-[11px] font-medium text-slate-600 hover:bg-slate-50 disabled:opacity-60 transition-colors">
+              {downloading ? <span className="w-2.5 h-2.5 border border-slate-400 border-t-transparent rounded-full animate-spin" /> : <Download className="w-2.5 h-2.5" />}
+              SF-424
+            </button>
+            {dlError && <span className="text-[10px] text-rose-500">{dlError}</span>}
           </div>
         </div>
-      )}
+        {/* Step dots */}
+        <div className="flex items-center">
+          {docs.map((_, i) => (
+            <div key={i} className="flex items-center flex-1 last:flex-none">
+              <button onClick={() => setStep(i)}
+                className={`w-7 h-7 rounded-full text-[11px] font-bold transition-all flex-none grid place-items-center ${
+                  i === step
+                    ? "bg-blue-600 text-white ring-4 ring-blue-100"
+                    : checkedItems.has(i)
+                    ? "bg-emerald-500 text-white hover:bg-emerald-600"
+                    : "bg-slate-200 text-slate-500 hover:bg-slate-300"
+                }`}>
+                {checkedItems.has(i) && i !== step ? <Check className="w-3.5 h-3.5" strokeWidth={3} /> : i + 1}
+              </button>
+              {i < docs.length - 1 && (
+                <div className={`flex-1 h-0.5 mx-1 rounded-full ${checkedItems.has(i) ? "bg-emerald-400" : "bg-slate-200"}`} />
+              )}
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Current step content */}
+      <div className="flex-1">
+        {currentFormKey ? (
+          <GovFormFiller
+            formKey={currentFormKey}
+            values={getFormValues(step)}
+            onChange={(k, v) => handleFormChange(step, k, v)}
+            onReady={() => toggleItem(step)}
+            isReady={checkedItems.has(step)}
+          />
+        ) : (
+          <div className="p-6 flex flex-col gap-5">
+            <div>
+              <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-400 mb-1.5">Required Document</p>
+              <p className="text-lg font-semibold text-slate-900 leading-snug">{currentDoc}</p>
+            </div>
+            <p className="text-sm text-slate-500 leading-relaxed">
+              Prepare this document, then mark it ready when it&apos;s complete.
+            </p>
+            <button onClick={() => toggleItem(step)}
+              className={`self-start inline-flex items-center gap-2.5 h-10 px-5 rounded-xl text-sm font-semibold border-2 transition-colors ${
+                checkedItems.has(step)
+                  ? "bg-emerald-50 border-emerald-400 text-emerald-700"
+                  : "bg-white border-slate-300 text-slate-700 hover:border-blue-400 hover:bg-blue-50 hover:text-blue-700"
+              }`}>
+              <span className={`w-5 h-5 rounded-md grid place-items-center border-2 flex-none transition-colors ${
+                checkedItems.has(step) ? "bg-emerald-500 border-emerald-500 text-white" : "border-current"
+              }`}>
+                {checkedItems.has(step) && <Check className="w-3 h-3" strokeWidth={3} />}
+              </span>
+              {checkedItems.has(step) ? "Marked as ready" : "Mark as ready"}
+            </button>
+          </div>
+        )}
+      </div>
+
+      {/* Navigation */}
+      <div className="flex items-center justify-between px-5 py-3.5 border-t border-slate-100 bg-slate-50 shrink-0">
+        <button onClick={() => setStep((s) => Math.max(0, s - 1))} disabled={step === 0}
+          className="inline-flex items-center gap-1 h-9 px-3.5 rounded-lg border border-slate-200 bg-white text-sm font-semibold text-slate-600 hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors">
+          <ChevronLeft className="w-4 h-4" /> Back
+        </button>
+
+        {step < total - 1 ? (
+          <button onClick={() => setStep((s) => s + 1)}
+            className="inline-flex items-center gap-1 h-9 px-4 rounded-lg bg-blue-600 text-white text-sm font-semibold hover:bg-blue-700 transition-colors">
+            Next <ChevronRight className="w-4 h-4" />
+          </button>
+        ) : (
+          <span className={`text-sm font-semibold ${allDone ? "text-emerald-600" : "text-slate-400"}`}>
+            {allDone ? "All documents ready ✓" : `${total - checkedItems.size} remaining`}
+          </span>
+        )}
+      </div>
     </div>
   )
 }
