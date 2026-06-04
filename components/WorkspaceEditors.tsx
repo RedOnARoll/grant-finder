@@ -92,60 +92,81 @@ export function OverviewTab({ grant, onStartApplication }: { grant: Grant; onSta
 
 // ── GrantGuidelines ────────────────────────────────────────────────────────
 
-function GrantGuidelines({ grant }: { grant: Grant }) {
-  const eligList: string[] = Array.isArray(grant.eligibility_criteria)
-    ? (grant.eligibility_criteria as string[])
-    : Object.entries(grant.eligibility_criteria as Record<string, unknown>)
-        .filter(([, v]) => v !== null && v !== undefined && v !== false)
-        .map(([k, v]) => `${k.replace(/_/g, " ")}: ${v}`)
+const NARRATIVE_GUIDELINES = [
+  {
+    heading: "Before You Write",
+    items: [
+      "Read the full Notice of Funding Opportunity (NOFO) before drafting anything.",
+      "Note exact page limits, font size, and margin requirements — non-compliance can disqualify an otherwise strong application.",
+      "List every review criterion; your narrative must address each one explicitly.",
+    ],
+  },
+  {
+    heading: "Statement of Need",
+    items: [
+      "Use current, cited data to document the problem — census data, peer-reviewed research, or a formal needs assessment.",
+      "Connect local need to the funder's stated mission and priorities.",
+      "Do not assume reviewers know your community; make the case clearly.",
+    ],
+  },
+  {
+    heading: "Project Description",
+    items: [
+      "State goals and SMART objectives: Specific, Measurable, Achievable, Relevant, Time-bound.",
+      "Describe an evidence-based approach and cite peer-reviewed research or federal program models that support it.",
+      "Specify who will be served, how many individuals, and over what period.",
+    ],
+  },
+  {
+    heading: "Organizational Capacity",
+    items: [
+      "Demonstrate relevant prior experience with similar projects or target populations.",
+      "Name key personnel and briefly note their qualifications.",
+      "Describe each partner's specific, concrete role — avoid vague letters of support.",
+    ],
+  },
+  {
+    heading: "Evaluation Plan",
+    items: [
+      "Define measurable indicators of progress toward each objective.",
+      "Specify data collection methods, responsible parties, and reporting frequency.",
+      "Explain how findings will be used for continuous program improvement.",
+    ],
+  },
+  {
+    heading: "Writing Best Practices",
+    items: [
+      "Write for an expert reviewer who is unfamiliar with your organization.",
+      "Use section headers that mirror the NOFO's exact section titles.",
+      "Define all acronyms on first use; avoid unexplained jargon.",
+      "Lead each section with your strongest point — reviewers skim.",
+    ],
+  },
+]
 
+function GrantGuidelines({ grant }: { grant: Grant }) {
   return (
     <div className="flex-1 overflow-y-auto p-4 space-y-4 text-sm">
-      <div>
-        <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-400 mb-1">Funder</p>
-        <p className="text-sm font-semibold text-slate-800">{grant.agency}</p>
-      </div>
-
-      {grant.description && (
-        <div>
-          <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-400 mb-1">About</p>
-          <p className="text-xs text-slate-600 leading-relaxed">{grant.description}</p>
-        </div>
-      )}
-
-      {eligList.length > 0 && (
-        <div>
-          <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-400 mb-1.5">Eligibility Requirements</p>
+      {NARRATIVE_GUIDELINES.map((section) => (
+        <div key={section.heading}>
+          <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-400 mb-1.5">{section.heading}</p>
           <ul className="space-y-1.5">
-            {eligList.map((item, i) => (
-              <li key={i} className="flex items-start gap-2 text-xs text-slate-600">
-                <Check className="w-3 h-3 text-blue-500 mt-0.5 shrink-0" strokeWidth={2.5} />
+            {section.items.map((item, i) => (
+              <li key={i} className="flex items-start gap-2 text-xs text-slate-600 leading-relaxed">
+                <span className="w-1 h-1 rounded-full bg-blue-400 mt-1.5 shrink-0" />
                 {item}
               </li>
             ))}
           </ul>
         </div>
-      )}
-
-      {grant.required_documents.length > 0 && (
-        <div>
-          <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-400 mb-1.5">Required Documents</p>
-          <ul className="space-y-1.5">
-            {grant.required_documents.map((doc, i) => (
-              <li key={i} className="flex items-start gap-2 text-xs text-slate-600">
-                <span className="w-3.5 h-3.5 rounded bg-slate-200 text-slate-500 text-[9px] font-bold grid place-items-center shrink-0 mt-0.5">{i + 1}</span>
-                {doc}
-              </li>
-            ))}
-          </ul>
-        </div>
-      )}
+      ))}
 
       {grant.official_source_url && (
-        <div className="pt-1 border-t border-slate-100">
+        <div className="pt-2 border-t border-slate-100">
+          <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-400 mb-1">Program-Specific Guidelines</p>
           <a href={grant.official_source_url} target="_blank" rel="noopener noreferrer"
             className="inline-flex items-center gap-1.5 text-xs font-medium text-blue-600 hover:underline">
-            View official guidelines <ExternalLink className="w-3 h-3" />
+            View official NOFO <ExternalLink className="w-3 h-3" />
           </a>
         </div>
       )}
