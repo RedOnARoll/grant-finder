@@ -60,6 +60,16 @@ type DocCategory =
 function categorize(doc: string): DocCategory {
   const d = doc.toLowerCase()
   if (!d.includes("fafsa") && (d.includes("application") || d.includes("enrollment form"))) return "application_form"
+  if (
+    d.includes("submission portal") ||
+    d.includes("apply via") ||
+    d.includes("apply through") ||
+    d.includes("apply online") ||
+    d.includes("submit via") ||
+    d.includes("submit through") ||
+    d.includes("application portal") ||
+    d.includes("grants.gov")
+  ) return "application_form"
   if (d.includes("sam.gov") || d.includes("sam registration") || d.includes("uei") || d.includes("unique entity id")) return "sam_uei"
   if (d.includes("social security") && (d.includes("card") || d.includes("number"))) return "ssn"
   if (d.includes("birth certificate") || d.includes("identity and age") || d.includes("proof of age")) return "birth_certificate"

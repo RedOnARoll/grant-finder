@@ -180,7 +180,7 @@ async function extractFromUrl(
         content: `Today is ${today}. Extract grant/benefit information for "${grantName}" from this webpage text. Return ONLY valid JSON with these fields:
 - deadline: ISO date string (YYYY-MM-DD) or null. Look for phrases like "deadline", "due date", "apply by", "closes", "submissions due", "applications accepted through". If you find a month/day without a year (e.g. "May 30"), use the current or next upcoming occurrence based on today's date. For monthly recurring grants, return the next upcoming monthly deadline. Return null only if no deadline can be determined.
 - max_amount: number (dollars) or null
-- required_documents: array of strings (document names required to apply)
+- required_documents: array of strings listing supporting documents the applicant must gather and prepare (e.g. tax returns, ID, business plan). Do NOT include the application form, submission portal, or the act of applying itself — for example, do not include items like "Application via grants.gov", "Submit via SBIR portal", "Online application form", or any reference to where/how to submit
 - application_url: the direct URL to apply or null
 - eligibility_summary: one sentence plain-English eligibility statement or null
 
