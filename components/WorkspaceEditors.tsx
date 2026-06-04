@@ -1,7 +1,7 @@
 "use client"
 
 import { useCallback, useEffect, useRef, useState } from "react"
-import { Check, ChevronLeft, ChevronRight, Download, ExternalLink, RefreshCw, Send, Sparkles } from "lucide-react"
+import { BookOpen, Check, ChevronLeft, ChevronRight, Download, ExternalLink, RefreshCw, Send, Sparkles } from "lucide-react"
 import type { Grant } from "@/lib/types"
 import { getBrowserSupabase } from "@/lib/supabase-browser"
 import { GovFormFiller } from "@/components/GovFormFiller"
@@ -90,6 +90,69 @@ export function OverviewTab({ grant, onStartApplication }: { grant: Grant; onSta
   )
 }
 
+// ── GrantGuidelines ────────────────────────────────────────────────────────
+
+function GrantGuidelines({ grant }: { grant: Grant }) {
+  const eligList: string[] = Array.isArray(grant.eligibility_criteria)
+    ? (grant.eligibility_criteria as string[])
+    : Object.entries(grant.eligibility_criteria as Record<string, unknown>)
+        .filter(([, v]) => v !== null && v !== undefined && v !== false)
+        .map(([k, v]) => `${k.replace(/_/g, " ")}: ${v}`)
+
+  return (
+    <div className="flex-1 overflow-y-auto p-4 space-y-4 text-sm">
+      <div>
+        <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-400 mb-1">Funder</p>
+        <p className="text-sm font-semibold text-slate-800">{grant.agency}</p>
+      </div>
+
+      {grant.description && (
+        <div>
+          <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-400 mb-1">About</p>
+          <p className="text-xs text-slate-600 leading-relaxed">{grant.description}</p>
+        </div>
+      )}
+
+      {eligList.length > 0 && (
+        <div>
+          <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-400 mb-1.5">Eligibility Requirements</p>
+          <ul className="space-y-1.5">
+            {eligList.map((item, i) => (
+              <li key={i} className="flex items-start gap-2 text-xs text-slate-600">
+                <Check className="w-3 h-3 text-blue-500 mt-0.5 shrink-0" strokeWidth={2.5} />
+                {item}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
+      {grant.required_documents.length > 0 && (
+        <div>
+          <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-400 mb-1.5">Required Documents</p>
+          <ul className="space-y-1.5">
+            {grant.required_documents.map((doc, i) => (
+              <li key={i} className="flex items-start gap-2 text-xs text-slate-600">
+                <span className="w-3.5 h-3.5 rounded bg-slate-200 text-slate-500 text-[9px] font-bold grid place-items-center shrink-0 mt-0.5">{i + 1}</span>
+                {doc}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
+      {grant.official_source_url && (
+        <div className="pt-1 border-t border-slate-100">
+          <a href={grant.official_source_url} target="_blank" rel="noopener noreferrer"
+            className="inline-flex items-center gap-1.5 text-xs font-medium text-blue-600 hover:underline">
+            View official guidelines <ExternalLink className="w-3 h-3" />
+          </a>
+        </div>
+      )}
+    </div>
+  )
+}
+
 // ── NarrativeBuilderTab ────────────────────────────────────────────────────
 
 type ChatMsg = { role: "user" | "ai"; content: string; isError?: boolean }
@@ -104,6 +167,8 @@ export function NarrativeBuilderTab({ grant, userId }: { grant: Grant; userId: s
   const [chatMsgs, setChatMsgs] = useState<ChatMsg[]>([])
   const [chatInput, setChatInput] = useState("")
   const [genError, setGenError] = useState("")
+  const [rightTab, setRightTab] = useState<"guidelines" | "ai-edit">("guidelines")
+  const [manualMode, setManualMode] = useState(false)
   const chatEndRef = useRef<HTMLDivElement>(null)
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
@@ -158,6 +223,7 @@ export function NarrativeBuilderTab({ grant, userId }: { grant: Grant; userId: s
       const json = await res.json() as { narrative: string }
       setDraft(json.narrative)
       setLastSavedDraft(json.narrative)
+      setManualMode(false)
       setChatMsgs([])
     } catch (err) {
       setGenError(err instanceof Error ? err.message : "Generation failed. Please try again.")
@@ -209,31 +275,55 @@ export function NarrativeBuilderTab({ grant, userId }: { grant: Grant; userId: s
     win.print()
   }
 
-  if (!draft && !isGenerating) {
+  if (!draft && !isGenerating && !manualMode) {
     return (
-      <div className="p-8 flex flex-col items-center justify-center min-h-56 text-center gap-4">
-        <div className="w-12 h-12 rounded-xl bg-blue-50 text-blue-600 grid place-items-center">
-          <Sparkles className="w-6 h-6" />
+      <div className="flex" style={{ minHeight: "500px" }}>
+        <div className="flex flex-col items-center justify-center border-r border-slate-200 p-8 text-center gap-4" style={{ flex: "0 0 65%" }}>
+          <div className="w-12 h-12 rounded-xl bg-blue-50 text-blue-600 grid place-items-center">
+            <Sparkles className="w-6 h-6" />
+          </div>
+          <div>
+            <p className="text-sm font-semibold text-slate-800">Write your narrative</p>
+            <p className="text-xs text-slate-500 mt-1 max-w-xs mx-auto">Type directly below, or let AI draft a narrative based on this grant&apos;s requirements.</p>
+          </div>
+          {genError && <p className="text-xs text-rose-600 max-w-xs">{genError}</p>}
+          <div className="flex flex-col gap-2 w-full max-w-xs">
+            <button onClick={() => setManualMode(true)}
+              className="inline-flex items-center justify-center gap-2 h-10 px-5 rounded-lg border border-slate-300 bg-white text-slate-700 text-sm font-semibold hover:bg-slate-50 transition-colors">
+              Start writing
+            </button>
+            <button onClick={handleGenerate}
+              className="inline-flex items-center justify-center gap-2 h-10 px-5 rounded-lg bg-blue-600 text-white text-sm font-semibold hover:bg-blue-700 transition-colors">
+              <Sparkles className="w-4 h-4" /> Generate with AI
+            </button>
+          </div>
         </div>
-        <div>
-          <p className="text-sm font-semibold text-slate-800">Generate Narrative</p>
-          <p className="text-xs text-slate-500 mt-1 max-w-xs mx-auto">AI will research this grant&apos;s requirements and draft a narrative using your profile.</p>
+        <div className="flex flex-col" style={{ flex: "0 0 35%" }}>
+          <div className="px-3 py-2.5 border-b border-slate-100 bg-slate-50 shrink-0 flex items-center gap-1">
+            <BookOpen className="w-3.5 h-3.5 text-slate-400" />
+            <p className="text-xs font-semibold text-slate-500">Grant Guidelines</p>
+          </div>
+          <GrantGuidelines grant={grant} />
         </div>
-        {genError && <p className="text-xs text-rose-600 max-w-xs">{genError}</p>}
-        <button onClick={handleGenerate}
-          className="inline-flex items-center gap-2 h-10 px-5 rounded-lg bg-blue-600 text-white text-sm font-semibold hover:bg-blue-700 transition-colors">
-          <Sparkles className="w-4 h-4" /> Generate Narrative
-        </button>
       </div>
     )
   }
 
   if (isGenerating) {
     return (
-      <div className="p-8 flex flex-col items-center justify-center min-h-56 gap-3 text-center">
-        <div className="w-6 h-6 border-2 border-blue-600 border-t-transparent rounded-full animate-spin" />
-        <p className="text-sm text-slate-600">Researching grant requirements and drafting narrative…</p>
-        <p className="text-xs text-slate-400">This may take up to 30 seconds</p>
+      <div className="flex" style={{ minHeight: "500px" }}>
+        <div className="flex flex-col items-center justify-center border-r border-slate-200 p-8 gap-3 text-center" style={{ flex: "0 0 65%" }}>
+          <div className="w-6 h-6 border-2 border-blue-600 border-t-transparent rounded-full animate-spin" />
+          <p className="text-sm text-slate-600">Researching grant requirements and drafting narrative…</p>
+          <p className="text-xs text-slate-400">This may take up to 30 seconds</p>
+        </div>
+        <div className="flex flex-col" style={{ flex: "0 0 35%" }}>
+          <div className="px-3 py-2.5 border-b border-slate-100 bg-slate-50 shrink-0 flex items-center gap-1">
+            <BookOpen className="w-3.5 h-3.5 text-slate-400" />
+            <p className="text-xs font-semibold text-slate-500">Grant Guidelines</p>
+          </div>
+          <GrantGuidelines grant={grant} />
+        </div>
       </div>
     )
   }
@@ -248,7 +338,7 @@ export function NarrativeBuilderTab({ grant, userId }: { grant: Grant; userId: s
             {savedBadge && <span className="text-[10px] font-semibold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-md">Saved</span>}
             <button onClick={exportPDF}
               className="inline-flex items-center gap-1 h-7 px-2.5 rounded-md border border-slate-200 bg-white text-[11px] font-medium text-slate-600 hover:bg-slate-50 transition-colors">
-              <Download className="w-3 h-3" /> PDF
+              <Download className="w-3 h-3" /> Save as PDF
             </button>
             <button onClick={handleGenerate}
               className="inline-flex items-center gap-1 h-7 px-2.5 rounded-md border border-slate-200 bg-white text-[11px] font-medium text-slate-600 hover:bg-slate-50 transition-colors">
@@ -266,52 +356,70 @@ export function NarrativeBuilderTab({ grant, userId }: { grant: Grant; userId: s
         />
       </div>
 
-      {/* Right zone — AI chat panel 35% */}
+      {/* Right zone — Guidelines / AI edit 35% */}
       <div className="flex flex-col" style={{ flex: "0 0 35%" }}>
-        <div className="px-3 py-2.5 border-b border-slate-100 bg-slate-50 shrink-0">
-          <p className="text-xs font-semibold text-slate-500">Edit with AI</p>
-        </div>
-        <div className="flex-1 overflow-y-auto p-3 space-y-2" style={{ minHeight: "380px" }}>
-          {chatMsgs.length === 0 && (
-            <p className="text-xs text-slate-400 text-center pt-8 leading-relaxed px-2">
-              Ask AI to edit your narrative…<br />
-              e.g. &ldquo;Make the opening more concise&rdquo;
-            </p>
-          )}
-          {chatMsgs.map((m, i) => (
-            <div key={i} className={`flex ${m.role === "user" ? "justify-end" : "justify-start"}`}>
-              <div className={`max-w-[90%] rounded-xl px-3 py-2 text-xs leading-relaxed ${
-                m.role === "user" ? "bg-blue-600 text-white" :
-                m.isError ? "bg-rose-50 text-rose-700 border border-rose-200" :
-                "bg-slate-100 text-slate-700"
-              }`}>{m.content}</div>
-            </div>
-          ))}
-          {isEditing && (
-            <div className="flex gap-1 px-2 pt-1">
-              {[0, 1, 2].map((i) => (
-                <span key={i} className="w-1.5 h-1.5 bg-blue-400 rounded-full animate-bounce"
-                  style={{ animationDelay: `${i * 0.15}s` }} />
-              ))}
-            </div>
-          )}
-          <div ref={chatEndRef} />
-        </div>
-        <div className="flex gap-2 p-3 border-t border-slate-100 shrink-0">
-          <textarea
-            value={chatInput}
-            onChange={(e) => setChatInput(e.target.value)}
-            onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleSend() } }}
-            disabled={isEditing}
-            placeholder="Ask AI to edit…"
-            rows={2}
-            className="flex-1 resize-none rounded-lg border border-slate-200 px-3 py-2 text-xs text-slate-800 outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100 transition-colors disabled:opacity-60"
-          />
-          <button onClick={handleSend} disabled={!chatInput.trim() || isEditing || !draft.trim()}
-            className="self-end h-9 w-9 rounded-lg bg-blue-600 text-white grid place-items-center hover:bg-blue-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors shrink-0">
-            <Send className="w-3.5 h-3.5" />
+        <div className="flex border-b border-slate-100 bg-slate-50 shrink-0">
+          <button onClick={() => setRightTab("guidelines")}
+            className={`flex items-center gap-1.5 px-3 py-2.5 text-[11px] font-semibold border-b-2 transition-colors ${
+              rightTab === "guidelines" ? "border-blue-600 text-blue-700" : "border-transparent text-slate-500 hover:text-slate-700"
+            }`}>
+            <BookOpen className="w-3 h-3" /> Guidelines
+          </button>
+          <button onClick={() => setRightTab("ai-edit")}
+            className={`flex items-center gap-1.5 px-3 py-2.5 text-[11px] font-semibold border-b-2 transition-colors ${
+              rightTab === "ai-edit" ? "border-blue-600 text-blue-700" : "border-transparent text-slate-500 hover:text-slate-700"
+            }`}>
+            <Sparkles className="w-3 h-3" /> Edit with AI
           </button>
         </div>
+
+        {rightTab === "guidelines" && <GrantGuidelines grant={grant} />}
+
+        {rightTab === "ai-edit" && (
+          <>
+            <div className="flex-1 overflow-y-auto p-3 space-y-2" style={{ minHeight: "380px" }}>
+              {chatMsgs.length === 0 && (
+                <p className="text-xs text-slate-400 text-center pt-8 leading-relaxed px-2">
+                  Ask AI to edit your narrative…<br />
+                  e.g. &ldquo;Make the opening more concise&rdquo;
+                </p>
+              )}
+              {chatMsgs.map((m, i) => (
+                <div key={i} className={`flex ${m.role === "user" ? "justify-end" : "justify-start"}`}>
+                  <div className={`max-w-[90%] rounded-xl px-3 py-2 text-xs leading-relaxed ${
+                    m.role === "user" ? "bg-blue-600 text-white" :
+                    m.isError ? "bg-rose-50 text-rose-700 border border-rose-200" :
+                    "bg-slate-100 text-slate-700"
+                  }`}>{m.content}</div>
+                </div>
+              ))}
+              {isEditing && (
+                <div className="flex gap-1 px-2 pt-1">
+                  {[0, 1, 2].map((i) => (
+                    <span key={i} className="w-1.5 h-1.5 bg-blue-400 rounded-full animate-bounce"
+                      style={{ animationDelay: `${i * 0.15}s` }} />
+                  ))}
+                </div>
+              )}
+              <div ref={chatEndRef} />
+            </div>
+            <div className="flex gap-2 p-3 border-t border-slate-100 shrink-0">
+              <textarea
+                value={chatInput}
+                onChange={(e) => setChatInput(e.target.value)}
+                onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleSend() } }}
+                disabled={isEditing}
+                placeholder="Ask AI to edit…"
+                rows={2}
+                className="flex-1 resize-none rounded-lg border border-slate-200 px-3 py-2 text-xs text-slate-800 outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100 transition-colors disabled:opacity-60"
+              />
+              <button onClick={handleSend} disabled={!chatInput.trim() || isEditing || !draft.trim()}
+                className="self-end h-9 w-9 rounded-lg bg-blue-600 text-white grid place-items-center hover:bg-blue-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors shrink-0">
+                <Send className="w-3.5 h-3.5" />
+              </button>
+            </div>
+          </>
+        )}
       </div>
     </div>
   )
