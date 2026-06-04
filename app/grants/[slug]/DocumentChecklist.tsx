@@ -3,7 +3,18 @@
 import { useState } from "react"
 import { getDocumentGenerationAction } from "@/lib/document-generation"
 
+function isApplicationItem(doc: string): boolean {
+  const d = doc.toLowerCase()
+  if (!d.includes("fafsa") && (d.includes("application") || d.includes("enrollment form"))) return true
+  return (
+    d.includes("submission portal") || d.includes("apply via") || d.includes("apply through") ||
+    d.includes("apply online") || d.includes("submit via") || d.includes("submit through") ||
+    d.includes("application portal") || d.includes("grants.gov")
+  )
+}
+
 export default function DocumentChecklist({ documents }: { documents: string[] }) {
+  const filtered = documents.filter(doc => !isApplicationItem(doc))
   const [checked, setChecked] = useState<Set<number>>(new Set())
 
   function toggle(i: number) {
@@ -19,7 +30,7 @@ export default function DocumentChecklist({ documents }: { documents: string[] }
   }
 
   const done = checked.size
-  const total = documents.length
+  const total = filtered.length
 
   return (
     <div>
@@ -39,7 +50,7 @@ export default function DocumentChecklist({ documents }: { documents: string[] }
       </div>
 
       <ul className="space-y-3">
-        {documents.map((doc, i) => {
+        {filtered.map((doc, i) => {
           const generationAction = getDocumentGenerationAction(doc)
 
           return (
@@ -105,7 +116,7 @@ export default function DocumentChecklist({ documents }: { documents: string[] }
         })}
       </ul>
 
-      {done === total && total > 0 && (
+      {done === total && total > 0 && filtered.length > 0 && (
         <p className="mt-5 text-sm font-medium text-green-700 bg-green-50 px-4 py-2.5 rounded-lg">
           All documents gathered — you&apos;re ready to apply!
         </p>

@@ -2,8 +2,19 @@
 
 import { useState } from "react"
 
+function isApplicationItem(doc: string): boolean {
+  const d = doc.toLowerCase()
+  if (!d.includes("fafsa") && (d.includes("application") || d.includes("enrollment form"))) return true
+  return (
+    d.includes("submission portal") || d.includes("apply via") || d.includes("apply through") ||
+    d.includes("apply online") || d.includes("submit via") || d.includes("submit through") ||
+    d.includes("application portal") || d.includes("grants.gov")
+  )
+}
+
 export default function DocumentChecklist({ documents }: { documents: string[] }) {
-  const [checked, setChecked] = useState<boolean[]>(documents.map(() => false))
+  const filtered = documents.filter(doc => !isApplicationItem(doc))
+  const [checked, setChecked] = useState<boolean[]>(filtered.map(() => false))
 
   const toggle = (i: number) =>
     setChecked((prev) => prev.map((v, j) => (j === i ? !v : v)))
@@ -15,7 +26,7 @@ export default function DocumentChecklist({ documents }: { documents: string[] }
       <div className="flex items-center justify-between mb-4">
         <h2 className="text-xl font-semibold text-zinc-900">Required Documents</h2>
         <span className="text-sm text-zinc-500">
-          {count}/{documents.length} ready
+          {count}/{filtered.length} ready
         </span>
       </div>
 
@@ -23,13 +34,13 @@ export default function DocumentChecklist({ documents }: { documents: string[] }
         <div className="mb-4 h-2 rounded-full bg-zinc-100 overflow-hidden">
           <div
             className="h-full rounded-full bg-zinc-900 transition-all"
-            style={{ width: `${(count / documents.length) * 100}%` }}
+            style={{ width: `${(count / filtered.length) * 100}%` }}
           />
         </div>
       )}
 
       <ul className="space-y-2">
-        {documents.map((doc, i) => (
+        {filtered.map((doc, i) => (
           <li key={i}>
             <label className="flex items-start gap-3 cursor-pointer group">
               <span
