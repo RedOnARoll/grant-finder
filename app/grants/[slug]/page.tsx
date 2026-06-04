@@ -14,6 +14,7 @@ import AdminVerificationWarning from "@/components/AdminVerificationWarning"
 import ReportDataButton from "@/components/ReportDataButton"
 import ScrollToTop from "@/components/ScrollToTop"
 import PrefillButton from "./PrefillButton"
+import StartApplicationButton from "@/components/StartApplicationButton"
 
 export const revalidate = 3600
 export const dynamicParams = true
@@ -161,12 +162,12 @@ export default async function GrantDetailPage({
 
             <div className="flex flex-wrap gap-2 lg:justify-end">
               <SaveInterestButton slug={grant.slug} type="grant" />
-              <Link
-                href={`/workspace?slug=${grant.slug}`}
+              <StartApplicationButton
+                slug={grant.slug}
                 className="inline-flex h-10 items-center justify-center gap-2 rounded-lg bg-blue-600 px-4 text-sm font-semibold text-white hover:bg-blue-700"
               >
                 Start Application
-              </Link>
+              </StartApplicationButton>
             </div>
           </div>
 
@@ -219,12 +220,12 @@ export default async function GrantDetailPage({
           <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_21rem] lg:items-start">
             <div className="min-w-0">
               <div className="lg:hidden mb-5 rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
-                <Link
-                  href={`/workspace?slug=${grant.slug}`}
+                <StartApplicationButton
+                  slug={grant.slug}
                   className="flex h-11 w-full items-center justify-center gap-2 rounded-lg bg-blue-600 px-4 text-sm font-semibold text-white hover:bg-blue-700"
                 >
                   Start Application
-                </Link>
+                </StartApplicationButton>
               </div>
 
               <GrantDetailTabs
