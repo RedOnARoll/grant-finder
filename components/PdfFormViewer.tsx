@@ -7,10 +7,19 @@ import { PDFDocument } from "pdf-lib"
 // ── Metadata ───────────────────────────────────────────────────────────────
 
 const FORM_TITLES: Record<string, string> = {
-  "sf-424":  "SF-424 — Application for Federal Assistance",
-  "sf-424a": "SF-424A — Budget Information (Non-Construction)",
-  "sf-424b": "SF-424B — Assurances (Non-Construction Programs)",
-  "sf-lll":  "SF-LLL — Disclosure of Lobbying Activities",
+  "sf-424":    "SF-424 — Application for Federal Assistance",
+  "sf-424a":   "SF-424A — Budget Information (Non-Construction)",
+  "sf-424b":   "SF-424B — Assurances (Non-Construction Programs)",
+  "sf-424c":   "SF-424C — Budget Information (Construction Programs)",
+  "sf-424d":   "SF-424D — Assurances (Construction Programs)",
+  "sf-lll":    "SF-LLL — Disclosure of Lobbying Activities",
+  "sf-3881":   "SF-3881 — ACH Vendor/Miscellaneous Payment Enrollment",
+  "sf-270":    "SF-270 — Request for Advance or Reimbursement",
+  "sf-425":    "SF-425 — Federal Financial Report",
+  "sba-912":   "SBA Form 912 — Statement of Personal History",
+  "sba-413":   "SBA Form 413 — Personal Financial Statement",
+  "sba-1919":  "SBA Form 1919 — Borrower Information Form",
+  "sba-1010c": "SBA Form 1010C — Lender's Application for Guaranty",
 }
 
 // seed key → candidate AcroForm field names (priority order)
