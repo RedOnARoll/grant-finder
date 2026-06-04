@@ -108,7 +108,7 @@ function GrantGuidelines({ grant }: { grant: Grant }) {
         const res = await fetch("/api/workspace/grant-guidelines", {
           method: "POST",
           headers: { "Content-Type": "application/json", Authorization: `Bearer ${session?.access_token ?? ""}` },
-          body: JSON.stringify({ officialSourceUrl: grant.official_source_url, grantName: grant.name }),
+          body: JSON.stringify({ grantId: grant.id, officialSourceUrl: grant.official_source_url, grantName: grant.name }),
         })
         if (!cancelled && res.ok) {
           const json = await res.json() as { sections: GuidelineSection[] }

@@ -10,10 +10,6 @@ interface GuidelineSection {
   items: string[]
 }
 
-// In-process cache keyed by URL — 24 h TTL
-const cache = new Map<string, { sections: GuidelineSection[]; cachedAt: number }>()
-const CACHE_TTL = 24 * 60 * 60 * 1000
-
 const PRIVATE_IP_RE =
   /^(localhost|127\.|10\.|172\.(1[6-9]|2\d|3[01])\.|192\.168\.|::1|0\.0\.0\.0)/i
 
@@ -26,6 +22,24 @@ function isAllowedUrl(raw: string): boolean {
   } catch {
     return false
   }
+}
+
+function serviceClient() {
+  return createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!,
+    { auth: { autoRefreshToken: false, persistSession: false } }
+  )
+}
+
+async function getUser(token: string) {
+  const client = createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    { global: { headers: { Authorization: `Bearer ${token}` } } }
+  )
+  const { data: { user } } = await client.auth.getUser()
+  return user
 }
 
 async function fetchPageText(url: string): Promise<string | null> {
@@ -99,16 +113,6 @@ ${pageText}`,
   }
 }
 
-async function getUser(token: string) {
-  const client = createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    { global: { headers: { Authorization: `Bearer ${token}` } } }
-  )
-  const { data: { user } } = await client.auth.getUser()
-  return user
-}
-
 export async function POST(req: NextRequest) {
   const ip = getClientIp(req)
   const ipRl = await rateLimit(`ws-guidelines-ip:${ip}`, 30, 60 * 60 * 1000)
@@ -123,26 +127,53 @@ export async function POST(req: NextRequest) {
   const user = await getUser(token)
   if (!user) return new Response("Unauthorized", { status: 401 })
 
-  let body: { officialSourceUrl?: string; grantName?: string }
+  let body: { grantId?: string; officialSourceUrl?: string; grantName?: string }
   try { body = await req.json() } catch { return new Response("Invalid body", { status: 400 }) }
 
+  const grantId = sanitizeString(String(body.grantId ?? ""))
   const rawUrl = sanitizeString(String(body.officialSourceUrl ?? ""))
   const grantName = sanitizeString(String(body.grantName ?? "")).slice(0, 200)
 
   if (!rawUrl) return Response.json({ sections: [] })
   if (!isAllowedUrl(rawUrl)) return new Response("Invalid URL", { status: 400 })
 
-  const cached = cache.get(rawUrl)
-  if (cached && Date.now() - cached.cachedAt < CACHE_TTL) {
-    return Response.json({ sections: cached.sections })
+  const supabase = serviceClient()
+
+  // Return cached result from DB if already fetched
+  if (grantId) {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { data } = await (supabase as any).from("grants")
+      .select("narrative_guidelines")
+      .eq("id", grantId)
+      .maybeSingle() as { data: { narrative_guidelines?: GuidelineSection[] | null } | null }
+
+    if (data?.narrative_guidelines != null) {
+      return Response.json({ sections: data.narrative_guidelines })
+    }
   }
 
+  // Not in DB yet — scrape, extract, persist
   try {
     const pageText = await fetchPageText(rawUrl)
-    if (!pageText) return Response.json({ sections: [] })
+    if (!pageText) {
+      if (grantId) {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        await (supabase as any).from("grants")
+          .update({ narrative_guidelines: [], guidelines_fetched_at: new Date().toISOString() })
+          .eq("id", grantId)
+      }
+      return Response.json({ sections: [] })
+    }
 
     const sections = await extractGuidelines(pageText, grantName)
-    cache.set(rawUrl, { sections, cachedAt: Date.now() })
+
+    if (grantId) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      await (supabase as any).from("grants")
+        .update({ narrative_guidelines: sections, guidelines_fetched_at: new Date().toISOString() })
+        .eq("id", grantId)
+    }
+
     return Response.json({ sections })
   } catch (err) {
     console.error("[workspace/grant-guidelines]", err)
