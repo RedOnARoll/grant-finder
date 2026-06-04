@@ -716,10 +716,22 @@ export function NarrativeBuilderTab({ grant, userId }: { grant: Grant; userId: s
 // ── FormsTab ───────────────────────────────────────────────────────────────
 
 const FORM_REGISTRY: Array<{ match: RegExp; key: string }> = [
-  { match: /sf[-\s]?424\b(?![\s-]?[abcd])/i, key: "sf-424"  },
-  { match: /sf[-\s]?424[\s-]?a\b/i,           key: "sf-424a" },
-  { match: /sf[-\s]?424[\s-]?b\b/i,           key: "sf-424b" },
-  { match: /sf[-\s]?lll\b/i,                  key: "sf-lll"  },
+  // SF-424 family — more specific variants before the base to avoid false matches
+  { match: /sf[-\s]?424[\s-]?a\b/i,                key: "sf-424a"   },
+  { match: /sf[-\s]?424[\s-]?b\b/i,                key: "sf-424b"   },
+  { match: /sf[-\s]?424[\s-]?c\b/i,                key: "sf-424c"   },
+  { match: /sf[-\s]?424[\s-]?d\b/i,                key: "sf-424d"   },
+  { match: /sf[-\s]?424\b/i,                        key: "sf-424"    },
+  // Other Standard Forms
+  { match: /sf[-\s]?lll\b/i,                        key: "sf-lll"    },
+  { match: /sf[-\s]?3881\b/i,                       key: "sf-3881"   },
+  { match: /sf[-\s]?270\b/i,                        key: "sf-270"    },
+  { match: /sf[-\s]?425\b/i,                        key: "sf-425"    },
+  // SBA forms
+  { match: /sba[\s-]?(form[\s-]?)?912\b/i,          key: "sba-912"   },
+  { match: /sba[\s-]?(form[\s-]?)?413\b/i,          key: "sba-413"   },
+  { match: /sba[\s-]?(form[\s-]?)?1919\b/i,         key: "sba-1919"  },
+  { match: /sba[\s-]?(form[\s-]?)?1010[\s-]?c\b/i,  key: "sba-1010c" },
 ]
 
 function matchFormKey(doc: string): string | null {
