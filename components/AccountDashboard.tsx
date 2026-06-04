@@ -25,6 +25,11 @@ function formatDate(value: string | null) {
   return new Date(value).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })
 }
 
+function isDeadlinePast(deadline: string | null): boolean {
+  if (!deadline) return false
+  return new Date(deadline).getTime() < Date.now()
+}
+
 function statusTone(status: ApplicationStatus): { row: string; pill: string } {
   switch (status) {
     case "interested": return { row: "border-amber-200 bg-amber-50",   pill: "bg-amber-100 text-amber-800"   }
@@ -417,7 +422,14 @@ export default function AccountDashboard() {
                 <span className="hidden sm:block text-xs text-slate-500 text-right">{formatAmount(program.max_amount)}</span>
 
                 {/* Deadline */}
-                <span className="hidden sm:block text-xs text-slate-500 text-right">{formatDate(program.deadline)}</span>
+                <div className="hidden sm:flex flex-col items-end gap-0.5">
+                  <span className={`text-xs tabular-nums ${isDeadlinePast(program.deadline) ? "text-rose-500 line-through decoration-rose-300" : "text-slate-500"}`}>
+                    {formatDate(program.deadline)}
+                  </span>
+                  {isDeadlinePast(program.deadline) && (
+                    <span className="text-[10px] font-semibold text-rose-600 bg-rose-50 px-1.5 py-0.5 rounded">Closed</span>
+                  )}
+                </div>
 
                 {/* Status select */}
                 <select
@@ -462,23 +474,31 @@ export default function AccountDashboard() {
             <div>
               <p className="text-xs font-semibold text-slate-400 uppercase tracking-wide mb-2">Grants</p>
               <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
-                {eligibleGrants.map(({ grant, confidence, matchedReasons }) => (
-                  <Link
-                    key={grant.id}
-                    href={`/grants/${grant.slug}`}
-                    className="bg-white rounded-xl border border-slate-200 shadow-sm p-4 hover:border-blue-300 hover:shadow-md transition group"
-                  >
-                    <div className="flex items-start justify-between gap-2 mb-2">
-                      <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${confidence === "likely" ? "bg-emerald-50 text-emerald-700" : "bg-amber-50 text-amber-700"}`}>
-                        {confidence === "likely" ? "Likely eligible" : "May qualify"}
-                      </span>
-                      <span className="text-xs text-slate-400 shrink-0">{formatAmount(grant.max_amount)}</span>
-                    </div>
-                    <p className="text-sm font-semibold text-slate-900 group-hover:text-blue-600 leading-snug">{grant.name}</p>
-                    <p className="text-xs text-slate-400 mt-0.5">{grant.agency}</p>
-                    {matchedReasons[0] && <p className="text-xs text-slate-500 mt-1.5 line-clamp-1">✓ {matchedReasons[0]}</p>}
-                  </Link>
-                ))}
+                {eligibleGrants.map(({ grant, confidence, matchedReasons }) => {
+                  const closed = isDeadlinePast(grant.deadline)
+                  return (
+                    <Link
+                      key={grant.id}
+                      href={`/grants/${grant.slug}`}
+                      className="bg-white rounded-xl border border-slate-200 shadow-sm p-4 hover:border-blue-300 hover:shadow-md transition group"
+                    >
+                      <div className="flex items-start justify-between gap-2 mb-2">
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${confidence === "likely" ? "bg-emerald-50 text-emerald-700" : "bg-amber-50 text-amber-700"}`}>
+                            {confidence === "likely" ? "Likely eligible" : "May qualify"}
+                          </span>
+                          {closed && (
+                            <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-rose-50 text-rose-600">Closed</span>
+                          )}
+                        </div>
+                        <span className="text-xs text-slate-400 shrink-0">{formatAmount(grant.max_amount)}</span>
+                      </div>
+                      <p className={`text-sm font-semibold leading-snug group-hover:text-blue-600 ${closed ? "text-slate-400" : "text-slate-900"}`}>{grant.name}</p>
+                      <p className="text-xs text-slate-400 mt-0.5">{grant.agency}</p>
+                      {matchedReasons[0] && <p className="text-xs text-slate-500 mt-1.5 line-clamp-1">✓ {matchedReasons[0]}</p>}
+                    </Link>
+                  )
+                })}
               </div>
             </div>
           )}
@@ -487,23 +507,31 @@ export default function AccountDashboard() {
             <div>
               <p className="text-xs font-semibold text-slate-400 uppercase tracking-wide mb-2">Benefits</p>
               <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
-                {eligibleBenefits.map(({ benefit, confidence, matchedReasons }) => (
-                  <Link
-                    key={benefit.id}
-                    href={`/benefits/${benefit.slug}`}
-                    className="bg-white rounded-xl border border-slate-200 shadow-sm p-4 hover:border-blue-300 hover:shadow-md transition group"
-                  >
-                    <div className="flex items-start justify-between gap-2 mb-2">
-                      <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${confidence === "likely" ? "bg-emerald-50 text-emerald-700" : "bg-amber-50 text-amber-700"}`}>
-                        {confidence === "likely" ? "Likely eligible" : "May qualify"}
-                      </span>
-                      <span className="text-xs text-slate-400 shrink-0">{formatAmount(benefit.max_amount)}</span>
-                    </div>
-                    <p className="text-sm font-semibold text-slate-900 group-hover:text-blue-600 leading-snug">{benefit.name}</p>
-                    <p className="text-xs text-slate-400 mt-0.5">{benefit.agency}</p>
-                    {matchedReasons[0] && <p className="text-xs text-slate-500 mt-1.5 line-clamp-1">✓ {matchedReasons[0]}</p>}
-                  </Link>
-                ))}
+                {eligibleBenefits.map(({ benefit, confidence, matchedReasons }) => {
+                  const closed = isDeadlinePast(benefit.deadline)
+                  return (
+                    <Link
+                      key={benefit.id}
+                      href={`/benefits/${benefit.slug}`}
+                      className="bg-white rounded-xl border border-slate-200 shadow-sm p-4 hover:border-blue-300 hover:shadow-md transition group"
+                    >
+                      <div className="flex items-start justify-between gap-2 mb-2">
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${confidence === "likely" ? "bg-emerald-50 text-emerald-700" : "bg-amber-50 text-amber-700"}`}>
+                            {confidence === "likely" ? "Likely eligible" : "May qualify"}
+                          </span>
+                          {closed && (
+                            <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-rose-50 text-rose-600">Closed</span>
+                          )}
+                        </div>
+                        <span className="text-xs text-slate-400 shrink-0">{formatAmount(benefit.max_amount)}</span>
+                      </div>
+                      <p className={`text-sm font-semibold leading-snug group-hover:text-blue-600 ${closed ? "text-slate-400" : "text-slate-900"}`}>{benefit.name}</p>
+                      <p className="text-xs text-slate-400 mt-0.5">{benefit.agency}</p>
+                      {matchedReasons[0] && <p className="text-xs text-slate-500 mt-1.5 line-clamp-1">✓ {matchedReasons[0]}</p>}
+                    </Link>
+                  )
+                })}
               </div>
             </div>
           )}

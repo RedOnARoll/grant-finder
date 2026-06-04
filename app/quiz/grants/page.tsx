@@ -411,7 +411,12 @@ function Results({ matches, category, onReset }: { matches: Grant[]; category: C
             return (
               <div key={g.id} className="flex h-full flex-col bg-white rounded-xl border border-slate-200 shadow-sm p-5 hover:shadow-md transition-shadow">
                 <div className="flex items-start justify-between gap-4 mb-2">
-                  <h3 className="font-semibold text-slate-900">{g.name}</h3>
+                  <div className="flex items-center gap-2 flex-wrap min-w-0">
+                    <h3 className={`font-semibold leading-snug ${g.deadline && new Date(g.deadline).getTime() < Date.now() ? "text-slate-400" : "text-slate-900"}`}>{g.name}</h3>
+                    {g.deadline && new Date(g.deadline).getTime() < Date.now() && (
+                      <span className="shrink-0 text-xs font-semibold px-1.5 py-0.5 rounded bg-rose-100 text-rose-700">Closed</span>
+                    )}
+                  </div>
                   <span className="shrink-0 text-sm font-semibold bg-slate-100 text-slate-700 px-2 py-0.5 rounded-lg">{formatAmount(g.max_amount)}</span>
                 </div>
                 <p className="text-sm text-slate-500 mb-1">{g.agency}</p>

@@ -265,6 +265,7 @@ function TopMatchCard({
     exploratory: { label: "Worth exploring", className: "bg-slate-100 text-slate-700" },
   }[confidence]
 
+  const isClosed = !!program.deadline && new Date(program.deadline).getTime() < Date.now()
   const formattedDeadline = program.deadline
     ? new Date(program.deadline).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })
     : "Open enrollment"
@@ -280,8 +281,11 @@ function TopMatchCard({
             <span className={`text-xs font-semibold uppercase tracking-wider px-2 py-0.5 rounded-full ${isGrant ? "bg-blue-100 text-blue-700" : "bg-emerald-100 text-emerald-700"}`}>
               {isGrant ? "Grant" : "Benefit"}
             </span>
+            {isClosed && (
+              <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-rose-50 text-rose-600">Closed</span>
+            )}
           </div>
-          <h3 className="text-lg font-bold text-slate-900 mb-1 leading-snug">{program.name}</h3>
+          <h3 className={`text-lg font-bold mb-1 leading-snug ${isClosed ? "text-slate-400" : "text-slate-900"}`}>{program.name}</h3>
           <p className="text-sm text-slate-500 mb-4">{program.agency}</p>
 
           {reasons.length > 0 && (
@@ -307,7 +311,8 @@ function TopMatchCard({
             )}
             <span>
               <span className="text-slate-400">Deadline: </span>
-              <span className="font-medium text-slate-900">{formattedDeadline}</span>
+              <span className={`font-medium tabular-nums ${isClosed ? "text-rose-600 line-through decoration-rose-300" : "text-slate-900"}`}>{formattedDeadline}</span>
+              {isClosed && <span className="ml-1.5 text-xs font-semibold text-rose-600">(Closed)</span>}
             </span>
           </div>
         </div>
@@ -341,6 +346,7 @@ function CompactMatchCard({
     agency: string
     type: string
     max_amount?: number | null
+    deadline?: string | null
   }
   score: number
   reasons: string[]
@@ -349,19 +355,25 @@ function CompactMatchCard({
   const href = `/${isGrant ? "grants" : "benefits"}/${program.slug}`
   const confidence = score >= 80 ? "Strong" : score >= 50 ? "Possible" : "Worth a look"
   const confColor = score >= 80 ? "text-emerald-700" : score >= 50 ? "text-amber-700" : "text-slate-600"
+  const isClosed = !!program.deadline && new Date(program.deadline).getTime() < Date.now()
 
   return (
     <Link href={href} className="bg-white border border-slate-200 rounded-xl p-4 hover:shadow-md transition-shadow flex flex-col">
       <div className="flex justify-between items-start gap-2 mb-2">
-        <span className={`text-xs font-semibold uppercase px-2 py-0.5 rounded-full ${isGrant ? "bg-blue-100 text-blue-700" : "bg-emerald-100 text-emerald-700"}`}>
-          {isGrant ? "Grant" : "Benefit"}
-        </span>
+        <div className="flex items-center gap-1.5 flex-wrap">
+          <span className={`text-xs font-semibold uppercase px-2 py-0.5 rounded-full ${isGrant ? "bg-blue-100 text-blue-700" : "bg-emerald-100 text-emerald-700"}`}>
+            {isGrant ? "Grant" : "Benefit"}
+          </span>
+          {isClosed && (
+            <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-rose-50 text-rose-600">Closed</span>
+          )}
+        </div>
         <span className={`text-xs font-semibold uppercase tracking-wide ${confColor} whitespace-nowrap`}>
           {confidence}
         </span>
       </div>
       <p className="text-xs text-slate-400 mb-1">{program.agency}</p>
-      <h4 className="text-sm font-semibold text-slate-900 mb-2 leading-snug line-clamp-2">{program.name}</h4>
+      <h4 className={`text-sm font-semibold mb-2 leading-snug line-clamp-2 ${isClosed ? "text-slate-400" : "text-slate-900"}`}>{program.name}</h4>
       {reasons[0] && (
         <p className="text-xs text-slate-500 leading-relaxed mb-3 flex-1">{reasons[0]}</p>
       )}
