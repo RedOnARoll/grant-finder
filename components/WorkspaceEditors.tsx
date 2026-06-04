@@ -144,10 +144,46 @@ const NARRATIVE_GUIDELINES = [
   },
 ]
 
+type GuidelineSection = { heading: string; items: string[] }
+
 function GrantGuidelines({ grant }: { grant: Grant }) {
+  const supabase = getBrowserSupabase()
+  const [fetched, setFetched] = useState<GuidelineSection[] | null>(null)
+  const [loading, setLoading] = useState(Boolean(grant.official_source_url))
+
+  useEffect(() => {
+    if (!grant.official_source_url) return
+    let cancelled = false
+    ;(async () => {
+      try {
+        const { data: { session } } = await supabase.auth.getSession()
+        const res = await fetch("/api/workspace/grant-guidelines", {
+          method: "POST",
+          headers: { "Content-Type": "application/json", Authorization: `Bearer ${session?.access_token ?? ""}` },
+          body: JSON.stringify({ officialSourceUrl: grant.official_source_url, grantName: grant.name }),
+        })
+        if (!cancelled && res.ok) {
+          const json = await res.json() as { sections: GuidelineSection[] }
+          if (!cancelled && json.sections.length > 0) setFetched(json.sections)
+        }
+      } catch { /* fall through to static */ }
+      if (!cancelled) setLoading(false)
+    })()
+    return () => { cancelled = true }
+  }, [grant.official_source_url, grant.name, supabase])
+
+  const sections = fetched ?? NARRATIVE_GUIDELINES
+
   return (
     <div className="flex-1 overflow-y-auto p-4 space-y-4 text-sm">
-      {NARRATIVE_GUIDELINES.map((section) => (
+      {loading && (
+        <div className="flex items-center gap-2 text-xs text-slate-400">
+          <span className="w-3 h-3 border border-slate-300 border-t-blue-400 rounded-full animate-spin shrink-0" />
+          Loading from official source…
+        </div>
+      )}
+
+      {sections.map((section) => (
         <div key={section.heading}>
           <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-400 mb-1.5">{section.heading}</p>
           <ul className="space-y-1.5">
