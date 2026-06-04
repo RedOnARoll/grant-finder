@@ -56,21 +56,25 @@ async function extractGuidelines(pageText: string, grantName: string): Promise<G
     messages: [
       {
         role: "user",
-        content: `You are reviewing the official grant page for "${grantName}".
+        content: `You are reading the official grant page for "${grantName}". Extract specific, factual requirements — report only what is explicitly stated on this page.
 
-Extract ONLY the requirements and instructions for writing the grant narrative (also called project narrative, program narrative, or application narrative). This includes:
-- Required narrative sections and what each must cover
-- Page or word limits for the narrative
-- Review criteria and what reviewers score
-- Specific content the funder requires applicants to address
-- Any "what to include" or formatting instructions for the narrative
+Look for and extract ONLY what is stated:
 
-Do NOT include eligibility criteria, budget instructions, forms, SF-424, or administrative requirements unrelated to the narrative itself.
+1. **Formatting Requirements** — exact page limit, word limit, font name and size, margin size, line spacing, file format.
+2. **Review Criteria** — the actual criteria reviewers score, with weights or points if stated (e.g. "Significance: 30 pts").
+3. **Required Narrative Sections** — specific section names the narrative must include and what each must address.
+4. **Content Requirements** — specific topics, questions, or data the funder explicitly requires applicants to cover.
 
-Return a JSON object with this exact shape (no markdown, raw JSON only):
-{"sections":[{"heading":"Section name","items":["Specific guideline 1","Specific guideline 2"]}]}
+Rules:
+- Only report facts present on this page. If a requirement is not stated, omit it entirely.
+- Do NOT include eligibility, budget, SF-424, forms, or submission steps.
+- Do NOT add generic writing advice, tips, or anything not on the page.
+- Do NOT say "check the NOFO", "verify", or "review requirements" — only facts found here.
 
-If the page lacks enough narrative writing guidance, return {"sections":[]}.
+Return raw JSON only (no markdown):
+{"sections":[{"heading":"Exact heading","items":["Specific fact 1","Specific fact 2"]}]}
+
+If no qualifying requirements are found, return {"sections":[]}.
 
 Page content:
 ${pageText}`,

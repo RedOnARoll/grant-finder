@@ -92,67 +92,15 @@ export function OverviewTab({ grant, onStartApplication }: { grant: Grant; onSta
 
 // ── GrantGuidelines ────────────────────────────────────────────────────────
 
-const NARRATIVE_GUIDELINES = [
-  {
-    heading: "Before You Write",
-    items: [
-      "Read the full Notice of Funding Opportunity (NOFO) before drafting anything.",
-      "Note exact page limits, font size, and margin requirements — non-compliance can disqualify an otherwise strong application.",
-      "List every review criterion; your narrative must address each one explicitly.",
-    ],
-  },
-  {
-    heading: "Statement of Need",
-    items: [
-      "Use current, cited data to document the problem — census data, peer-reviewed research, or a formal needs assessment.",
-      "Connect local need to the funder's stated mission and priorities.",
-      "Do not assume reviewers know your community; make the case clearly.",
-    ],
-  },
-  {
-    heading: "Project Description",
-    items: [
-      "State goals and SMART objectives: Specific, Measurable, Achievable, Relevant, Time-bound.",
-      "Describe an evidence-based approach and cite peer-reviewed research or federal program models that support it.",
-      "Specify who will be served, how many individuals, and over what period.",
-    ],
-  },
-  {
-    heading: "Organizational Capacity",
-    items: [
-      "Demonstrate relevant prior experience with similar projects or target populations.",
-      "Name key personnel and briefly note their qualifications.",
-      "Describe each partner's specific, concrete role — avoid vague letters of support.",
-    ],
-  },
-  {
-    heading: "Evaluation Plan",
-    items: [
-      "Define measurable indicators of progress toward each objective.",
-      "Specify data collection methods, responsible parties, and reporting frequency.",
-      "Explain how findings will be used for continuous program improvement.",
-    ],
-  },
-  {
-    heading: "Writing Best Practices",
-    items: [
-      "Write for an expert reviewer who is unfamiliar with your organization.",
-      "Use section headers that mirror the NOFO's exact section titles.",
-      "Define all acronyms on first use; avoid unexplained jargon.",
-      "Lead each section with your strongest point — reviewers skim.",
-    ],
-  },
-]
-
 type GuidelineSection = { heading: string; items: string[] }
 
 function GrantGuidelines({ grant }: { grant: Grant }) {
   const supabase = getBrowserSupabase()
-  const [fetched, setFetched] = useState<GuidelineSection[] | null>(null)
+  const [sections, setSections] = useState<GuidelineSection[]>([])
   const [loading, setLoading] = useState(Boolean(grant.official_source_url))
 
   useEffect(() => {
-    if (!grant.official_source_url) return
+    if (!grant.official_source_url) { setLoading(false); return }
     let cancelled = false
     ;(async () => {
       try {
@@ -164,22 +112,55 @@ function GrantGuidelines({ grant }: { grant: Grant }) {
         })
         if (!cancelled && res.ok) {
           const json = await res.json() as { sections: GuidelineSection[] }
-          if (!cancelled && json.sections.length > 0) setFetched(json.sections)
+          if (!cancelled) setSections(json.sections ?? [])
         }
-      } catch { /* fall through to static */ }
+      } catch { /* leave empty */ }
       if (!cancelled) setLoading(false)
     })()
     return () => { cancelled = true }
   }, [grant.official_source_url, grant.name, supabase])
 
-  const sections = fetched ?? NARRATIVE_GUIDELINES
+  const eligList: string[] = Array.isArray(grant.eligibility_criteria)
+    ? (grant.eligibility_criteria as string[])
+    : Object.entries(grant.eligibility_criteria as Record<string, unknown>)
+        .filter(([, v]) => v !== null && v !== undefined && v !== false)
+        .map(([k, v]) => `${k.replace(/_/g, " ")}: ${v}`)
 
   return (
     <div className="flex-1 overflow-y-auto p-4 space-y-4 text-sm">
+      {/* Funder / basic info */}
+      <div>
+        <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-400 mb-1">Funder</p>
+        <p className="text-xs font-semibold text-slate-800">{grant.agency}</p>
+        {grant.description && <p className="text-xs text-slate-500 mt-1 leading-relaxed">{grant.description}</p>}
+      </div>
+
+      {/* Eligibility */}
+      {eligList.length > 0 && (
+        <div>
+          <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-400 mb-1.5">Eligibility</p>
+          <ul className="space-y-1.5">
+            {eligList.map((item, i) => (
+              <li key={i} className="flex items-start gap-2 text-xs text-slate-600">
+                <Check className="w-3 h-3 text-blue-500 mt-0.5 shrink-0" strokeWidth={2.5} />
+                {item}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
+      {/* Fetched NOFO requirements */}
       {loading && (
         <div className="flex items-center gap-2 text-xs text-slate-400">
           <span className="w-3 h-3 border border-slate-300 border-t-blue-400 rounded-full animate-spin shrink-0" />
-          Loading from official source…
+          Checking official requirements…
+        </div>
+      )}
+
+      {!loading && sections.length === 0 && grant.official_source_url && (
+        <div className="text-xs text-slate-400 italic">
+          No specific formatting requirements found from the official source.
         </div>
       )}
 
@@ -199,7 +180,6 @@ function GrantGuidelines({ grant }: { grant: Grant }) {
 
       {grant.official_source_url && (
         <div className="pt-2 border-t border-slate-100">
-          <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-400 mb-1">Program-Specific Guidelines</p>
           <a href={grant.official_source_url} target="_blank" rel="noopener noreferrer"
             className="inline-flex items-center gap-1.5 text-xs font-medium text-blue-600 hover:underline">
             View official NOFO <ExternalLink className="w-3 h-3" />
@@ -221,7 +201,102 @@ type QuestionnaireAnswers = {
   pastExperience: string
 }
 
-function NarrativeQuestionnaire({ userId, initial, onSubmit, onCancel }: {
+type QField = { key: keyof QuestionnaireAnswers; label: string; placeholder: string; rows: number }
+
+const CATEGORY_FIELDS: Record<string, QField[]> = {
+  research: [
+    { key: "orgName",            label: "Lead investigator or institution",         placeholder: "e.g. Dr. Jane Smith, MIT",                                      rows: 1 },
+    { key: "orgMission",         label: "What is the research problem or question?", placeholder: "The scientific question, gap, or hypothesis you're addressing…", rows: 3 },
+    { key: "projectDescription", label: "What is your proposed approach or method?", placeholder: "Research design, methods, and key activities…",                 rows: 3 },
+    { key: "targetPopulation",   label: "Why is this research significant or novel?", placeholder: "What prior work does it build on? What gap does it fill?",     rows: 2 },
+    { key: "expectedOutcomes",   label: "What deliverables or results do you expect?", placeholder: "e.g. publications, datasets, prototypes, clinical outcomes…", rows: 2 },
+    { key: "pastExperience",     label: "Relevant prior work, publications, or funding?", placeholder: "Grants received, key publications, team credentials…",     rows: 2 },
+  ],
+  small_business: [
+    { key: "orgName",            label: "Business name",                              placeholder: "e.g. Bright Innovations LLC",                                   rows: 1 },
+    { key: "orgMission",         label: "What does your business do?",               placeholder: "Your product or service and the problem you solve…",            rows: 3 },
+    { key: "projectDescription", label: "What will you do with this grant?",         placeholder: "Specific activity — R&D, market launch, hiring, equipment…",   rows: 3 },
+    { key: "targetPopulation",   label: "Who are your customers or end beneficiaries?", placeholder: "e.g. small farms in the Midwest, underserved urban communities…", rows: 2 },
+    { key: "expectedOutcomes",   label: "What business outcomes do you expect?",     placeholder: "e.g. launch MVP, create 5 jobs, reach $500K revenue…",         rows: 2 },
+    { key: "pastExperience",     label: "Business track record or relevant experience?", placeholder: "Founding year, prior contracts, awards, key team background…", rows: 2 },
+  ],
+  arts: [
+    { key: "orgName",            label: "Artist or organization name",               placeholder: "e.g. Open Canvas Collective",                                   rows: 1 },
+    { key: "orgMission",         label: "Describe the artistic project and medium",  placeholder: "What kind of work? What is your artistic vision?",              rows: 3 },
+    { key: "projectDescription", label: "What will this grant fund?",               placeholder: "Creation, exhibition, residency, community events…",            rows: 3 },
+    { key: "targetPopulation",   label: "Who is the intended audience or community?", placeholder: "Geographic area, demographic, how many people engaged…",      rows: 2 },
+    { key: "expectedOutcomes",   label: "What artistic and community outcomes do you expect?", placeholder: "e.g. exhibit 12 works, engage 500 community members…", rows: 2 },
+    { key: "pastExperience",     label: "Relevant past work, exhibitions, or residencies?", placeholder: "Prior grants, shows, commissions, partnerships…",        rows: 2 },
+  ],
+  education: [
+    { key: "orgName",            label: "Institution or program name",               placeholder: "e.g. Lincoln Elementary, Reading First Program",                rows: 1 },
+    { key: "orgMission",         label: "What is the educational program?",          placeholder: "Program, grade levels, subject area, and students served…",    rows: 3 },
+    { key: "projectDescription", label: "What will this grant fund?",               placeholder: "Curriculum, training, technology, staffing, equipment…",       rows: 3 },
+    { key: "targetPopulation",   label: "Who are the learners?",                     placeholder: "Grade levels, demographics, number of students, location…",    rows: 2 },
+    { key: "expectedOutcomes",   label: "What learning outcomes do you expect?",     placeholder: "e.g. improve reading scores 20%, train 50 teachers…",          rows: 2 },
+    { key: "pastExperience",     label: "Prior programs, grants, or student results?", placeholder: "Relevant history, accreditations, previous grant outcomes…", rows: 2 },
+  ],
+  health: [
+    { key: "orgName",            label: "Organization or clinic name",               placeholder: "e.g. Community Health Alliance",                                rows: 1 },
+    { key: "orgMission",         label: "What health need or disparity does this address?", placeholder: "Health problem, target population, and geographic area…", rows: 3 },
+    { key: "projectDescription", label: "What intervention or services will this fund?", placeholder: "Screenings, outreach, training, equipment, staffing…",     rows: 3 },
+    { key: "targetPopulation",   label: "Who will receive services?",                placeholder: "Demographics, location, estimated number of patients…",        rows: 2 },
+    { key: "expectedOutcomes",   label: "What health outcomes do you expect?",       placeholder: "e.g. reduce ER visits 15%, screen 1,000 patients…",            rows: 2 },
+    { key: "pastExperience",     label: "Relevant clinical experience or past programs?", placeholder: "Certifications, prior grants, partner orgs, patient data…", rows: 2 },
+  ],
+  agricultural: [
+    { key: "orgName",            label: "Farm or organization name",                 placeholder: "e.g. Sunrise Family Farm",                                      rows: 1 },
+    { key: "orgMission",         label: "Describe your agricultural operation",      placeholder: "Type of farming, acreage, crops/livestock, years in operation…", rows: 3 },
+    { key: "projectDescription", label: "What will this grant fund?",               placeholder: "Equipment, conservation practices, infrastructure, land…",      rows: 3 },
+    { key: "targetPopulation",   label: "Who else benefits beyond your farm?",       placeholder: "Local food system, community, environment, downstream buyers…", rows: 2 },
+    { key: "expectedOutcomes",   label: "What improvements do you expect?",          placeholder: "e.g. reduce erosion 30%, improve water quality, expand 200 ac…", rows: 2 },
+    { key: "pastExperience",     label: "Farming history and prior USDA programs?",  placeholder: "Years farming, prior grant participation, certifications…",     rows: 2 },
+  ],
+  veterans: [
+    { key: "orgName",            label: "Organization or program name",              placeholder: "e.g. Valor Transition Services",                                rows: 1 },
+    { key: "orgMission",         label: "How does your organization serve veterans?", placeholder: "Mission, services offered, and veteran population served…",    rows: 3 },
+    { key: "projectDescription", label: "What will this grant fund?",               placeholder: "Job training, housing, mental health, benefits outreach…",      rows: 3 },
+    { key: "targetPopulation",   label: "Which veterans will benefit?",              placeholder: "Era (Vietnam, post-9/11), demographics, location, number…",    rows: 2 },
+    { key: "expectedOutcomes",   label: "What outcomes do you expect for veterans?", placeholder: "e.g. place 50 in jobs, house 20 vets, serve 200 in counseling…", rows: 2 },
+    { key: "pastExperience",     label: "Experience serving veterans?",              placeholder: "Prior programs, VA partnerships, certifications, veteran staff…", rows: 2 },
+  ],
+  housing: [
+    { key: "orgName",            label: "Organization or developer name",            placeholder: "e.g. Affordable Homes Initiative",                              rows: 1 },
+    { key: "orgMission",         label: "What housing need does this address?",      placeholder: "Housing gap, affordability crisis, or population in need…",     rows: 3 },
+    { key: "projectDescription", label: "What will this grant fund?",               placeholder: "Construction, rehab, rental assistance, homeownership…",       rows: 3 },
+    { key: "targetPopulation",   label: "Who will be housed or served?",             placeholder: "Income level, household type, demographics, number of units…", rows: 2 },
+    { key: "expectedOutcomes",   label: "What housing outcomes do you expect?",      placeholder: "e.g. create 40 affordable units, prevent 50 evictions…",       rows: 2 },
+    { key: "pastExperience",     label: "Experience in affordable housing?",         placeholder: "Prior projects, HUD experience, LIHTC, community partners…",   rows: 2 },
+  ],
+  energy: [
+    { key: "orgName",            label: "Organization or project name",              placeholder: "e.g. SolarEdge Cooperative",                                    rows: 1 },
+    { key: "orgMission",         label: "What energy problem or opportunity is this?", placeholder: "Technology, energy source, or efficiency challenge…",         rows: 3 },
+    { key: "projectDescription", label: "What will this grant fund?",               placeholder: "R&D, installation, pilot program, grid work, workforce…",      rows: 3 },
+    { key: "targetPopulation",   label: "Who benefits from this project?",           placeholder: "Households, businesses, communities, grid users, job seekers…", rows: 2 },
+    { key: "expectedOutcomes",   label: "What energy or environmental results do you expect?", placeholder: "e.g. 2 MW installed, 500 homes powered, reduce 1,000 tons CO2…", rows: 2 },
+    { key: "pastExperience",     label: "Technical background or past deployments?", placeholder: "Prior installs, patents, team qualifications, DOE experience…", rows: 2 },
+  ],
+  individual: [
+    { key: "orgName",            label: "Your name",                                 placeholder: "e.g. Maria Gonzalez",                                           rows: 1 },
+    { key: "orgMission",         label: "Describe yourself and your background",     placeholder: "Your field, career stage, and what drives your work…",          rows: 3 },
+    { key: "projectDescription", label: "What will you use this grant for?",         placeholder: "Specific project, study, creative work, or professional goal…", rows: 3 },
+    { key: "targetPopulation",   label: "Who else benefits from your work?",         placeholder: "Community, field, audience, or population impacted…",           rows: 2 },
+    { key: "expectedOutcomes",   label: "What do you expect to accomplish?",         placeholder: "Concrete deliverables, milestones, or outcomes…",               rows: 2 },
+    { key: "pastExperience",     label: "Relevant past work or qualifications?",     placeholder: "Degrees, awards, prior projects, publications…",                rows: 2 },
+  ],
+}
+
+const DEFAULT_FIELDS: QField[] = [
+  { key: "orgName",            label: "Your name or organization",          placeholder: "e.g. Sunrise Community Center",              rows: 1 },
+  { key: "orgMission",         label: "What does your organization do?",    placeholder: "Briefly describe your mission or work…",     rows: 3 },
+  { key: "projectDescription", label: "What will you use this grant for?",  placeholder: "The specific project or activity…",          rows: 3 },
+  { key: "targetPopulation",   label: "Who will benefit?",                  placeholder: "e.g. low-income youth in rural areas…",      rows: 2 },
+  { key: "expectedOutcomes",   label: "What results do you expect?",        placeholder: "e.g. serve 200 families, create 10 jobs…",   rows: 2 },
+  { key: "pastExperience",     label: "Relevant past work or experience?",  placeholder: "Awards, prior programs, partnerships…",      rows: 2 },
+]
+
+function NarrativeQuestionnaire({ grant, userId, initial, onSubmit, onCancel }: {
+  grant: Grant
   userId: string
   initial: Partial<QuestionnaireAnswers>
   onSubmit: (a: QuestionnaireAnswers) => void
@@ -239,6 +314,8 @@ function NarrativeQuestionnaire({ userId, initial, onSubmit, onCancel }: {
   const [websiteUrl, setWebsiteUrl] = useState("")
   const [scraping, setScraping] = useState(false)
   const [scrapeMsg, setScrapeMsg] = useState("")
+
+  const fields = CATEGORY_FIELDS[grant.category] ?? DEFAULT_FIELDS
 
   useEffect(() => {
     if (initial.orgName) return
@@ -278,25 +355,16 @@ function NarrativeQuestionnaire({ userId, initial, onSubmit, onCancel }: {
     setAnswers(a => ({ ...a, [k]: v }))
   }
 
-  const fields: Array<{ key: keyof QuestionnaireAnswers; label: string; placeholder: string; rows: number }> = [
-    { key: "orgName",            label: "Your name or organization",        placeholder: "e.g. Sunrise Community Center",               rows: 1 },
-    { key: "orgMission",         label: "What does your organization do?",  placeholder: "Briefly describe your mission or work…",       rows: 3 },
-    { key: "projectDescription", label: "What will you use this grant for?", placeholder: "Describe the specific project or activity…",  rows: 3 },
-    { key: "targetPopulation",   label: "Who will benefit?",                placeholder: "e.g. low-income youth in rural areas…",        rows: 2 },
-    { key: "expectedOutcomes",   label: "What results do you expect?",      placeholder: "e.g. serve 200 families, create 10 jobs…",    rows: 2 },
-    { key: "pastExperience",     label: "Relevant past work or experience?", placeholder: "Awards, prior programs, partnerships…",       rows: 2 },
-  ]
-
   return (
     <div className="flex-1 overflow-y-auto p-5 space-y-4">
       <div>
-        <p className="text-sm font-semibold text-slate-800">A few questions first</p>
-        <p className="text-xs text-slate-500 mt-0.5">The AI uses your answers to write a specific, compelling narrative.</p>
+        <p className="text-sm font-semibold text-slate-800">Tell us about your application</p>
+        <p className="text-xs text-slate-500 mt-0.5">Your answers help the AI write a narrative specific to this grant.</p>
       </div>
 
       <div>
         <label className="block text-xs font-semibold text-slate-600 mb-1">
-          Your website <span className="font-normal text-slate-400">(optional — we&apos;ll fill in your mission)</span>
+          Your website <span className="font-normal text-slate-400">(optional — we&apos;ll read it to fill in your description)</span>
         </label>
         <div className="flex gap-2">
           <input type="url" value={websiteUrl} onChange={e => setWebsiteUrl(e.target.value)}
@@ -477,6 +545,7 @@ export function NarrativeBuilderTab({ grant, userId }: { grant: Grant; userId: s
       <div className="flex" style={{ minHeight: "500px" }}>
         <div className="flex flex-col border-r border-slate-200 overflow-hidden" style={{ flex: "0 0 65%" }}>
           <NarrativeQuestionnaire
+            grant={grant}
             userId={userId}
             initial={questAnswers}
             onSubmit={handleGenerateWithAnswers}
