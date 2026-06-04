@@ -82,6 +82,8 @@ export async function POST(req: NextRequest) {
   let body: {
     grantId: string; grantName: string; agencyName?: string; fundingSource?: string
     grantDescription?: string; eligibilityRequirements?: string[]; grantAmount?: number | null; deadline?: string | null
+    orgName?: string; orgMission?: string; projectDescription?: string
+    targetPopulation?: string; expectedOutcomes?: string; pastExperience?: string
   }
   try { body = await req.json() } catch { return new Response("Invalid body", { status: 400 }) }
 
@@ -92,11 +94,17 @@ export async function POST(req: NextRequest) {
   const grantDescription = sanitizeString(String(body.grantDescription ?? "")).slice(0, 1000)
   const grantAmount = typeof body.grantAmount === "number" ? body.grantAmount : null
   const deadline = body.deadline ? sanitizeString(String(body.deadline)) : null
+  const orgName = body.orgName ? sanitizeString(String(body.orgName)).slice(0, 200) : ""
+  const orgMission = body.orgMission ? sanitizeString(String(body.orgMission)).slice(0, 1000) : ""
+  const projectDescription = body.projectDescription ? sanitizeString(String(body.projectDescription)).slice(0, 1000) : ""
+  const targetPopulation = body.targetPopulation ? sanitizeString(String(body.targetPopulation)).slice(0, 500) : ""
+  const expectedOutcomes = body.expectedOutcomes ? sanitizeString(String(body.expectedOutcomes)).slice(0, 500) : ""
+  const pastExperience = body.pastExperience ? sanitizeString(String(body.pastExperience)).slice(0, 1000) : ""
 
   if (!grantId || !grantName) return new Response("grantId and grantName required", { status: 400 })
 
   const profileLines: string[] = []
-  if (profile?.full_name) profileLines.push(`Applicant/Org name: ${profile.full_name}`)
+  if (orgName || profile?.full_name) profileLines.push(`Applicant/Org name: ${orgName || profile?.full_name}`)
   if (profile?.state) profileLines.push(`State: ${profile.state}`)
   if (profile?.zip_code) profileLines.push(`ZIP: ${profile.zip_code}`)
   if (profile?.business_type) profileLines.push(`Organization type: ${profile.business_type}`)
@@ -109,6 +117,13 @@ export async function POST(req: NextRequest) {
   if (Array.isArray(profile?.business_ownership_identities) && profile.business_ownership_identities.length > 0) {
     profileLines.push(`Ownership identities: ${profile.business_ownership_identities.join(", ")}`)
   }
+
+  const questLines: string[] = []
+  if (orgMission)        questLines.push(`Mission/purpose: ${orgMission}`)
+  if (projectDescription) questLines.push(`Project/use of funds: ${projectDescription}`)
+  if (targetPopulation)  questLines.push(`Who benefits: ${targetPopulation}`)
+  if (expectedOutcomes)  questLines.push(`Expected outcomes: ${expectedOutcomes}`)
+  if (pastExperience)    questLines.push(`Past experience: ${pastExperience}`)
 
   const searchContext = await fetchGrantGuidance(fundingSource || "federal", agencyName)
 
@@ -129,6 +144,7 @@ ${deadline ? `Deadline: ${deadline}` : ""}
 
 Applicant profile:
 ${profileLines.length > 0 ? profileLines.map((l) => `- ${l}`).join("\n") : "- (No profile data provided — write placeholders for the applicant to fill in)"}
+${questLines.length > 0 ? `\nApplicant-provided details:\n${questLines.map((l) => `- ${l}`).join("\n")}` : ""}
 ${searchContext ? `\nCurrent guidance on ${fundingSource || "federal"} grant narratives (from official sources):\n${searchContext}` : ""}
 
 Write the complete narrative now. Use clear section headers. Be specific, professional, and compelling.`
