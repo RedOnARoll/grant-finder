@@ -84,7 +84,6 @@ export async function POST(req: NextRequest) {
             controller.enqueue(encoder.encode(event.delta.text))
           }
         }
-        // Save updated draft to workspace_drafts
         if (fullText) {
           await supabase.from("workspace_drafts").upsert(
             { user_id: user.id, grant_id: grantId, narrative_text: fullText, generated_at: new Date().toISOString() },

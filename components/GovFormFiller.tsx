@@ -338,7 +338,7 @@ function FieldInput({ f, values, onChange }: {
   onChange: (k: string, v: string) => void
 }) {
   const val  = values[f.key] ?? ""
-  const base = "w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition-colors placeholder:text-slate-400"
+  const base = "w-full border border-slate-400 bg-white px-2 py-1.5 text-sm text-slate-900 outline-none focus:border-blue-600 focus:ring-1 focus:ring-blue-200 transition-colors placeholder:text-slate-300 rounded-none font-mono"
   if (f.type === "select") {
     return (
       <select value={val} onChange={e => onChange(f.key, e.target.value)} className={base + " appearance-none cursor-pointer"}>
@@ -357,12 +357,12 @@ function RadioInput({ f, values, onChange }: {
 }) {
   const val = values[f.key] ?? ""
   return (
-    <div className="flex flex-wrap gap-2">
+    <div className="flex flex-wrap gap-1.5">
       {f.options.map(opt => {
         const active = val === opt
         return (
-          <label key={opt} className={`flex items-center gap-2 px-3 py-2 rounded-lg border text-sm font-medium cursor-pointer transition-colors ${active ? "border-blue-500 bg-blue-50 text-blue-800" : "border-slate-200 bg-white text-slate-700 hover:border-slate-300 hover:bg-slate-50"}`}>
-            <span className={`w-4 h-4 rounded-full border-2 flex-none flex items-center justify-center ${active ? "border-blue-500 bg-blue-500" : "border-slate-300"}`}>
+          <label key={opt} className={`flex items-center gap-1.5 px-2.5 py-1.5 border text-xs font-medium cursor-pointer transition-colors rounded-none ${active ? "border-blue-600 bg-blue-50 text-blue-900" : "border-slate-300 bg-white text-slate-600 hover:border-slate-400"}`}>
+            <span className={`w-3.5 h-3.5 border-2 flex-none flex items-center justify-center rounded-full ${active ? "border-blue-600 bg-blue-600" : "border-slate-400"}`}>
               {active && <span className="w-1.5 h-1.5 rounded-full bg-white block" />}
             </span>
             {opt}
@@ -375,11 +375,11 @@ function RadioInput({ f, values, onChange }: {
 
 function renderLeaf(f: TextField | RadioField | SelectField, values: Record<string, string>, onChange: (k: string, v: string) => void) {
   return (
-    <div key={f.key} className="flex flex-col gap-1 min-w-0">
+    <div key={f.key} className="flex flex-col gap-0.5 min-w-0">
       {f.label && (
-        <label className="text-xs font-medium text-slate-500 leading-tight">
+        <label className="text-[10px] font-semibold text-slate-500 uppercase tracking-wide leading-tight">
           {f.label}
-          {(f as TextField).hint && <span className="text-slate-400 font-normal"> · {(f as TextField).hint}</span>}
+          {(f as TextField).hint && <span className="text-slate-400 font-normal normal-case tracking-normal"> — {(f as TextField).hint}</span>}
         </label>
       )}
       {f.type === "radio"
@@ -432,35 +432,35 @@ export function GovFormFiller({ formKey, values, onChange, onReady, isReady }: {
       </div>
 
       {/* form body */}
-      <div className="p-6 overflow-y-auto bg-slate-50">
-        <div className="max-w-2xl mx-auto bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
-          <div className="bg-[#1a3d6e] px-6 py-4">
-            <p className="text-white/70 text-[10px] font-semibold uppercase tracking-wider">OMB-Approved Standard Form</p>
-            <p className="text-white text-base font-bold mt-0.5">{schema.title}</p>
+      <div className="overflow-y-auto bg-slate-200 p-4">
+        <div className="max-w-3xl mx-auto bg-white shadow-lg">
+          <div className="bg-[#1a3d6e] px-5 py-3">
+            <p className="text-white/60 text-[9px] font-semibold uppercase tracking-widest">OMB-Approved Standard Form</p>
+            <p className="text-white text-sm font-bold mt-0.5">{schema.title}</p>
           </div>
-          <div className="p-6 grid gap-5">
+          <div>
             {schema.fields.map((field, i) => {
               if (field.type === "section") {
                 return (
-                  <div key={i} className="-mx-6 px-6 py-2.5 bg-slate-50 border-y border-slate-100">
-                    <p className="text-xs font-bold text-[#1a3d6e] uppercase tracking-wider">{field.label}</p>
+                  <div key={i} className="px-4 py-2 bg-slate-100 border-y border-slate-300">
+                    <p className="text-[10px] font-bold text-[#1a3d6e] uppercase tracking-widest">{field.label}</p>
                     {field.sub && <p className="text-[11px] text-slate-500 mt-0.5">{field.sub}</p>}
                   </div>
                 )
               }
               if (field.type === "row") {
                 return (
-                  <div key={i} className="grid gap-3"
+                  <div key={i} className="px-4 py-3 border-b border-slate-100 grid gap-3"
                     style={{ gridTemplateColumns: `repeat(${Math.min(field.fields.length, 4)}, minmax(0, 1fr))` }}>
                     {field.fields.map(f => renderLeaf(f, values, onChange))}
                   </div>
                 )
               }
-              return <div key={i}>{renderLeaf(field as TextField | RadioField | SelectField, values, onChange)}</div>
+              return <div key={i} className="px-4 py-3 border-b border-slate-100">{renderLeaf(field as TextField | RadioField | SelectField, values, onChange)}</div>
             })}
           </div>
         </div>
-        <p className="text-center text-[11px] text-slate-400 mt-4">
+        <p className="text-center text-[11px] text-slate-500 mt-3 mb-1">
           Fill all fields, then click <strong>Download filled PDF</strong> to save your completed form.
         </p>
       </div>

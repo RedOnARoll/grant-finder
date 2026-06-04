@@ -1,5 +1,6 @@
 import { NextRequest } from "next/server"
 import { createClient } from "@supabase/supabase-js"
+import Anthropic from "@anthropic-ai/sdk"
 import { anthropic } from "@/lib/anthropic"
 import { rateLimit, getClientIp, tooManyRequests, checkPayloadSize, sanitizeString } from "@/lib/rate-limit"
 
@@ -26,14 +27,16 @@ async function getUser(token: string) {
 async function fetchGrantGuidance(funderType: string, agencyName: string): Promise<string> {
   try {
     const query = `Current official requirements and best practices for writing a grant narrative for ${funderType} grants${agencyName ? ` from ${agencyName}` : ""}. Include required sections and what funders look for.`
-    const res = await (anthropic.messages as typeof anthropic.messages & { create: typeof anthropic.messages.create }).create({
+    // Web search tool — best-effort, falls back to empty string on any error
+    const params: Anthropic.MessageCreateParamsNonStreaming = {
       model: "claude-haiku-4-5-20251001",
       max_tokens: 1024,
-      tools: [{ type: "web_search_20250305", name: "web_search" } as Parameters<typeof anthropic.messages.create>[0]["tools"] extends (infer T)[] ? T : never],
+      tools: [{ type: "web_search_20250305", name: "web_search" } as unknown as Anthropic.Tool],
       messages: [{ role: "user", content: query }],
-    } as Parameters<typeof anthropic.messages.create>[0])
+    }
+    const res = await anthropic.messages.create(params)
     const textBlock = res.content.find((b) => b.type === "text")
-    return textBlock && "text" in textBlock ? textBlock.text.slice(0, 2000) : ""
+    return textBlock && "text" in textBlock ? (textBlock as Anthropic.TextBlock).text.slice(0, 2000) : ""
   } catch {
     return ""
   }
@@ -92,7 +95,6 @@ export async function POST(req: NextRequest) {
 
   if (!grantId || !grantName) return new Response("grantId and grantName required", { status: 400 })
 
-  // Build profile context
   const profileLines: string[] = []
   if (profile?.full_name) profileLines.push(`Applicant/Org name: ${profile.full_name}`)
   if (profile?.state) profileLines.push(`State: ${profile.state}`)
@@ -105,10 +107,9 @@ export async function POST(req: NextRequest) {
   if (profile?.veteran_status) profileLines.push("Veteran-owned")
   if (profile?.disability_status) profileLines.push("Disability-owned")
   if (Array.isArray(profile?.business_ownership_identities) && profile.business_ownership_identities.length > 0) {
-    profileLines.push(`Ownership: ${profile.business_ownership_identities.join(", ")}`)
+    profileLines.push(`Ownership identities: ${profile.business_ownership_identities.join(", ")}`)
   }
 
-  // Try web search for current funder guidance
   const searchContext = await fetchGrantGuidance(fundingSource || "federal", agencyName)
 
   const systemPrompt = `You are an expert grant writer with deep knowledge of US grant applications. You have researched the current official requirements and best practices for this funder type from authoritative sources. Write a compelling, accurate grant narrative tailored to this specific grant and funder. Structure the narrative with clearly labeled sections appropriate for this grant type (e.g. Executive Summary, Statement of Need, Project Description, Goals & Objectives, Evaluation Plan, Budget Justification). Be specific, professional, and tailor the tone and emphasis to what this funder prioritizes. Do not use generic filler — every sentence should serve the application.`
@@ -127,9 +128,8 @@ ${grantAmount ? `Award amount: $${grantAmount.toLocaleString()}` : ""}
 ${deadline ? `Deadline: ${deadline}` : ""}
 
 Applicant profile:
-${profileLines.length > 0 ? profileLines.map((l) => `- ${l}`).join("\n") : "- (No profile data provided)"}
-
-${searchContext ? `Current guidance on ${fundingSource || "federal"} grant narratives (from official sources):\n${searchContext}\n` : ""}
+${profileLines.length > 0 ? profileLines.map((l) => `- ${l}`).join("\n") : "- (No profile data provided — write placeholders for the applicant to fill in)"}
+${searchContext ? `\nCurrent guidance on ${fundingSource || "federal"} grant narratives (from official sources):\n${searchContext}` : ""}
 
 Write the complete narrative now. Use clear section headers. Be specific, professional, and compelling.`
 
@@ -142,13 +142,12 @@ Write the complete narrative now. Use clear section headers. Be specific, profes
       messages: [{ role: "user", content: userPrompt }],
     })
     const textBlock = msg.content.find((b) => b.type === "text")
-    narrative = textBlock && "text" in textBlock ? textBlock.text : ""
+    narrative = textBlock && "text" in textBlock ? (textBlock as Anthropic.TextBlock).text : ""
   } catch (err) {
     console.error("[workspace/generate-narrative]", err)
     return new Response("Generation failed", { status: 500 })
   }
 
-  // Save to workspace_drafts
   await supabase.from("workspace_drafts").upsert(
     { user_id: user.id, grant_id: grantId, narrative_text: narrative, generated_at: new Date().toISOString() },
     { onConflict: "user_id,grant_id" }

@@ -1,7 +1,7 @@
 -- ── workspace-migration.sql ────────────────────────────────────────────────
 -- Run in Supabase SQL editor. All statements are idempotent.
 
--- 1. Add stage column to saved_programs (separate from status)
+-- 1. Add stage column to saved_programs (separate from existing status column)
 alter table public.saved_programs
   add column if not exists stage text not null default 'interested'
   check (stage in ('interested', 'applying', 'submitted', 'awarded', 'declined'));
@@ -48,7 +48,7 @@ create policy "Users manage own workspace drafts"
 create index if not exists workspace_drafts_user_grant_idx
   on public.workspace_drafts (user_id, grant_id);
 
--- 4. workspace_checklist — persisted checkbox state for required docs
+-- 4. workspace_checklist — persisted checkbox state for required documents
 create table if not exists public.workspace_checklist (
   id uuid primary key default gen_random_uuid(),
   user_id uuid not null references auth.users(id) on delete cascade,
