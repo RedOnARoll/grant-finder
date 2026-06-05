@@ -1,16 +1,16 @@
 import { NextRequest, NextResponse } from "next/server"
 
 export const config = {
-  matcher: ["/admin/:path*"],
+  matcher: [
+    "/((?!_next/static|_next/image|favicon\\.ico|coming-soon|api/dev-unlock).*)",
+  ],
 }
 
 function getAccessToken(request: NextRequest): string | null {
-  // Supabase stores the session in a cookie named sb-{project-ref}-auth-token
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL ?? ""
   const projectRef = supabaseUrl.match(/https?:\/\/([^.]+)\.supabase\.co/)?.[1]
 
   if (projectRef) {
-    // Try the primary cookie first
     const primary = request.cookies.get(`sb-${projectRef}-auth-token`)
     if (primary?.value) {
       try {
@@ -19,7 +19,6 @@ function getAccessToken(request: NextRequest): string | null {
       } catch { /* try next */ }
     }
 
-    // Supabase may chunk large sessions across indexed cookies
     const chunks: string[] = []
     for (let i = 0; i < 5; i++) {
       const chunk = request.cookies.get(`sb-${projectRef}-auth-token.${i}`)
@@ -38,11 +37,22 @@ function getAccessToken(request: NextRequest): string | null {
 }
 
 export async function middleware(request: NextRequest) {
+  const { pathname } = request.nextUrl
+
+  // Coming soon gate — redirect everyone without the dev cookie
+  const devAccess = request.cookies.get("dev_access")
+  if (devAccess?.value !== "granted") {
+    return NextResponse.redirect(new URL("/coming-soon", request.url))
+  }
+
+  // Admin-only gate for /admin routes
+  if (!pathname.startsWith("/admin")) {
+    return NextResponse.next()
+  }
+
   const token = getAccessToken(request)
 
   if (!token) {
-    // The browser Supabase client stores sessions outside request cookies in this app.
-    // Let AdminShell verify the signed-in user client-side instead of bouncing valid admins.
     return NextResponse.next()
   }
 
@@ -51,7 +61,6 @@ export async function middleware(request: NextRequest) {
   const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY!
 
   try {
-    // Verify the token and get the user ID
     const userRes = await fetch(`${supabaseUrl}/auth/v1/user`, {
       headers: { Authorization: `Bearer ${token}`, apikey: anonKey },
     })
@@ -62,7 +71,6 @@ export async function middleware(request: NextRequest) {
 
     const user = await userRes.json() as { id: string }
 
-    // Check is_admin from the profiles table
     const profileRes = await fetch(
       `${supabaseUrl}/rest/v1/profiles?user_id=eq.${encodeURIComponent(user.id)}&select=is_admin&limit=1`,
       { headers: { Authorization: `Bearer ${serviceRoleKey}`, apikey: serviceRoleKey } }
