@@ -11,7 +11,7 @@ const AGENCY_STATES: Record<string, string[]> = {
   "Western States Arts Federation":      ["AK", "AZ", "CO", "ID", "MT", "NV", "NM", "OR", "UT", "WA", "WY"],
 }
 
-export const dynamic = "force-dynamic"
+export const revalidate = 3600
 
 function formatAmount(amount: number | null) {
   if (!amount) return "Varies"

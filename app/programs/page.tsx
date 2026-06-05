@@ -10,7 +10,7 @@ import { EmptyStateIllustration } from "@/components/illustrations/GeoShapes"
 import SmartSearchBar from "@/components/SmartSearchBar"
 import ZipFilter from "@/components/ZipFilter"
 
-export const dynamic = "force-dynamic"
+export const revalidate = 3600
 
 // State-specific private grants/benefits — filter out if user's state doesn't match
 const AGENCY_STATES: Record<string, string[]> = {

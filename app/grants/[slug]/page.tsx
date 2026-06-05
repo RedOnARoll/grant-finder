@@ -16,7 +16,7 @@ import ScrollToTop from "@/components/ScrollToTop"
 import PrefillButton from "./PrefillButton"
 import StartApplicationButton from "@/components/StartApplicationButton"
 
-export const revalidate = 3600
+export const revalidate = 86400
 export const dynamicParams = true
 
 export async function generateStaticParams() {

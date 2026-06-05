@@ -7,7 +7,7 @@ import { QuizIllustration } from "@/components/illustrations/GeoShapes"
 import HeroSearch from "@/components/HeroSearch"
 import WebsiteScanner from "@/components/WebsiteScanner"
 
-export const revalidate = 3600
+export const revalidate = 86400
 
 const GRANT_CATEGORIES: Record<string, { label: string; description: string; accent: string }> = {
   small_business: { label: "Small Business",  description: "Grants for entrepreneurs, startups, and growing businesses.", accent: "bg-blue-100"   },

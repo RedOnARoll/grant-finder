@@ -14,8 +14,8 @@ export async function GET(request: Request) {
 
   try {
     console.log("[cron] refresh-grants triggered")
-    const batchSize = parseInt(process.env.REFRESH_BATCH_SIZE ?? "100", 10)
-    const concurrency = parseInt(process.env.REFRESH_CONCURRENCY ?? "5", 10)
+    const batchSize = parseInt(process.env.REFRESH_BATCH_SIZE ?? "50", 10)
+    const concurrency = parseInt(process.env.REFRESH_CONCURRENCY ?? "3", 10)
     const summary = await runRefresh(batchSize, concurrency)
     return NextResponse.json({ ok: true, summary })
   } catch (err) {

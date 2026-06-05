@@ -53,7 +53,7 @@ function sortBenefits(benefits: Grant[], sort: BenefitSort | undefined): Grant[]
   }
 }
 
-export const dynamic = "force-dynamic"
+export const revalidate = 3600
 
 const SUBCATEGORY_LABELS: Record<string, string> = {
   housing:    "Housing",
