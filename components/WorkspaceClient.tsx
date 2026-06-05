@@ -103,18 +103,22 @@ function GrantSidebarItem({ grant, stage, active, onClick }: {
   grant: Grant; stage: Stage; active: boolean; onClick: () => void
 }) {
   const cfg = STAGE_CFG.find((c) => c.value === stage) ?? STAGE_CFG[0]
+  const isClosed = !!grant.deadline && new Date(grant.deadline).getTime() < Date.now()
   return (
     <button onClick={onClick}
       className={`w-full text-left px-3 py-3 rounded-xl border transition-all ${
         active ? "border-blue-300 bg-blue-50 shadow-sm" : "border-transparent hover:border-slate-200 hover:bg-slate-50"
       }`}>
       <div className="flex items-start justify-between gap-2">
-        <p className={`text-sm font-semibold leading-tight line-clamp-2 ${active ? "text-blue-900" : "text-slate-800"}`}>{grant.name}</p>
+        <p className={`text-sm font-semibold leading-tight line-clamp-2 ${active ? "text-blue-900" : isClosed ? "text-slate-400" : "text-slate-800"}`}>{grant.name}</p>
         <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded-md flex-none ${cfg.color}`}>{cfg.label}</span>
       </div>
       <p className="text-xs text-slate-500 mt-0.5 truncate">{grant.agency}</p>
       <div className="flex items-center gap-2 mt-1.5">
-        <span className={`text-[11px] font-semibold ${deadlineColor(grant.deadline)}`}>{fmtDL(grant.deadline)}</span>
+        {isClosed
+          ? <span className="text-[11px] font-semibold px-1.5 py-0.5 rounded bg-rose-100 text-rose-700">Closed</span>
+          : <span className={`text-[11px] font-semibold ${deadlineColor(grant.deadline)}`}>{fmtDL(grant.deadline)}</span>
+        }
         <span className="text-slate-200 text-[10px]">·</span>
         <span className="text-[11px] text-slate-400">{fmtAmt(grant.max_amount)}</span>
       </div>
@@ -283,6 +287,22 @@ export default function WorkspaceClient({ initialSlug }: { initialSlug?: string 
               <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-400 mb-2">Application Stage</p>
               <StageTracker stage={stageMap[grant.slug] ?? "interested"} onChange={handleStageChange} />
             </div>
+
+            {/* Closed grant banner */}
+            {!!grant.deadline && new Date(grant.deadline).getTime() < Date.now() && (
+              <div className="px-6 py-3 border-b border-rose-200 bg-rose-50 shrink-0 flex items-start gap-2.5">
+                <svg className="w-4 h-4 text-rose-500 shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <circle cx="12" cy="12" r="10" /><path strokeLinecap="round" d="M12 8v4m0 4h.01" />
+                </svg>
+                <p className="text-sm text-rose-800">
+                  <span className="font-semibold">Applications are currently closed.</span>{" "}
+                  {grant.is_recurring
+                    ? <>This is a recurring grant — the next cycle is estimated to open around <strong>{(() => { const d = new Date(grant.deadline!); d.setFullYear(d.getFullYear() + 1); return d.toLocaleDateString("en-US", { month: "long", year: "numeric" }) })()}</strong>. You can still prepare your materials here.</>
+                    : <>This grant cycle has ended. Check the <a href={grant.official_source_url ?? "#"} target="_blank" rel="noopener noreferrer" className="underline">official source</a> for future opportunities. You can still use this workspace to prepare.</>
+                  }
+                </p>
+              </div>
+            )}
 
             {/* Tab bar */}
             <div className="flex border-b border-slate-200 bg-white px-6 shrink-0">
