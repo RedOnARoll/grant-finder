@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server"
 
 export const config = {
   matcher: [
-    "/((?!_next/static|_next/image|favicon\\.ico|coming-soon|api/dev-unlock).*)",
+    "/((?!_next/static|_next/image|favicon\\.ico|coming-soon|api/dev-unlock|api/grantmatch|grantmatch).*)",
   ],
 }
 
