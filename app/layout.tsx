@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Suspense } from "react";
 import { Inter } from "next/font/google";
+import Script from "next/script";
 import { Analytics } from "@vercel/analytics/react";
 import SiteFooter from "@/components/SiteFooter";
 import UpgradeBanner from "@/components/UpgradeBanner";
@@ -43,6 +44,18 @@ export default function RootLayout({
         </Suspense>
         <SiteFooter />
         <Analytics />
+        <Script
+          src="https://www.googletagmanager.com/gtag/js?id=G-NJY8L8FX7P"
+          strategy="afterInteractive"
+        />
+        <Script id="google-analytics" strategy="afterInteractive">
+          {`
+            window.dataLayer = window.dataLayer || [];
+            function gtag(){dataLayer.push(arguments);}
+            gtag('js', new Date());
+            gtag('config', 'G-NJY8L8FX7P');
+          `}
+        </Script>
       </body>
     </html>
   );
